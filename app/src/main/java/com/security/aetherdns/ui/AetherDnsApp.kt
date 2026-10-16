@@ -1,8 +1,11 @@
 package com.security.aetherdns.ui
 
+import android.app.StatusBarManager
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,22 +24,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.model.DnsProfile
+import com.security.aetherdns.service.AetherDnsTileService
 import com.security.aetherdns.ui.theme.*
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.HostnameValidator
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AetherDnsApp() {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -43,23 +53,44 @@ fun AetherDnsApp() {
     var hasPermission by remember { mutableStateOf(DnsManager.hasSecurePermission(context)) }
     var currentMode by remember { mutableStateOf(DnsManager.getPrivateDnsMode(context)) }
     var currentSpecifier by remember { mutableStateOf(DnsManager.getPrivateDnsSpecifier(context)) }
-    var selectedProfileId by remember {
-        val matched = DefaultProfiles.list.find { it.hostname.equals(currentSpecifier, ignoreCase = true) }
-        mutableStateOf(matched?.id ?: if (currentSpecifier.isNotBlank()) "custom" else "adguard_default")
-    }
-    var customHostname by remember {
-        mutableStateOf(if (selectedProfileId == "custom") currentSpecifier else "")
-    }
-
-    // Live Audit State
-    var isAuditing by remember { mutableStateOf(false) }
-    var auditSummary by remember { mutableStateOf<AuditSummary?>(null) }
 
     fun refreshState() {
         hasPermission = DnsManager.hasSecurePermission(context)
         currentMode = DnsManager.getPrivateDnsMode(context)
         currentSpecifier = DnsManager.getPrivateDnsSpecifier(context)
     }
+
+    // Refresh state otomatis setiap kali aplikasi kembali ke foreground (ON_RESUME)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    var selectedProfileId by remember {
+        val matched = DefaultProfiles.list.find { it.hostname.equals(currentSpecifier, ignoreCase = true) }
+        mutableStateOf(matched?.id ?: if (currentSpecifier.isNotBlank()) "custom" else "adguard_default")
+    }
+
+    var customHostname by remember {
+        mutableStateOf(if (selectedProfileId == "custom") currentSpecifier else "")
+    }
+
+    val customValidation = remember(customHostname) {
+        if (customHostname.isBlank()) null else HostnameValidator.validate(customHostname)
+    }
+    val isCustomInvalid = customValidation is HostnameValidator.Result.Invalid
+    val customErrorReason = (customValidation as? HostnameValidator.Result.Invalid)?.reason ?: ""
+
+    // Live Audit State
+    var isAuditing by remember { mutableStateOf(false) }
+    var auditSummary by remember { mutableStateOf<AuditSummary?>(null) }
 
     val isProtectionActive = currentMode == DnsManager.MODE_HOSTNAME && currentSpecifier.isNotBlank()
 
@@ -190,12 +221,13 @@ fun AetherDnsApp() {
                                     val targetHostname = if (selectedProfileId == "custom") {
                                         customHostname.trim()
                                     } else {
-                                        DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: "dns.adguard-dns.com"
+                                        DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
                                     }
 
-                                    if (targetHostname.isBlank()) {
+                                    val validation = HostnameValidator.validate(targetHostname)
+                                    if (validation is HostnameValidator.Result.Invalid) {
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Masukkan hostname DNS terlebih dahulu")
+                                            snackbarHostState.showSnackbar("Format Hostname tidak valid: ${validation.reason}")
                                         }
                                         return@Button
                                     }
@@ -231,6 +263,31 @@ fun AetherDnsApp() {
                                 text = if (isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+
+                        // Quick Settings Tile Shortcut (Android 13+)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(
+                                onClick = {
+                                    try {
+                                        val statusBarManager = context.getSystemService(StatusBarManager::class.java)
+                                        val component = ComponentName(context, AetherDnsTileService::class.java)
+                                        statusBarManager?.requestAddTileService(
+                                            component,
+                                            "DNS Anti-Iklan",
+                                            android.graphics.drawable.Icon.createWithResource(context, com.security.aetherdns.R.drawable.ic_shield_logo),
+                                            context.mainExecutor
+                                        ) { _ -> }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Tile dapat ditambahkan manual dari panel atas HP", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            ) {
+                                Icon(imageVector = Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pasang Tombol di Quick Settings (Status Bar)", fontSize = 12.sp)
+                            }
                         }
                     }
                 }
@@ -289,16 +346,18 @@ fun AetherDnsApp() {
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Menguji resolusi domain AdMob, DoubleClick, dan AppLovin untuk memastikan status sinkhole aktif.",
+                            text = "Menguji resolusi domain kontrol konektivitas, AdMob, DoubleClick, dan AppLovin.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         auditSummary?.let { summary ->
                             Spacer(modifier = Modifier.height(12.dp))
+                            val isSuccessBanner = summary.isNetworkReachable && summary.isOverallProtected
+
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (summary.isOverallProtected) SuccessGreen.copy(alpha = 0.12f) else ErrorRed.copy(alpha = 0.12f),
+                                color = if (isSuccessBanner) SuccessGreen.copy(alpha = 0.12f) else ErrorRed.copy(alpha = 0.12f),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -306,27 +365,25 @@ fun AetherDnsApp() {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = if (summary.isOverallProtected) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        imageVector = if (isSuccessBanner) Icons.Default.CheckCircle else Icons.Default.Warning,
                                         contentDescription = null,
-                                        tint = if (summary.isOverallProtected) SuccessGreen else ErrorRed,
+                                        tint = if (isSuccessBanner) SuccessGreen else ErrorRed,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
-                                            text = if (summary.isOverallProtected)
-                                                "Hasil: ${summary.blockedCount}/${summary.totalCount} Domain Terfilter (Aman)"
-                                            else
-                                                "Hasil: ${summary.blockedCount}/${summary.totalCount} Domain Terfilter (Bocor)",
+                                            text = when {
+                                                !summary.isNetworkReachable -> "Koneksi Offline / Resolver Gagal Merespons"
+                                                summary.isOverallProtected -> "Hasil: ${summary.blockedCount}/${summary.totalCount} Domain Terfilter (Aman)"
+                                                else -> "Hasil: ${summary.blockedCount}/${summary.totalCount} Domain Terfilter (Bocor)"
+                                            },
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,
-                                            color = if (summary.isOverallProtected) SuccessGreen else ErrorRed
+                                            color = if (isSuccessBanner) SuccessGreen else ErrorRed
                                         )
                                         Text(
-                                            text = if (summary.isOverallProtected)
-                                                "Iklan pihak ketiga berhasil di-sinkhole ke NXDOMAIN / 0.0.0.0"
-                                            else
-                                                "Koneksi iklan masih berhasil tembus. Pastikan Private DNS aktif.",
+                                            text = summary.statusMessage,
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -399,7 +456,8 @@ fun AetherDnsApp() {
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
-                            val adbCommand = "adb shell pm grant com.security.aetherdns android.permission.WRITE_SECURE_SETTINGS"
+                            // Dynamic package name to match debug or release build automatically
+                            val adbCommand = "adb shell pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS"
 
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
@@ -454,7 +512,7 @@ fun AetherDnsApp() {
                                 Button(
                                     onClick = {
                                         val targetHostname = if (selectedProfileId == "custom") customHostname.trim()
-                                        else DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: "dns.adguard-dns.com"
+                                        else DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
 
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("DNS Hostname", targetHostname))
@@ -466,7 +524,7 @@ fun AetherDnsApp() {
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = WarningOrange)
                                 ) {
-                                    Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Buka DNS HP", fontSize = 11.sp)
                                 }
@@ -604,7 +662,7 @@ fun AetherDnsApp() {
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("Hostname Kustom (NextDNS / VPS Sendiri)", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                Text("Gunakan ID NextDNS pribadi atau instance AdGuard Home / Pi-hole sendiri.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Gunakan ID profil NextDNS pribadi (xxxxxx.dns.nextdns.io) atau domain VPS sendiri.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
@@ -613,9 +671,17 @@ fun AetherDnsApp() {
                             OutlinedTextField(
                                 value = customHostname,
                                 onValueChange = { customHostname = it },
-                                label = { Text("Hostname DoT (contoh: xxxxxx.dns.nextdns.io)", fontSize = 12.sp) },
-                                placeholder = { Text("dns.domainkamu.com", fontSize = 12.sp) },
+                                label = { Text("Hostname DoT FQDN", fontSize = 12.sp) },
+                                placeholder = { Text("xxxxxx.dns.nextdns.io atau dns.domain.com", fontSize = 12.sp) },
                                 singleLine = true,
+                                isError = isCustomInvalid,
+                                supportingText = {
+                                    if (isCustomInvalid) {
+                                        Text(customErrorReason, color = ErrorRed, fontSize = 11.sp)
+                                    } else {
+                                        Text("Hanya FQDN murni (tanpa https:// atau IP address)", fontSize = 11.sp)
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -623,12 +689,26 @@ fun AetherDnsApp() {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = {
-                                        DnsManager.applyPrivateDns(context, customHostname.trim())
-                                        refreshState()
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Hostname kustom diterapkan: $customHostname")
+                                        if (isCustomInvalid) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Format Hostname tidak valid: $customErrorReason")
+                                            }
+                                            return@Button
+                                        }
+
+                                        val result = DnsManager.applyPrivateDns(context, customHostname.trim())
+                                        if (result.isSuccess) {
+                                            refreshState()
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Hostname kustom diterapkan: $customHostname")
+                                            }
+                                        } else {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Gagal: ${result.exceptionOrNull()?.message}")
+                                            }
                                         }
                                     },
+                                    enabled = !isCustomInvalid,
                                     modifier = Modifier.align(Alignment.End),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {

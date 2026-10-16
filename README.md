@@ -9,13 +9,19 @@ AetherDNS adalah aplikasi Android modern (Jetpack Compose + Material 3) yang ber
 1. **Zero Battery & Zero RAM Overhead (Native Level)**:
    - Tidak menggunakan `VpnService` lokal yang mem-parsing paket data di CPU.
    - Konfigurasi langsung disematkan pada Android OS Network Stack (`Settings.Global.PRIVATE_DNS_MODE` dan `Settings.Global.PRIVATE_DNS_SPECIFIER`).
-   - Sistem operasi Android sendiri yang menjalankan koneksi DoT terenkripsi di port 853 melalui daemon kernel C++ (`netd`).
-2. **Bebas Monopoli Slot VPN**:
+   - Sistem operasi Android sendiri yang menjalankan koneksi DoT terenkripsi di port 853 melalui daemon kernel C++ (`netd` / `resolv`).
+   - Setelah proteksi aktif, aplikasi dapat ditutup total dan proteksi tetap aktif 100%.
+2. **Quick Settings Tile (Status Bar 1-Klik)**:
+   - Dilengkapi `AetherDnsTileService` dengan metadata `ACTIVE_TILE` (0% background overhead).
+   - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
+   - Pada Android 13+, terdapat pintasan langsung untuk menambahkan tile ke Status Bar.
+3. **Bebas Monopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-3. **Persisten Setelah Reboot**:
-   - Pengaturan tersimpan permanen di database sistem Android.
-4. **Live Diagnostic / Sinkhole Audit**:
-   - Memiliki engine audit real-time (`DnsAuditor`) yang melakukan pengujian resolusi terhadap domain iklan utama (`pagead2.googlesyndication.com`, `ads.doubleclick.net`, `applovin.com`) untuk memverifikasi apakah sinkhole (0.0.0.0 / NXDOMAIN) aktif.
+4. **Validasi Ketat Hostname FQDN**:
+   - Dilengkapi `HostnameValidator` untuk menolak format URL (`https://`), path/query, port/IPv6, dan raw IP address, serta menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
+5. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
+   - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
+   - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
 
 ---
 
@@ -25,28 +31,35 @@ AetherDNS adalah aplikasi Android modern (Jetpack Compose + Material 3) yang ber
 | :--- | :--- | :--- | :--- |
 | **AdGuard DNS (Rekomendasi)** | `dns.adguard-dns.com` | Anti-Iklan & Tracker | Banner, pop-up, rewarded ads di aplikasi & browser |
 | **AdGuard Family** | `family.adguard-dns.com` | Keluarga & Anti-Iklan | Anti-iklan + proteksi konten dewasa + SafeSearch |
-| **NextDNS Public** | `dns.nextdns.io` | Kecepatan & Privasi | Anycast DoT berlatensi rendah |
+| **Mullvad Privacy** | `adblock.dns.mullvad.net` | Privasi & Anti-Iklan | Resolver zero-log resmi Mullvad dengan filter iklan aktif |
 | **Cloudflare Security (1.1.1.2)** | `security.cloudflare-dns.com` | Anti-Malware | Blokir phishing, malware, dan ransomware |
-| **Mullvad Privacy** | `adblock.doh.mullvad.net` | Privasi Maksimal | Zero-log resolver dengan filter ad agresif |
-| **Custom Hostname** | *(Bebas ditentukan)* | Kustomisasi | NextDNS ID pribadi atau instance VPS (AdGuard Home / Pi-hole) |
+| **NextDNS Anycast** | `dns.nextdns.io` | Resolver Bersih | Resolver Anycast berlatensi rendah (gunakan Hostname Kustom jika ingin filter ad NextDNS) |
+| **Custom Hostname** | *(Bebas ditentukan)* | Kustomisasi | ID profil NextDNS pribadi (`xxxxxx.dns.nextdns.io`) atau server VPS sendiri (AdGuard Home / Pi-hole) |
 
 ---
 
 ## Petunjuk Penggunaan
 
-### 1. Instalasi APK
-Pasang file [AetherDNS_v1.0.0_debug.apk](file:///c:/Users/TOOLS%20UBH/OneDrive%20-%20Indonesiapower/Documents/Aplikasi%20Mod/AetherDNS_v1.0.0_debug.apk) pada perangkat Android (minimal Android 9.0 / Pie).
+### 1. Unduh & Pasang APK
+Unduh build biner terbaru dari menu **[GitHub Releases](https://github.com/dromadi/AetherDNS/releases)**.
 
 ### 2. Aktivasi 1-Klik Otomatis (Izin WRITE_SECURE_SETTINGS)
 Agar aplikasi dapat mengubah pengaturan DNS sistem secara otomatis tanpa perlu membuka menu pengaturan manual, berikan izin ini 1 kali melalui ADB:
 
+**Untuk Build Debug (APK yang belum ditandatangani keystore release):**
+```bash
+adb shell pm grant com.security.aetherdns.debug android.permission.WRITE_SECURE_SETTINGS
+```
+
+**Untuk Build Release (APK production):**
 ```bash
 adb shell pm grant com.security.aetherdns android.permission.WRITE_SECURE_SETTINGS
 ```
-*(Bisa juga dijalankan lewat aplikasi **Shizuku** atau **Termux** jika perangkat sudah di-root/wireless debugging).*
+
+*(Catatan: Aplikasi AetherDNS secara otomatis mendeteksi nama paket yang terpasang dan menampilkan tombol "Salin Perintah ADB" yang langsung sesuai di layar).*
 
 ### 3. Penggunaan Tanpa ADB (Mode Bantuan / Manual)
-Jika pengguna belum menghubungkan ke PC:
+Jika belum sempat menghubungkan ke PC:
 - Pilih preset DNS yang diinginkan di dalam aplikasi.
 - Klik tombol **"Buka DNS HP"**.
-- Aplikasi akan otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP. Pengguna cukup menempel (*paste*) hostname tersebut.
+- Aplikasi otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP untuk di-paste langsung.

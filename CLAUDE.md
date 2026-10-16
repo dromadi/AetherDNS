@@ -13,9 +13,12 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Aplikasi tidak memproses atau mem-parsing paket data di background.
    - Eksekusi koneksi TLS (port 853) dilakukan langsung oleh daemon C++ (`netd` / `resolv`) bawaan Android kernel.
    - Setelah konfigurasi disetel, aplikasi dapat ditutup sepenuhnya dan proteksi tetap aktif 100%.
-2. **Tidak Memonopoli Slot VPN**:
+2. **Quick Settings Tile (Status Bar 1-Klik)**:
+   - Menggunakan `AetherDnsTileService` dengan meta-data `ACTIVE_TILE` (hanya aktif saat QS panel terbuka).
+   - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
+3. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-3. **Persisten Pasca-Reboot**:
+4. **Persisten Pasca-Reboot**:
    - Pengaturan tersimpan di database sistem `Settings.Global`.
 
 ---
@@ -25,33 +28,42 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 
 - `model/`:
-  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (AdGuard DNS, AdGuard Family, NextDNS Public, Cloudflare Security 1.1.1.2, Mullvad Privacy, dan Hostname Kustom).
+  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (AdGuard DNS, AdGuard Family, Mullvad Privacy, Cloudflare Security 1.1.1.2, NextDNS Anycast, dan Hostname Kustom).
 - `util/`:
   - `DnsManager.kt`: Wrapper manajemen konfigurasi sistem.
     - Membaca & menulis `Settings.Global.PRIVATE_DNS_MODE` (`"off"`, `"opportunistic"`, `"hostname"`).
     - Membaca & menulis `Settings.Global.PRIVATE_DNS_SPECIFIER` (DoT hostname target).
     - Memeriksa izin `Manifest.permission.WRITE_SECURE_SETTINGS`.
-    - Menyediakan fallback Intent (`openSystemDnsSettings`) untuk membuka antarmuka pengaturan native jika izin belum diberikan.
+    - Mengintegrasikan `HostnameValidator` sebelum menyimpan konfigurasi.
+    - Mengirim notifikasi pembaruan ke tile melalui `TileService.requestListeningState()`.
+  - `HostnameValidator.kt`: Validasi ketat FQDN.
+    - Menolak skema URL (`https://`), path/query, port/IPv6, dan raw IP address.
+    - Menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
   - `DnsAuditor.kt`: Engine audit sinkhole real-time.
-    - Menguji resolusi domain AdMob (`pagead2.googlesyndication.com`), Google AdService (`adservice.google.com`), DoubleClick (`ads.doubleclick.net`), dan AppLovin (`applovin.com`).
-    - Mendeteksi apakah domain di-sinkhole ke `0.0.0.0`, `127.0.0.1`, atau `NXDOMAIN` (UnknownHostException).
+    - Menguji domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah false-positive saat offline.
+    - Menguji resolusi domain AdMob, Google AdService, DoubleClick, dan AppLovin.
+    - Mendeteksi apakah domain di-sinkhole ke `0.0.0.0`, `127.0.0.1`, atau `NXDOMAIN`.
+- `service/`:
+  - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
+    - Menangani toggle ON/OFF langsung dari status bar.
+    - Menangani pembukaan `MainActivity` dengan `PendingIntent` pada Android 14+ (API 34+).
+    - Membungkus aksi dengan `unlockAndRun` jika layar dalam keadaan terkunci (`isSecure`).
 - `ui/`:
   - `AetherDnsApp.kt`: Antarmuka utama Jetpack Compose (Material 3).
-    - Kartu status proteksi visual dengan toggle 1-klik.
-    - Panel audit sinkhole real-time interaktif ("Uji DNS").
-    - Pilihan preset resolver dalam bentuk kartu radio.
-    - Form hostname kustom (DoT FQDN).
-    - Asisten izin ADB terintegrasi dengan tombol "Salin Perintah ADB" dan "Buka DNS HP".
-  - `theme/`: Palet warna Material 3, tipografi, dan tema aplikasi.
+    - Siklus hidup otomatis (`LifecycleEventObserver` pada `ON_RESUME`) untuk memuat ulang status sistem.
+    - Perintah ADB dinamis berdasarkan `context.packageName` (mendukung debug dan release build).
+    - Tombol pintasan pendaftaran tile ke Status Bar pada Android 13+ (`StatusBarManager.requestAddTileService`).
+    - Validasi real-time pada kolom input Hostname Kustom dengan `supportingText` deskriptif.
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()`.
 
 ---
 
 ## 3. Perintah Build & Kompilasi
 
-Proyek menggunakan Gradle dengan Kotlin DSL (`build.gradle.kts`) dan Gradle Version Catalogs (`libs.versions.toml`).
-
 ```powershell
+# Menjalankan Unit Tests (HostnameValidator, dsb.)
+.\gradlew.bat test
+
 # Kompilasi Debug APK
 .\gradlew.bat assembleDebug
 
@@ -63,26 +75,3 @@ Proyek menggunakan Gradle dengan Kotlin DSL (`build.gradle.kts`) dan Gradle Vers
 ```
 
 > **Catatan Windows / OneDrive**: `build.gradle.kts` root telah mengalihkan `buildDirectory` ke direktori lokal temporer (`C:\Users\...\AppData\Local\Temp\gradle_build\AetherDNS\...`) untuk menghindari *file lock* oleh sinkronisasi cloud OneDrive.
-
----
-
-## 4. Persyaratan Izin & Perintah ADB
-
-Aplikasi membutuhkan izin tingkat sistem:
-- `android.permission.WRITE_SECURE_SETTINGS` (Izin terproteksi sistem)
-
-Perintah aktivasi via ADB:
-```bash
-adb shell pm grant com.security.aetherdns android.permission.WRITE_SECURE_SETTINGS
-```
-
----
-
-## 5. Pedoman Pengembangan Lebih Lanjut
-
-1. **Mempertahankan Zero-Overhead**:
-   - Jangan menambahkan background service persisten atau polling loop yang tidak perlu. Aplikasi ini berprinsip *set-and-forget*.
-2. **Keamanan Jaringan**:
-   - Validasi bahwa hostname DoT yang dimasukkan oleh pengguna adalah FQDN yang valid (bukan URL dengan `https://` dan bukan IP biasa, karena Android Private DNS hanya menerima FQDN untuk verifikasi sertifikat TLS).
-3. **Standar Terminologi**:
-   - Gunakan terminologi rekayasa perangkat lunak dan analisis jaringan (misal: *DNS Sinkholing*, *Resolver*, *FQDN*, *DoT*, *Telemetry Filtering*).

@@ -1,10 +1,13 @@
 package com.security.aetherdns.util
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
+import android.service.quicksettings.TileService
 import android.util.Log
 
 object DnsManager {
@@ -15,6 +18,8 @@ object DnsManager {
     const val MODE_OFF = "off"
     const val MODE_OPPORTUNISTIC = "opportunistic"
     const val MODE_HOSTNAME = "hostname"
+
+    const val DEFAULT_FALLBACK_HOSTNAME = "dns.adguard-dns.com"
 
     fun hasSecurePermission(context: Context): Boolean {
         return try {
@@ -41,12 +46,25 @@ object DnsManager {
         }
     }
 
+    fun getEffectiveHostname(context: Context): String {
+        val current = getPrivateDnsSpecifier(context).trim()
+        return if (current.isNotEmpty()) current else DEFAULT_FALLBACK_HOSTNAME
+    }
+
     fun applyPrivateDns(context: Context, hostname: String): Result<Unit> {
+        val validation = HostnameValidator.validate(hostname)
+        if (validation is HostnameValidator.Result.Invalid) {
+            return Result.failure(IllegalArgumentException(validation.reason))
+        }
+
+        val normalizedFqdn = (validation as HostnameValidator.Result.Valid).fqdn
+
         return try {
             val resolver = context.contentResolver
             val modeSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_MODE, MODE_HOSTNAME)
-            val specSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_SPECIFIER, hostname.trim())
+            val specSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_SPECIFIER, normalizedFqdn)
             if (modeSuccess && specSuccess) {
+                notifyTileUpdate(context)
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Gagal memperbarui konfigurasi sistem"))
@@ -65,6 +83,7 @@ object DnsManager {
             val resolver = context.contentResolver
             val modeSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_MODE, MODE_OFF)
             if (modeSuccess) {
+                notifyTileUpdate(context)
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Gagal menonaktifkan DNS"))
@@ -74,6 +93,15 @@ object DnsManager {
             Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    fun notifyTileUpdate(context: Context) {
+        try {
+            val component = ComponentName(context, "com.security.aetherdns.service.AetherDnsTileService")
+            TileService.requestListeningState(context, component)
+        } catch (e: Exception) {
+            Log.d(TAG, "Could not request tile update: ${e.message}")
         }
     }
 

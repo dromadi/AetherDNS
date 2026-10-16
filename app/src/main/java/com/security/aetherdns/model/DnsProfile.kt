@@ -26,11 +26,11 @@ object DefaultProfiles {
             description = "Proteksi iklan aplikasi sekaligus memblokir situs konten dewasa dan mengaktifkan SafeSearch."
         ),
         DnsProfile(
-            id = "nextdns_public",
-            name = "NextDNS Public",
-            hostname = "dns.nextdns.io",
-            category = "Kecepatan & Privasi",
-            description = "Anycast resolver DoT berkecepatan tinggi dengan proteksi dasar terhadap ancaman cyber."
+            id = "mullvad_adblock",
+            name = "Mullvad Privacy Adblock",
+            hostname = "adblock.dns.mullvad.net",
+            category = "Privasi & Anti-Iklan",
+            description = "Resolver zero-logging resmi dari Mullvad dengan blocklist iklan dan tracker aktif."
         ),
         DnsProfile(
             id = "cloudflare_security",
@@ -40,11 +40,11 @@ object DefaultProfiles {
             description = "Fokus memblokir domain malware, phishing, ransomware, dan C2 server secara real-time."
         ),
         DnsProfile(
-            id = "mullvad_adblock",
-            name = "Mullvad Privacy Adblock",
-            hostname = "adblock.doh.mullvad.net",
-            category = "Privasi Maksimal",
-            description = "Resolver zero-logging dengan blocklist iklan dan tracker yang agresif."
+            id = "nextdns_public",
+            name = "NextDNS Anycast",
+            hostname = "dns.nextdns.io",
+            category = "Resolver Bersih (Tanpa Filter)",
+            description = "Anycast resolver DoT berlatensi rendah tanpa filter bawaan. Untuk anti-iklan NextDNS, gunakan opsi Hostname Kustom dengan ID profil Anda."
         )
     )
 }

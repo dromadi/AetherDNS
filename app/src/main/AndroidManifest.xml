@@ -25,6 +25,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Quick Settings Tile Service -->
+        <service
+            android:name=".service.AetherDnsTileService"
+            android:icon="@drawable/ic_shield_logo"
+            android:label="DNS Anti-Iklan"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
     </application>
 
 </manifest>
