@@ -26,19 +26,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Quick Settings Tile Service -->
+        <!-- Quick Settings Tile Service (Standard tile without ACTIVE_TILE so onStartListening fires on panel open) -->
         <service
             android:name=".service.AetherDnsTileService"
-            android:icon="@drawable/ic_shield_logo"
+            android:icon="@drawable/ic_tile_shield"
             android:label="DNS Anti-Iklan"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
-            <meta-data
-                android:name="android.service.quicksettings.ACTIVE_TILE"
-                android:value="true" />
         </service>
     </application>
 

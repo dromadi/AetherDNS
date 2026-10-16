@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.1.1)
 
 AetherDNS adalah aplikasi Android modern (Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -12,14 +12,20 @@ AetherDNS adalah aplikasi Android modern (Jetpack Compose + Material 3) yang ber
    - Sistem operasi Android sendiri yang menjalankan koneksi DoT terenkripsi di port 853 melalui daemon kernel C++ (`netd` / `resolv`).
    - Setelah proteksi aktif, aplikasi dapat ditutup total dan proteksi tetap aktif 100%.
 2. **Quick Settings Tile (Status Bar 1-Klik)**:
-   - Dilengkapi `AetherDnsTileService` dengan metadata `ACTIVE_TILE` (0% background overhead).
+   - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
+   - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun (tanpa polling background).
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
+   - Jika izin belum diberikan, tile tetap dapat diklik untuk langsung membuka panduan ADB di `MainActivity`.
    - Pada Android 13+, terdapat pintasan langsung untuk menambahkan tile ke Status Bar.
-3. **Bebas Monopoli Slot VPN**:
+3. **Pre-flight DoT Handshake Probe (`DotProbe`)**:
+   - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi sertifikat X.509 sebelum menulis ke sistem, melindungi HP pengguna dari kegagalan total resolusi DNS.
+4. **Verifikasi Status Kernel OS (`LinkProperties`)**:
+   - Membaca status `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
+5. **Bebas Monopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-4. **Validasi Ketat Hostname FQDN**:
+6. **Validasi Ketat Hostname FQDN**:
    - Dilengkapi `HostnameValidator` untuk menolak format URL (`https://`), path/query, port/IPv6, dan raw IP address, serta menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
-5. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
+7. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
    - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
 

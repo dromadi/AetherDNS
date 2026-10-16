@@ -97,9 +97,9 @@ object DnsAuditor {
 
         val isProtected = blockedCounter >= 2
         val message = if (isProtected) {
-            "Semua domain telemetri & iklan berhasil disinkhole (NXDOMAIN / 0.0.0.0)."
+            "$blockedCounter dari ${testDomains.size} domain telemetri & iklan berhasil disinkhole (NXDOMAIN / 0.0.0.0)."
         } else {
-            "Sebagian atau seluruh domain iklan masih berhasil di-resolve ke IP publik."
+            "Hanya $blockedCounter dari ${testDomains.size} domain iklan terfilter. Domain iklan lainnya masih tembus ke IP publik."
         }
 
         AuditSummary(

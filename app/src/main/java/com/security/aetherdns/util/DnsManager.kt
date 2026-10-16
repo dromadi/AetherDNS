@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.Build
 import android.provider.Settings
 import android.service.quicksettings.TileService
@@ -46,9 +47,36 @@ object DnsManager {
         }
     }
 
+    fun isProtectionActive(context: Context): Boolean {
+        val mode = getPrivateDnsMode(context)
+        val specifier = getPrivateDnsSpecifier(context)
+        return mode == MODE_HOSTNAME && specifier.isNotBlank()
+    }
+
     fun getEffectiveHostname(context: Context): String {
         val current = getPrivateDnsSpecifier(context).trim()
         return if (current.isNotEmpty()) current else DEFAULT_FALLBACK_HOSTNAME
+    }
+
+    /**
+     * Membaca status validasi DoT langsung dari Network LinkProperties OS Android (API 28+).
+     * Memberitahu apakah Android OS berhasil menyelesaikan TLS handshake dan mengenkripsi traffic DNS.
+     */
+    fun getSystemLinkPropertiesStatus(context: Context): Pair<Boolean, String?> {
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val activeNetwork = cm?.activeNetwork
+            val linkProperties = cm?.getLinkProperties(activeNetwork)
+            if (linkProperties != null) {
+                val isActive = linkProperties.isPrivateDnsActive
+                val serverName = linkProperties.privateDnsServerName
+                Pair(isActive, serverName)
+            } else {
+                Pair(false, null)
+            }
+        } catch (e: Exception) {
+            Pair(false, null)
+        }
     }
 
     fun applyPrivateDns(context: Context, hostname: String): Result<Unit> {

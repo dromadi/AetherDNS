@@ -14,11 +14,16 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Eksekusi koneksi TLS (port 853) dilakukan langsung oleh daemon C++ (`netd` / `resolv`) bawaan Android kernel.
    - Setelah konfigurasi disetel, aplikasi dapat ditutup sepenuhnya dan proteksi tetap aktif 100%.
 2. **Quick Settings Tile (Status Bar 1-Klik)**:
-   - Menggunakan `AetherDnsTileService` dengan meta-data `ACTIVE_TILE` (hanya aktif saat QS panel terbuka).
+   - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield` (hanya aktif saat QS panel terbuka, tanpa meta-data `ACTIVE_TILE` agar `onStartListening()` terpanggil saat panel dibuka).
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
-3. **Tidak Memonopoli Slot VPN**:
+   - Menggunakan `STATE_INACTIVE` saat izin belum ada agar klik tetap diterima sistem dan diarahkan ke asisten ADB di `MainActivity`.
+3. **Pre-flight DoT Handshake Probe**:
+   - `DotProbe` menguji handshake TLS port 853 dengan SNI dan verifikasi sertifikat sebelum mengaktifkan mode strict, melindungi pengguna dari kegagalan total resolusi DNS.
+4. **Verifikasi Status Kernel OS Langsung**:
+   - Menggunakan `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
+5. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-4. **Persisten Pasca-Reboot**:
+6. **Persisten Pasca-Reboot**:
    - Pengaturan tersimpan di database sistem `Settings.Global`.
 
 ---
@@ -33,16 +38,14 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsManager.kt`: Wrapper manajemen konfigurasi sistem.
     - Membaca & menulis `Settings.Global.PRIVATE_DNS_MODE` (`"off"`, `"opportunistic"`, `"hostname"`).
     - Membaca & menulis `Settings.Global.PRIVATE_DNS_SPECIFIER` (DoT hostname target).
+    - `isProtectionActive(context)`: Single source of truth status proteksi.
+    - `getSystemLinkPropertiesStatus(context)`: Membaca status DoT langsung dari kernel network daemon OS.
     - Memeriksa izin `Manifest.permission.WRITE_SECURE_SETTINGS`.
     - Mengintegrasikan `HostnameValidator` sebelum menyimpan konfigurasi.
     - Mengirim notifikasi pembaruan ke tile melalui `TileService.requestListeningState()`.
-  - `HostnameValidator.kt`: Validasi ketat FQDN.
-    - Menolak skema URL (`https://`), path/query, port/IPv6, dan raw IP address.
-    - Menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
-  - `DnsAuditor.kt`: Engine audit sinkhole real-time.
-    - Menguji domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah false-positive saat offline.
-    - Menguji resolusi domain AdMob, Google AdService, DoubleClick, dan AppLovin.
-    - Mendeteksi apakah domain di-sinkhole ke `0.0.0.0`, `127.0.0.1`, atau `NXDOMAIN`.
+  - `DotProbe.kt`: Pre-flight test koneksi port 853 DoT via SSLSocket + SNI.
+  - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
+  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`).
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
     - Menangani toggle ON/OFF langsung dari status bar.
@@ -50,6 +53,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
     - Membungkus aksi dengan `unlockAndRun` jika layar dalam keadaan terkunci (`isSecure`).
 - `ui/`:
   - `AetherDnsApp.kt`: Antarmuka utama Jetpack Compose (Material 3).
+    - Menampilkan badge status validasi kernel OS (`LinkProperties`).
+    - Menjalankan uji `DotProbe` sebelum menerapkan hostname DoT baru.
     - Siklus hidup otomatis (`LifecycleEventObserver` pada `ON_RESUME`) untuk memuat ulang status sistem.
     - Perintah ADB dinamis berdasarkan `context.packageName` (mendukung debug dan release build).
     - Tombol pintasan pendaftaran tile ke Status Bar pada Android 13+ (`StatusBarManager.requestAddTileService`).

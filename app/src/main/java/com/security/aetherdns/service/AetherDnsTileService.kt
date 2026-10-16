@@ -18,13 +18,14 @@ class AetherDnsTileService : TileService() {
     override fun onClick() {
         super.onClick()
 
-        // 1. Jika belum ada izin WRITE_SECURE_SETTINGS, buka MainActivity untuk panduan ADB
+        // 1. Jika belum ada izin WRITE_SECURE_SETTINGS, buka MainActivity untuk panduan ADB.
+        // Catatan AOSP: Tile harus berstatus STATE_INACTIVE (bukan STATE_UNAVAILABLE) agar klik diteruskan ke sini.
         if (!DnsManager.hasSecurePermission(this)) {
             openMainActivity()
             return
         }
 
-        // 2. Proteksi Lockscreen: Pastikan perangkat dibuka sebelum mengubah DNS
+        // 2. Proteksi Lockscreen: Pastikan perangkat dibuka sebelum mengubah konfigurasi DNS sistem
         if (isSecure) {
             unlockAndRun {
                 performToggle()
@@ -35,14 +36,21 @@ class AetherDnsTileService : TileService() {
     }
 
     private fun performToggle() {
-        val currentMode = DnsManager.getPrivateDnsMode(this)
-        val isCurrentlyActive = currentMode == DnsManager.MODE_HOSTNAME
+        val isCurrentlyActive = DnsManager.isProtectionActive(this)
 
         if (isCurrentlyActive) {
             DnsManager.disablePrivateDns(this)
         } else {
             val targetHostname = DnsManager.getEffectiveHostname(this)
-            DnsManager.applyPrivateDns(this, targetHostname)
+            val result = DnsManager.applyPrivateDns(this, targetHostname)
+
+            // Jika hostname tersimpan tidak valid atau gagal, fallback ke AdGuard default
+            if (result.isFailure) {
+                val fallbackResult = DnsManager.applyPrivateDns(this, DnsManager.DEFAULT_FALLBACK_HOSTNAME)
+                if (fallbackResult.isFailure) {
+                    openMainActivity()
+                }
+            }
         }
 
         updateTileState()
@@ -52,7 +60,8 @@ class AetherDnsTileService : TileService() {
         val tile = qsTile ?: return
 
         if (!DnsManager.hasSecurePermission(this)) {
-            tile.state = Tile.STATE_UNAVAILABLE
+            // Gunakan STATE_INACTIVE agar klik tetap diterima sistem dan diarahkan ke openMainActivity()
+            tile.state = Tile.STATE_INACTIVE
             tile.label = "DNS Anti-Iklan"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = "Perlu Izin ADB"
@@ -61,10 +70,10 @@ class AetherDnsTileService : TileService() {
             return
         }
 
-        val mode = DnsManager.getPrivateDnsMode(this)
+        val isProtectionActive = DnsManager.isProtectionActive(this)
         val specifier = DnsManager.getPrivateDnsSpecifier(this)
 
-        if (mode == DnsManager.MODE_HOSTNAME && specifier.isNotBlank()) {
+        if (isProtectionActive) {
             tile.state = Tile.STATE_ACTIVE
             tile.label = "DNS Anti-Iklan"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

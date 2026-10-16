@@ -35,10 +35,7 @@ import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.service.AetherDnsTileService
 import com.security.aetherdns.ui.theme.*
-import com.security.aetherdns.util.AuditSummary
-import com.security.aetherdns.util.DnsAuditor
-import com.security.aetherdns.util.DnsManager
-import com.security.aetherdns.util.HostnameValidator
+import com.security.aetherdns.util.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,11 +50,14 @@ fun AetherDnsApp() {
     var hasPermission by remember { mutableStateOf(DnsManager.hasSecurePermission(context)) }
     var currentMode by remember { mutableStateOf(DnsManager.getPrivateDnsMode(context)) }
     var currentSpecifier by remember { mutableStateOf(DnsManager.getPrivateDnsSpecifier(context)) }
+    var systemLinkProperties by remember { mutableStateOf(DnsManager.getSystemLinkPropertiesStatus(context)) }
+    var isProbing by remember { mutableStateOf(false) }
 
     fun refreshState() {
         hasPermission = DnsManager.hasSecurePermission(context)
         currentMode = DnsManager.getPrivateDnsMode(context)
         currentSpecifier = DnsManager.getPrivateDnsSpecifier(context)
+        systemLinkProperties = DnsManager.getSystemLinkPropertiesStatus(context)
     }
 
     // Refresh state otomatis setiap kali aplikasi kembali ke foreground (ON_RESUME)
@@ -92,7 +92,7 @@ fun AetherDnsApp() {
     var isAuditing by remember { mutableStateOf(false) }
     var auditSummary by remember { mutableStateOf<AuditSummary?>(null) }
 
-    val isProtectionActive = currentMode == DnsManager.MODE_HOSTNAME && currentSpecifier.isNotBlank()
+    val isProtectionActive = DnsManager.isProtectionActive(context)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -106,7 +106,7 @@ fun AetherDnsApp() {
                             fontSize = 20.sp
                         )
                         Text(
-                            text = "Native DoT & Ad-Sinkhole Controller",
+                            text = "Native DoT & Ad-Sinkhole Controller (v1.1.1)",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -197,9 +197,41 @@ fun AetherDnsApp() {
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
+                        // Indikator Validasi Kernel OS (LinkProperties API 28+)
+                        if (isProtectionActive) {
+                            val (isSystemValidated, validatedServer) = systemLinkProperties
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSystemValidated) SuccessGreen.copy(alpha = 0.12f) else WarningOrange.copy(alpha = 0.12f),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSystemValidated) Icons.Default.CheckCircle else Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = if (isSystemValidated) SuccessGreen else WarningOrange,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isSystemValidated)
+                                            "OS Kernel: DoT Terenkripsi (${validatedServer ?: currentSpecifier})"
+                                        else
+                                            "OS Kernel: Sedang memvalidasi handshake TLS...",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (isSystemValidated) SuccessGreen else WarningOrange
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Big Toggle Button
+                        // Big Toggle Button with Pre-flight DoT Probe
                         Button(
                             onClick = {
                                 if (!hasPermission) {
@@ -232,19 +264,28 @@ fun AetherDnsApp() {
                                         return@Button
                                     }
 
-                                    val result = DnsManager.applyPrivateDns(context, targetHostname)
-                                    if (result.isSuccess) {
-                                        refreshState()
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Proteksi DNS berhasil diaktifkan ke $targetHostname")
+                                    coroutineScope.launch {
+                                        isProbing = true
+                                        // Uji pre-flight DoT handshake ke port 853 sebelum mengubah mode strict
+                                        val probe = DotProbe.probe(targetHostname)
+                                        isProbing = false
+
+                                        if (probe is DotProbeResult.Failure) {
+                                            snackbarHostState.showSnackbar("Handshake DoT gagal: ${probe.reason}. Dibatalkan demi keamanan DNS.")
+                                            return@launch
                                         }
-                                    } else {
-                                        coroutineScope.launch {
+
+                                        val result = DnsManager.applyPrivateDns(context, targetHostname)
+                                        if (result.isSuccess) {
+                                            refreshState()
+                                            snackbarHostState.showSnackbar("Proteksi DNS berhasil diaktifkan ke $targetHostname")
+                                        } else {
                                             snackbarHostState.showSnackbar("Gagal: ${result.exceptionOrNull()?.message}")
                                         }
                                     }
                                 }
                             },
+                            enabled = !isProbing,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isProtectionActive) ErrorRed else PrimaryBlue
                             ),
@@ -253,16 +294,22 @@ fun AetherDnsApp() {
                                 .fillMaxWidth()
                                 .height(48.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isProtectionActive) Icons.Default.PowerSettingsNew else Icons.Default.Bolt,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            if (isProbing) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Menguji Handshake DoT...", fontWeight = FontWeight.SemiBold)
+                            } else {
+                                Icon(
+                                    imageVector = if (isProtectionActive) Icons.Default.PowerSettingsNew else Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
 
                         // Quick Settings Tile Shortcut (Android 13+)
@@ -276,7 +323,7 @@ fun AetherDnsApp() {
                                         statusBarManager?.requestAddTileService(
                                             component,
                                             "DNS Anti-Iklan",
-                                            android.graphics.drawable.Icon.createWithResource(context, com.security.aetherdns.R.drawable.ic_shield_logo),
+                                            android.graphics.drawable.Icon.createWithResource(context, com.security.aetherdns.R.drawable.ic_tile_shield),
                                             context.mainExecutor
                                         ) { _ -> }
                                     } catch (e: Exception) {
@@ -563,10 +610,12 @@ fun AetherDnsApp() {
                         .clickable {
                             selectedProfileId = profile.id
                             if (hasPermission && isProtectionActive) {
-                                DnsManager.applyPrivateDns(context, profile.hostname)
-                                refreshState()
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
+                                    val result = DnsManager.applyPrivateDns(context, profile.hostname)
+                                    if (result.isSuccess) {
+                                        refreshState()
+                                        snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
+                                    }
                                 }
                             }
                         },
@@ -587,10 +636,12 @@ fun AetherDnsApp() {
                             onClick = {
                                 selectedProfileId = profile.id
                                 if (hasPermission && isProtectionActive) {
-                                    DnsManager.applyPrivateDns(context, profile.hostname)
-                                    refreshState()
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
+                                        val result = DnsManager.applyPrivateDns(context, profile.hostname)
+                                        if (result.isSuccess) {
+                                            refreshState()
+                                            snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
+                                        }
                                     }
                                 }
                             }
@@ -696,23 +747,36 @@ fun AetherDnsApp() {
                                             return@Button
                                         }
 
-                                        val result = DnsManager.applyPrivateDns(context, customHostname.trim())
-                                        if (result.isSuccess) {
-                                            refreshState()
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Hostname kustom diterapkan: $customHostname")
+                                        coroutineScope.launch {
+                                            isProbing = true
+                                            val probe = DotProbe.probe(customHostname.trim())
+                                            isProbing = false
+
+                                            if (probe is DotProbeResult.Failure) {
+                                                snackbarHostState.showSnackbar("Handshake DoT gagal: ${probe.reason}. Dibatalkan demi keamanan DNS.")
+                                                return@launch
                                             }
-                                        } else {
-                                            coroutineScope.launch {
+
+                                            val result = DnsManager.applyPrivateDns(context, customHostname.trim())
+                                            if (result.isSuccess) {
+                                                refreshState()
+                                                snackbarHostState.showSnackbar("Hostname kustom diterapkan: $customHostname")
+                                            } else {
                                                 snackbarHostState.showSnackbar("Gagal: ${result.exceptionOrNull()?.message}")
                                             }
                                         }
                                     },
-                                    enabled = !isCustomInvalid,
+                                    enabled = !isCustomInvalid && !isProbing,
                                     modifier = Modifier.align(Alignment.End),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("Terapkan", fontSize = 12.sp)
+                                    if (isProbing) {
+                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Menguji...", fontSize = 12.sp)
+                                    } else {
+                                        Text("Uji & Terapkan", fontSize = 12.sp)
+                                    }
                                 }
                             }
                         }
