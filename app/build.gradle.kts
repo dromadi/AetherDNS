@@ -12,8 +12,8 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,6 +44,8 @@ android {
 
     buildFeatures {
         compose = true
+        aidl = true
+        buildConfig = true
     }
 }
 
@@ -60,6 +62,10 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.ext)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Shizuku API (Rootless Permission Granter via Wireless Debugging)
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 
     testImplementation("junit:junit:4.13.2")
     debugImplementation(libs.androidx.compose.ui.tooling)

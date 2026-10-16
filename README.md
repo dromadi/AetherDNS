@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.2.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.3.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -6,22 +6,22 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 
 ## Arsitektur & Keunggulan Teknis
 
-1. **Clean Architecture (DnsRepository + MainViewModel + StateFlow)**:
+1. **Aktivasi Tanpa PC via Shizuku (Wireless Debugging Android 11+)**:
+   - Terintegrasi dengan Shizuku API v13 melalui AIDL UserService (`IGrantService.aidl`).
+   - Memberikan izin `WRITE_SECURE_SETTINGS` langsung dari HP tanpa perlu laptop/kabel data.
+   - Menggunakan `daemon(false)` sehingga proses shell langsung berhenti setelah izin diberikan (0% overhead).
+2. **Clean Architecture (DnsRepository + MainViewModel + StateFlow)**:
    - Memisahkan logika bisnis sepenuhnya dari lapisan tampilan Jetpack Compose.
    - Pendaftaran `ContentObserver` pada database `Settings.Global` memastikan status di UI selalu reaktif secara real-time tanpa *polling loop*.
-2. **Zero Battery & Zero RAM Overhead (Native Level)**:
-   - Tidak menggunakan `VpnService` lokal yang mem-parsing paket data di CPU.
-   - Konfigurasi langsung disematkan pada Android OS Network Stack (`Settings.Global.PRIVATE_DNS_MODE` dan `Settings.Global.PRIVATE_DNS_SPECIFIER`).
-   - Sistem operasi Android sendiri yang menjalankan koneksi DoT terenkripsi di port 853 melalui daemon kernel C++ (`netd` / `resolv`).
-   - Setelah proteksi aktif, aplikasi dapat ditutup total dan proteksi tetap aktif 100%.
+   - Mendaftarkan `ConnectivityManager.NetworkCallback` (`onLinkPropertiesChanged`) untuk pembaruan instan status validasi DoT kernel OS.
 3. **Pre-flight DoT Handshake Probe & Hostname Matching (`DotProbe`)**:
    - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
-   - Dilengkapi *self-healing fallback*: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru.
+   - Dilengkapi *self-healing fallback* aman: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru, dilindungi oleh `Mutex` dan blok `finally { NonCancellable }`.
 4. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
-   - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun (tanpa polling background).
+   - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
-   - Jika izin belum diberikan, tile tetap dapat diklik untuk langsung membuka panduan ADB di `MainActivity`.
+   - Jika izin belum diberikan, tile tetap dapat diklik untuk langsung membuka panduan ADB / Shizuku di `MainActivity`.
    - Pada Android 13+, terdapat pintasan langsung untuk menambahkan tile ke Status Bar.
 5. **Verifikasi Status Kernel OS (`LinkProperties`)**:
    - Membaca status `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
@@ -53,23 +53,29 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 ### 1. Unduh & Pasang APK
 Unduh build biner terbaru dari menu **[GitHub Releases](https://github.com/dromadi/AetherDNS/releases)**.
 
-### 2. Aktivasi 1-Klik Otomatis (Izin WRITE_SECURE_SETTINGS)
-Agar aplikasi dapat mengubah pengaturan DNS sistem secara otomatis tanpa perlu membuka menu pengaturan manual, berikan izin ini 1 kali melalui ADB:
+### 2. Cara Aktivasi Izin WRITE_SECURE_SETTINGS
 
-**Untuk Build Debug (APK yang belum ditandatangani keystore release):**
+#### Jalur A: Tanpa PC Menggunakan Shizuku (Rekomendasi)
+1. Pasang dan aktifkan aplikasi **Shizuku** via Wireless Debugging di HP Anda (Android 11+).
+2. Buka **AetherDNS**. Aplikasi akan otomatis mendeteksi status Shizuku.
+3. Tekan tombol **"Berikan Izin Otomatis Sekarang"**. Izin akan aktif secara instan!
+*(Catatan pengguna Xiaomi/HyperOS: Pastikan opsi "USB debugging (Security settings)" aktif di Opsi Pengembang).*
+
+#### Jalur B: Menggunakan Kabel Data & ADB di PC (Fallback)
+Jalankan perintah ini di Command Prompt / Terminal:
+
+**Untuk Build Debug:**
 ```bash
 adb shell pm grant com.security.aetherdns.debug android.permission.WRITE_SECURE_SETTINGS
 ```
 
-**Untuk Build Release (APK production):**
+**Untuk Build Release:**
 ```bash
 adb shell pm grant com.security.aetherdns android.permission.WRITE_SECURE_SETTINGS
 ```
 
-*(Catatan: Aplikasi AetherDNS secara otomatis mendeteksi nama paket yang terpasang dan menampilkan tombol "Salin Perintah ADB" yang langsung sesuai di layar).*
-
 ### 3. Penggunaan Tanpa ADB (Mode Bantuan / Manual)
-Jika belum sempat menghubungkan ke PC:
+Jika belum sempat mengaktifkan izin:
 - Pilih preset DNS yang diinginkan di dalam aplikasi.
 - Klik tombol **"Buka DNS HP"**.
 - Aplikasi otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP untuk di-paste langsung.

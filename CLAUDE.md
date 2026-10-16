@@ -13,17 +13,21 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Aplikasi tidak memproses atau mem-parsing paket data di background.
    - Eksekusi koneksi TLS (port 853) dilakukan langsung oleh daemon C++ (`netd` / `resolv`) bawaan Android kernel.
    - Setelah konfigurasi disetel, aplikasi dapat ditutup sepenuhnya dan proteksi tetap aktif 100%.
-2. **Reaktivitas Tanpa Polling (`ContentObserver`)**:
+2. **Aktivasi Tanpa PC via Shizuku (Wireless Debugging Android 11+)**:
+   - Terintegrasi dengan Shizuku API v13 melalui AIDL UserService (`IGrantService.aidl`).
+   - Berjalan pada proses terpisah dengan UID shell (2000) untuk mengeksekusi `pm grant <packageName> android.permission.WRITE_SECURE_SETTINGS`.
+   - Menggunakan `daemon(false)` sehingga proses shell langsung dimatikan setelah izin diberikan (0% persistent overhead).
+3. **Reaktivitas Tanpa Polling (`ContentObserver` & `NetworkCallback`)**:
    - `DnsRepository` mendaftarkan `ContentObserver` pada database `Settings.Global`. Setiap perubahan DNS dari Settings HP atau Quick Settings Tile langsung memicu pembaruan `StateFlow` secara instan.
-3. **Pre-flight DoT Handshake Probe & Hostname Verifier**:
-   - `DotProbe` menguji handshake TLS port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap Subject Alternative Name (SAN) sertifikat X.509 sebelum menulis ke sistem.
-   - Dilengkapi mekanisme *self-healing*: Jika probe gagal karena resolver lama yang aktif sedang mati/rusak (NXDOMAIN), repository sementara mengalihkan ke mode `opportunistic` agar resolver baru dapat di-resolve dan dipasang.
-4. **Quick Settings Tile (Status Bar 1-Klik)**:
+   - Mendaftarkan `ConnectivityManager.NetworkCallback` (`onLinkPropertiesChanged`) untuk memantau status validasi DoT kernel OS (`isPrivateDnsActive`) secara real-time.
+4. **Pre-flight DoT Handshake Probe & Hostname Verifier**:
+   - `DotProbe` menguji handshake TLS port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap Subject Alternative Name (SAN) sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
+   - Dilengkapi *self-healing* aman: Jika probe gagal karena resolusi DNS mati (`DotProbeCause.RESOLVE`) saat mode strict aktif, repository sementara beralih ke `opportunistic`, melakukan retry bertahap (3x percobaan), dan selalu memulihkan setting di blok `finally { withContext(NonCancellable) { ... } }` jika pemulihan gagal.
+   - Dilindungi `Mutex` untuk mencegah *race condition* akibat penekanan preset ganda secara cepat.
+5. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
-5. **Verifikasi Status Kernel OS Langsung**:
-   - Menggunakan `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
 6. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
@@ -33,22 +37,26 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 
 Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 
-- `AetherDnsApplication.kt`: Application class singleton untuk container dependency injection manual (`dnsRepository`).
+- `AetherDnsApplication.kt`: Application class singleton untuk container dependency injection manual (`dnsRepository`, `permissionGranter`).
+- `shizuku/`:
+  - `IGrantService.aidl`: Interface AIDL transaksi Shizuku (`destroy() = 16777114`, `grantSecureSettings() = 1`).
+  - `GrantService.kt`: Implementasi AIDL yang mengeksekusi `pm grant` di sisi proses ber-UID shell.
+  - `PermissionGranter.kt`: Interface dan implementasi `ShizukuGranter` (`status()`, `requestPermission()`, `grant()`).
 - `data/`:
-  - `DnsState.kt`: Model data immutable untuk merepresentasikan status DoT sistem (`hasPermission`, `mode`, `specifier`, `isProtectionActive`, `isSystemDoTValidated`).
-  - `DnsRepository.kt`: Single source of truth. Mengelola pembacaan/penulisan settings, `ContentObserver`, eksekusi `DotProbe`, dan pemulihan deadlock DNS (*self-healing*).
+  - `DnsState.kt`: Model data immutable untuk status DoT sistem.
+  - `DnsRepository.kt`: Single source of truth. Mengelola pembacaan/penulisan settings, `ContentObserver`, `NetworkCallback`, `Mutex` concurrency, dan pemulihan deadlock DNS (*self-healing*).
 - `model/`:
-  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (AdGuard DNS, AdGuard Family, Mullvad Privacy, Cloudflare Security 1.1.1.2, NextDNS Anycast, dan Hostname Kustom).
+  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles`.
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
-  - `DotProbe.kt`: Pre-flight test koneksi port 853 DoT via SSLSocket + SNI + `HttpsURLConnection.getDefaultHostnameVerifier()`.
+  - `DotProbe.kt`: Pre-flight test koneksi port 853 DoT via SSLSocket + SNI + `HttpsURLConnection.getDefaultHostnameVerifier()` dengan typed `DotProbeCause`.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
-  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`).
+  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
 - `ui/`:
-  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi apply/disable/audit, dan `Channel<UiEvent>` untuk Snackbar.
-  - `AetherDnsApp.kt`: Tampilan deklaratif murni Jetpack Compose (Material 3).
+  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit, dan `Channel<UiEvent>` untuk Snackbar.
+  - `AetherDnsApp.kt`: Tampilan deklaratif Jetpack Compose (Material 3) dengan kartu status Shizuku multi-state.
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
 ---

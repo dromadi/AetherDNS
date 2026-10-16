@@ -6,9 +6,18 @@ import java.net.InetSocketAddress
 import java.security.cert.CertificateException
 import javax.net.ssl.*
 
+enum class DotProbeCause {
+    RESOLVE,
+    TIMEOUT,
+    TLS,
+    CERT_MISMATCH,
+    INVALID_INPUT,
+    OTHER
+}
+
 sealed class DotProbeResult {
     data object Success : DotProbeResult()
-    data class Failure(val reason: String) : DotProbeResult()
+    data class Failure(val cause: DotProbeCause, val reason: String) : DotProbeResult()
 }
 
 object DotProbe {
@@ -23,7 +32,7 @@ object DotProbe {
     suspend fun probe(hostname: String): DotProbeResult = withContext(Dispatchers.IO) {
         val validation = HostnameValidator.validate(hostname)
         if (validation is HostnameValidator.Result.Invalid) {
-            return@withContext DotProbeResult.Failure(validation.reason)
+            return@withContext DotProbeResult.Failure(DotProbeCause.INVALID_INPUT, validation.reason)
         }
         val targetFqdn = (validation as HostnameValidator.Result.Valid).fqdn
 
@@ -47,13 +56,16 @@ object DotProbe {
 
             val session = socket.session
             if (!session.isValid) {
-                return@withContext DotProbeResult.Failure("Sesi TLS tidak valid")
+                return@withContext DotProbeResult.Failure(DotProbeCause.TLS, "Sesi TLS tidak valid")
             }
 
             // Validasi kecocokan hostname target dengan Subject Alternative Name (SAN) / Common Name (CN) di sertifikat
             val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
             if (!verifier.verify(targetFqdn, session)) {
-                return@withContext DotProbeResult.Failure("Sertifikat SSL/TLS yang diterima tidak cocok dengan hostname $targetFqdn")
+                return@withContext DotProbeResult.Failure(
+                    DotProbeCause.CERT_MISMATCH,
+                    "Sertifikat SSL/TLS yang diterima tidak cocok dengan hostname $targetFqdn"
+                )
             }
 
             DotProbeResult.Success
@@ -64,15 +76,15 @@ object DotProbe {
             } else {
                 "Handshake TLS gagal pada port 853: ${e.message}"
             }
-            DotProbeResult.Failure(message)
+            DotProbeResult.Failure(DotProbeCause.TLS, message)
         } catch (e: CertificateException) {
-            DotProbeResult.Failure("Sertifikat SSL/TLS server tidak valid atau kadaluarsa")
+            DotProbeResult.Failure(DotProbeCause.TLS, "Sertifikat SSL/TLS server tidak valid atau kadaluarsa")
         } catch (e: java.net.SocketTimeoutException) {
-            DotProbeResult.Failure("Batas waktu terlampaui (Timeout): Server tidak merespons di port 853")
+            DotProbeResult.Failure(DotProbeCause.TIMEOUT, "Batas waktu terlampaui (Timeout): Server tidak merespons di port 853")
         } catch (e: java.net.UnknownHostException) {
-            DotProbeResult.Failure("Hostname tidak dapat di-resolve (NXDOMAIN)")
+            DotProbeResult.Failure(DotProbeCause.RESOLVE, "Hostname tidak dapat di-resolve (NXDOMAIN)")
         } catch (e: Exception) {
-            DotProbeResult.Failure("Gagal terhubung ke port 853: ${e.javaClass.simpleName} - ${e.message}")
+            DotProbeResult.Failure(DotProbeCause.OTHER, "Gagal terhubung ke port 853: ${e.javaClass.simpleName} - ${e.message}")
         } finally {
             try {
                 socket?.close()

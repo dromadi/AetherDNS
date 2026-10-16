@@ -8,6 +8,11 @@
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Query Shizuku application for Android 11+ package visibility -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
     <application
         android:name=".AetherDnsApplication"
         android:allowBackup="true"
@@ -27,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Quick Settings Tile Service (Standard tile without ACTIVE_TILE so onStartListening fires on panel open) -->
+        <!-- Quick Settings Tile Service -->
         <service
             android:name=".service.AetherDnsTileService"
             android:icon="@drawable/ic_tile_shield"
@@ -38,6 +43,15 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- Shizuku Provider (Dynamic authority matching debug & release package) -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 
 </manifest>

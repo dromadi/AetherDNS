@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.service.AetherDnsTileService
+import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.ui.theme.*
 import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.HostnameValidator
@@ -42,7 +43,9 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     val dnsState by viewModel.dnsState.collectAsState()
+    val shizukuStatus by viewModel.shizukuStatus.collectAsState()
     val isProbing by viewModel.isProbing.collectAsState()
+    val isGranting by viewModel.isGranting.collectAsState()
     val isAuditing by viewModel.isAuditing.collectAsState()
     val auditSummary by viewModel.auditSummary.collectAsState()
 
@@ -84,7 +87,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             fontSize = 20.sp
                         )
                         Text(
-                            text = "Native DoT & Ad-Sinkhole Controller (v1.2.0)",
+                            text = "Native DoT & Ad-Sinkhole Controller (v1.3.0)",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -406,7 +409,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 }
             }
 
-            // 3. Setup Assistant / Guide Card (If permission is NOT granted)
+            // 3. Setup Assistant / Guide Card with Shizuku (If permission is NOT granted)
             if (!dnsState.hasPermission) {
                 item {
                     Card(
@@ -415,30 +418,142 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         colors = CardDefaults.cardColors(containerColor = WarningOrangeLight)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            // Section A: Aktivasi Langsung di HP via Shizuku (Wireless Debugging)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.Info,
+                                    imageVector = Icons.Default.Bolt,
                                     contentDescription = null,
-                                    tint = WarningOrange,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(22.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Aktivasi 1-Klik Tanpa Root (ADB)",
+                                    text = "Aktivasi Langsung di HP (Tanpa PC)",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = WarningOrange
+                                    fontSize = 15.sp,
+                                    color = PrimaryBlue
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Agar aplikasi dapat mengontrol DNS bawaan Android langsung (0% konsumsi baterai & RAM), berikan izin WRITE_SECURE_SETTINGS 1 kali melalui ADB di PC atau Shizuku/Termux:",
+                                text = "AetherDNS mendukung aktivasi otomatis melalui Shizuku menggunakan Wireless Debugging (Android 11+). Cukup 1 kali aktivasi.",
                                 fontSize = 12.sp,
                                 color = Color(0xFF424242)
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
+
+                            // Shizuku State Card
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Status Shizuku:", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = when (shizukuStatus) {
+                                                GranterStatus.READY -> SuccessGreen.copy(alpha = 0.15f)
+                                                GranterStatus.NEEDS_AUTHORIZATION -> WarningOrange.copy(alpha = 0.15f)
+                                                else -> MaterialTheme.colorScheme.surfaceVariant
+                                            }
+                                        ) {
+                                            Text(
+                                                text = when (shizukuStatus) {
+                                                    GranterStatus.READY -> "Siap Terhubung"
+                                                    GranterStatus.NEEDS_AUTHORIZATION -> "Perlu Otorisasi"
+                                                    GranterStatus.NOT_RUNNING -> "Belum Berjalan"
+                                                    GranterStatus.NOT_INSTALLED -> "Belum Terpasang"
+                                                    GranterStatus.UNSUPPORTED -> "Versi Tidak Didukung"
+                                                },
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = when (shizukuStatus) {
+                                                    GranterStatus.READY -> SuccessGreen
+                                                    GranterStatus.NEEDS_AUTHORIZATION -> WarningOrange
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                },
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = when (shizukuStatus) {
+                                            GranterStatus.READY -> "Layanan Shizuku aktif. Tekan tombol di bawah untuk memberikan izin secara instan."
+                                            GranterStatus.NEEDS_AUTHORIZATION -> "Shizuku sedang aktif. Izinkan AetherDNS untuk meminta izin WRITE_SECURE_SETTINGS."
+                                            GranterStatus.NOT_RUNNING -> "Aplikasi Shizuku terpasang di HP Anda. Buka aplikasi Shizuku lalu tekan 'Start' via Wireless Debugging."
+                                            GranterStatus.NOT_INSTALLED -> "Pasang aplikasi Shizuku (Google Play / GitHub) untuk mengaktifkan izin tanpa bantuan komputer."
+                                            GranterStatus.UNSUPPORTED -> "Perbarui aplikasi Shizuku ke versi 11+."
+                                        },
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    if (shizukuStatus == GranterStatus.READY || shizukuStatus == GranterStatus.NEEDS_AUTHORIZATION) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Button(
+                                            onClick = { viewModel.grantViaShizuku() },
+                                            enabled = !isGranting,
+                                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            if (isGranting) {
+                                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Memproses Izin...", fontSize = 12.sp)
+                                            } else {
+                                                Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (shizukuStatus == GranterStatus.READY) "Berikan Izin Otomatis Sekarang" else "Izinkan AetherDNS di Shizuku",
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "💡 Pengguna Xiaomi / MIUI / HyperOS: Pastikan opsi 'USB debugging (Security settings)' di Opsi Pengembang aktif sebelum grant.",
+                                fontSize = 10.sp,
+                                color = Color(0xFF616161)
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Section B: Perintah ADB Manual via PC
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Terminal,
+                                    contentDescription = null,
+                                    tint = WarningOrange,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Atau Jalankan Perintah ADB Manual (PC)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = WarningOrange
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
                             val adbCommand = "adb shell pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS"
 
                             Surface(
@@ -476,7 +591,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -488,7 +603,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 ) {
                                     Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Cek Ulang Izin", fontSize = 11.sp)
+                                    Text("Cek Ulang", fontSize = 11.sp)
                                 }
 
                                 Button(
