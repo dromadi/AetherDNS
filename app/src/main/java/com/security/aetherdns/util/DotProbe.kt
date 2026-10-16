@@ -4,11 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.security.cert.CertificateException
-import javax.net.ssl.SNIHostName
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLException
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.*
 
 sealed class DotProbeResult {
     data object Success : DotProbeResult()
@@ -20,7 +16,8 @@ object DotProbe {
     private const val TIMEOUT_MS = 3500
 
     /**
-     * Melakukan uji koneksi TLS handshake ke server DoT port 853 dengan verifikasi sertifikat X.509 dan SNI.
+     * Melakukan uji koneksi TLS handshake ke server DoT port 853 dengan verifikasi sertifikat X.509,
+     * Server Name Indication (SNI), dan pencocokan Hostname Verifier (SAN / CN).
      * Mencegah pemutusan total DNS sistem akibat memasukkan hostname yang tidak melayani DoT.
      */
     suspend fun probe(hostname: String): DotProbeResult = withContext(Dispatchers.IO) {
@@ -53,11 +50,23 @@ object DotProbe {
                 return@withContext DotProbeResult.Failure("Sesi TLS tidak valid")
             }
 
+            // Validasi kecocokan hostname target dengan Subject Alternative Name (SAN) / Common Name (CN) di sertifikat
+            val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
+            if (!verifier.verify(targetFqdn, session)) {
+                return@withContext DotProbeResult.Failure("Sertifikat SSL/TLS yang diterima tidak cocok dengan hostname $targetFqdn")
+            }
+
             DotProbeResult.Success
+        } catch (e: SSLException) {
+            val rootCause = e.cause
+            val message = if (rootCause is CertificateException) {
+                "Sertifikat SSL/TLS tidak tepercaya atau kadaluarsa (${rootCause.message})"
+            } else {
+                "Handshake TLS gagal pada port 853: ${e.message}"
+            }
+            DotProbeResult.Failure(message)
         } catch (e: CertificateException) {
             DotProbeResult.Failure("Sertifikat SSL/TLS server tidak valid atau kadaluarsa")
-        } catch (e: SSLException) {
-            DotProbeResult.Failure("Handshake TLS gagal pada port 853: ${e.message}")
         } catch (e: java.net.SocketTimeoutException) {
             DotProbeResult.Failure("Batas waktu terlampaui (Timeout): Server tidak merespons di port 853")
         } catch (e: java.net.UnknownHostException) {

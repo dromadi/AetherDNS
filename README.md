@@ -1,31 +1,35 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.1.1)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.2.0)
 
-AetherDNS adalah aplikasi Android modern (Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
+AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
 ---
 
 ## Arsitektur & Keunggulan Teknis
 
-1. **Zero Battery & Zero RAM Overhead (Native Level)**:
+1. **Clean Architecture (DnsRepository + MainViewModel + StateFlow)**:
+   - Memisahkan logika bisnis sepenuhnya dari lapisan tampilan Jetpack Compose.
+   - Pendaftaran `ContentObserver` pada database `Settings.Global` memastikan status di UI selalu reaktif secara real-time tanpa *polling loop*.
+2. **Zero Battery & Zero RAM Overhead (Native Level)**:
    - Tidak menggunakan `VpnService` lokal yang mem-parsing paket data di CPU.
    - Konfigurasi langsung disematkan pada Android OS Network Stack (`Settings.Global.PRIVATE_DNS_MODE` dan `Settings.Global.PRIVATE_DNS_SPECIFIER`).
    - Sistem operasi Android sendiri yang menjalankan koneksi DoT terenkripsi di port 853 melalui daemon kernel C++ (`netd` / `resolv`).
    - Setelah proteksi aktif, aplikasi dapat ditutup total dan proteksi tetap aktif 100%.
-2. **Quick Settings Tile (Status Bar 1-Klik)**:
+3. **Pre-flight DoT Handshake Probe & Hostname Matching (`DotProbe`)**:
+   - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
+   - Dilengkapi *self-healing fallback*: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru.
+4. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun (tanpa polling background).
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
    - Jika izin belum diberikan, tile tetap dapat diklik untuk langsung membuka panduan ADB di `MainActivity`.
    - Pada Android 13+, terdapat pintasan langsung untuk menambahkan tile ke Status Bar.
-3. **Pre-flight DoT Handshake Probe (`DotProbe`)**:
-   - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi sertifikat X.509 sebelum menulis ke sistem, melindungi HP pengguna dari kegagalan total resolusi DNS.
-4. **Verifikasi Status Kernel OS (`LinkProperties`)**:
+5. **Verifikasi Status Kernel OS (`LinkProperties`)**:
    - Membaca status `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
-5. **Bebas Monopoli Slot VPN**:
+6. **Bebas Monopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-6. **Validasi Ketat Hostname FQDN**:
+7. **Validasi Ketat Hostname FQDN**:
    - Dilengkapi `HostnameValidator` untuk menolak format URL (`https://`), path/query, port/IPv6, dan raw IP address, serta menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
-7. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
+8. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
    - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
 

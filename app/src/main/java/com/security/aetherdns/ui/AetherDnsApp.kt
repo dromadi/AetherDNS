@@ -24,62 +24,46 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.security.aetherdns.model.DefaultProfiles
-import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.service.AetherDnsTileService
 import com.security.aetherdns.ui.theme.*
-import com.security.aetherdns.util.*
-import kotlinx.coroutines.launch
+import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.HostnameValidator
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AetherDnsApp() {
+fun AetherDnsApp(viewModel: MainViewModel) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // State management
-    var hasPermission by remember { mutableStateOf(DnsManager.hasSecurePermission(context)) }
-    var currentMode by remember { mutableStateOf(DnsManager.getPrivateDnsMode(context)) }
-    var currentSpecifier by remember { mutableStateOf(DnsManager.getPrivateDnsSpecifier(context)) }
-    var systemLinkProperties by remember { mutableStateOf(DnsManager.getSystemLinkPropertiesStatus(context)) }
-    var isProbing by remember { mutableStateOf(false) }
+    val dnsState by viewModel.dnsState.collectAsState()
+    val isProbing by viewModel.isProbing.collectAsState()
+    val isAuditing by viewModel.isAuditing.collectAsState()
+    val auditSummary by viewModel.auditSummary.collectAsState()
 
-    fun refreshState() {
-        hasPermission = DnsManager.hasSecurePermission(context)
-        currentMode = DnsManager.getPrivateDnsMode(context)
-        currentSpecifier = DnsManager.getPrivateDnsSpecifier(context)
-        systemLinkProperties = DnsManager.getSystemLinkPropertiesStatus(context)
-    }
-
-    // Refresh state otomatis setiap kali aplikasi kembali ke foreground (ON_RESUME)
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshState()
+    // Handle snackbar events from ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
             }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
     }
 
-    var selectedProfileId by remember {
-        val matched = DefaultProfiles.list.find { it.hostname.equals(currentSpecifier, ignoreCase = true) }
-        mutableStateOf(matched?.id ?: if (currentSpecifier.isNotBlank()) "custom" else "adguard_default")
+    var selectedProfileId by remember(dnsState.specifier) {
+        val matched = DefaultProfiles.list.find { it.hostname.equals(dnsState.specifier, ignoreCase = true) }
+        mutableStateOf(matched?.id ?: if (dnsState.specifier.isNotBlank()) "custom" else "adguard_default")
     }
 
-    var customHostname by remember {
-        mutableStateOf(if (selectedProfileId == "custom") currentSpecifier else "")
+    var customHostname by remember(dnsState.specifier) {
+        mutableStateOf(if (selectedProfileId == "custom") dnsState.specifier else "")
     }
 
     val customValidation = remember(customHostname) {
@@ -87,12 +71,6 @@ fun AetherDnsApp() {
     }
     val isCustomInvalid = customValidation is HostnameValidator.Result.Invalid
     val customErrorReason = (customValidation as? HostnameValidator.Result.Invalid)?.reason ?: ""
-
-    // Live Audit State
-    var isAuditing by remember { mutableStateOf(false) }
-    var auditSummary by remember { mutableStateOf<AuditSummary?>(null) }
-
-    val isProtectionActive = DnsManager.isProtectionActive(context)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -106,7 +84,7 @@ fun AetherDnsApp() {
                             fontSize = 20.sp
                         )
                         Text(
-                            text = "Native DoT & Ad-Sinkhole Controller (v1.1.1)",
+                            text = "Native DoT & Ad-Sinkhole Controller (v1.2.0)",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -115,7 +93,7 @@ fun AetherDnsApp() {
                 actions = {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (hasPermission) SuccessGreen.copy(alpha = 0.15f) else WarningOrange.copy(alpha = 0.15f),
+                        color = if (dnsState.hasPermission) SuccessGreen.copy(alpha = 0.15f) else WarningOrange.copy(alpha = 0.15f),
                         modifier = Modifier.padding(end = 12.dp)
                     ) {
                         Row(
@@ -126,14 +104,14 @@ fun AetherDnsApp() {
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(if (hasPermission) SuccessGreen else WarningOrange)
+                                    .background(if (dnsState.hasPermission) SuccessGreen else WarningOrange)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (hasPermission) "Mode Native Aktif" else "Perlu Izin ADB",
+                                text = if (dnsState.hasPermission) "Mode Native Aktif" else "Perlu Izin ADB",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (hasPermission) SuccessGreen else WarningOrange
+                                color = if (dnsState.hasPermission) SuccessGreen else WarningOrange
                             )
                         }
                     }
@@ -154,7 +132,7 @@ fun AetherDnsApp() {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isProtectionActive) PrimaryBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = if (dnsState.isProtectionActive) PrimaryBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Column(
@@ -168,15 +146,15 @@ fun AetherDnsApp() {
                                 .size(72.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isProtectionActive) SuccessGreen.copy(alpha = 0.15f)
+                                    if (dnsState.isProtectionActive) SuccessGreen.copy(alpha = 0.15f)
                                     else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = if (isProtectionActive) Icons.Default.Shield else Icons.Default.GppBad,
+                                imageVector = if (dnsState.isProtectionActive) Icons.Default.Shield else Icons.Default.GppBad,
                                 contentDescription = null,
-                                tint = if (isProtectionActive) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (dnsState.isProtectionActive) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(40.dp)
                             )
                         }
@@ -184,25 +162,24 @@ fun AetherDnsApp() {
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = if (isProtectionActive) "Proteksi DNS Aktif" else "Proteksi Nonaktif",
+                            text = if (dnsState.isProtectionActive) "Proteksi DNS Aktif" else "Proteksi Nonaktif",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = if (isProtectionActive) SuccessGreen else MaterialTheme.colorScheme.onSurface
+                            color = if (dnsState.isProtectionActive) SuccessGreen else MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
-                            text = if (isProtectionActive) currentSpecifier else "Sistem menggunakan DNS default bawaan ISP",
+                            text = if (dnsState.isProtectionActive) dnsState.specifier else "Sistem menggunakan DNS default bawaan ISP",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
                         // Indikator Validasi Kernel OS (LinkProperties API 28+)
-                        if (isProtectionActive) {
-                            val (isSystemValidated, validatedServer) = systemLinkProperties
+                        if (dnsState.isProtectionActive) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isSystemValidated) SuccessGreen.copy(alpha = 0.12f) else WarningOrange.copy(alpha = 0.12f),
+                                color = if (dnsState.isSystemDoTValidated) SuccessGreen.copy(alpha = 0.12f) else WarningOrange.copy(alpha = 0.12f),
                                 modifier = Modifier.padding(top = 8.dp)
                             ) {
                                 Row(
@@ -210,20 +187,20 @@ fun AetherDnsApp() {
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (isSystemValidated) Icons.Default.CheckCircle else Icons.Default.Sync,
+                                        imageVector = if (dnsState.isSystemDoTValidated) Icons.Default.CheckCircle else Icons.Default.Sync,
                                         contentDescription = null,
-                                        tint = if (isSystemValidated) SuccessGreen else WarningOrange,
+                                        tint = if (dnsState.isSystemDoTValidated) SuccessGreen else WarningOrange,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isSystemValidated)
-                                            "OS Kernel: DoT Terenkripsi (${validatedServer ?: currentSpecifier})"
+                                        text = if (dnsState.isSystemDoTValidated)
+                                            "OS Kernel: DoT Terenkripsi (${dnsState.validatedServerName ?: dnsState.specifier})"
                                         else
                                             "OS Kernel: Sedang memvalidasi handshake TLS...",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (isSystemValidated) SuccessGreen else WarningOrange
+                                        color = if (dnsState.isSystemDoTValidated) SuccessGreen else WarningOrange
                                     )
                                 }
                             }
@@ -234,60 +211,25 @@ fun AetherDnsApp() {
                         // Big Toggle Button with Pre-flight DoT Probe
                         Button(
                             onClick = {
-                                if (!hasPermission) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Izin WRITE_SECURE_SETTINGS diperlukan untuk switch otomatis.")
-                                    }
+                                if (!dnsState.hasPermission) {
+                                    Toast.makeText(context, "Izin WRITE_SECURE_SETTINGS diperlukan", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
 
-                                if (isProtectionActive) {
-                                    val result = DnsManager.disablePrivateDns(context)
-                                    if (result.isSuccess) {
-                                        refreshState()
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Proteksi DNS dinonaktifkan")
-                                        }
-                                    }
+                                if (dnsState.isProtectionActive) {
+                                    viewModel.disableDns()
                                 } else {
                                     val targetHostname = if (selectedProfileId == "custom") {
                                         customHostname.trim()
                                     } else {
                                         DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
                                     }
-
-                                    val validation = HostnameValidator.validate(targetHostname)
-                                    if (validation is HostnameValidator.Result.Invalid) {
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Format Hostname tidak valid: ${validation.reason}")
-                                        }
-                                        return@Button
-                                    }
-
-                                    coroutineScope.launch {
-                                        isProbing = true
-                                        // Uji pre-flight DoT handshake ke port 853 sebelum mengubah mode strict
-                                        val probe = DotProbe.probe(targetHostname)
-                                        isProbing = false
-
-                                        if (probe is DotProbeResult.Failure) {
-                                            snackbarHostState.showSnackbar("Handshake DoT gagal: ${probe.reason}. Dibatalkan demi keamanan DNS.")
-                                            return@launch
-                                        }
-
-                                        val result = DnsManager.applyPrivateDns(context, targetHostname)
-                                        if (result.isSuccess) {
-                                            refreshState()
-                                            snackbarHostState.showSnackbar("Proteksi DNS berhasil diaktifkan ke $targetHostname")
-                                        } else {
-                                            snackbarHostState.showSnackbar("Gagal: ${result.exceptionOrNull()?.message}")
-                                        }
-                                    }
+                                    viewModel.applyDns(targetHostname, probe = true)
                                 }
                             },
                             enabled = !isProbing,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isProtectionActive) ErrorRed else PrimaryBlue
+                                containerColor = if (dnsState.isProtectionActive) ErrorRed else PrimaryBlue
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -300,13 +242,13 @@ fun AetherDnsApp() {
                                 Text("Menguji Handshake DoT...", fontWeight = FontWeight.SemiBold)
                             } else {
                                 Icon(
-                                    imageVector = if (isProtectionActive) Icons.Default.PowerSettingsNew else Icons.Default.Bolt,
+                                    imageVector = if (dnsState.isProtectionActive) Icons.Default.PowerSettingsNew else Icons.Default.Bolt,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
+                                    text = if (dnsState.isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -369,13 +311,7 @@ fun AetherDnsApp() {
                             }
 
                             FilledTonalButton(
-                                onClick = {
-                                    isAuditing = true
-                                    coroutineScope.launch {
-                                        auditSummary = DnsAuditor.runAudit()
-                                        isAuditing = false
-                                    }
-                                },
+                                onClick = { viewModel.runAudit() },
                                 enabled = !isAuditing,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
@@ -471,7 +407,7 @@ fun AetherDnsApp() {
             }
 
             // 3. Setup Assistant / Guide Card (If permission is NOT granted)
-            if (!hasPermission) {
+            if (!dnsState.hasPermission) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -503,7 +439,6 @@ fun AetherDnsApp() {
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
-                            // Dynamic package name to match debug or release build automatically
                             val adbCommand = "adb shell pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS"
 
                             Surface(
@@ -547,7 +482,7 @@ fun AetherDnsApp() {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 OutlinedButton(
-                                    onClick = { refreshState() },
+                                    onClick = { viewModel.refresh() },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -609,14 +544,8 @@ fun AetherDnsApp() {
                         .fillMaxWidth()
                         .clickable {
                             selectedProfileId = profile.id
-                            if (hasPermission && isProtectionActive) {
-                                coroutineScope.launch {
-                                    val result = DnsManager.applyPrivateDns(context, profile.hostname)
-                                    if (result.isSuccess) {
-                                        refreshState()
-                                        snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
-                                    }
-                                }
+                            if (dnsState.hasPermission && dnsState.isProtectionActive) {
+                                viewModel.applyDns(profile.hostname, probe = true)
                             }
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -635,14 +564,8 @@ fun AetherDnsApp() {
                             selected = isSelected,
                             onClick = {
                                 selectedProfileId = profile.id
-                                if (hasPermission && isProtectionActive) {
-                                    coroutineScope.launch {
-                                        val result = DnsManager.applyPrivateDns(context, profile.hostname)
-                                        if (result.isSuccess) {
-                                            refreshState()
-                                            snackbarHostState.showSnackbar("Beralih ke ${profile.name}")
-                                        }
-                                    }
+                                if (dnsState.hasPermission && dnsState.isProtectionActive) {
+                                    viewModel.applyDns(profile.hostname, probe = true)
                                 }
                             }
                         )
@@ -736,35 +659,15 @@ fun AetherDnsApp() {
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            if (hasPermission && isProtectionActive && customHostname.isNotBlank()) {
+                            if (dnsState.hasPermission && dnsState.isProtectionActive && customHostname.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = {
                                         if (isCustomInvalid) {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Format Hostname tidak valid: $customErrorReason")
-                                            }
+                                            Toast.makeText(context, "Format Hostname tidak valid: $customErrorReason", Toast.LENGTH_SHORT).show()
                                             return@Button
                                         }
-
-                                        coroutineScope.launch {
-                                            isProbing = true
-                                            val probe = DotProbe.probe(customHostname.trim())
-                                            isProbing = false
-
-                                            if (probe is DotProbeResult.Failure) {
-                                                snackbarHostState.showSnackbar("Handshake DoT gagal: ${probe.reason}. Dibatalkan demi keamanan DNS.")
-                                                return@launch
-                                            }
-
-                                            val result = DnsManager.applyPrivateDns(context, customHostname.trim())
-                                            if (result.isSuccess) {
-                                                refreshState()
-                                                snackbarHostState.showSnackbar("Hostname kustom diterapkan: $customHostname")
-                                            } else {
-                                                snackbarHostState.showSnackbar("Gagal: ${result.exceptionOrNull()?.message}")
-                                            }
-                                        }
+                                        viewModel.applyDns(customHostname.trim(), probe = true)
                                     },
                                     enabled = !isCustomInvalid && !isProbing,
                                     modifier = Modifier.align(Alignment.End),
