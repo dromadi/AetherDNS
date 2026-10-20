@@ -97,7 +97,7 @@ Jika belum sempat mengaktifkan izin:
 ## Pengujian
 
 - `./gradlew testDebugUnitTest` — unit test (logika apply, self-healing, jeda, parser DNS, validator, dsb.).
-- `AETHERDNS_LIVE_DOT=1 ./gradlew testDebugUnitTest --tests 'com.security.aetherdns.live.*'` — uji DoT terhadap resolver sungguhan (butuh akses port 853). Dijalankan otomatis oleh job CI `live-dot`.
+- `AETHERDNS_LIVE_DOT=1 ./gradlew testDebugUnitTest --tests 'com.security.aetherdns.live.*'` — uji DoT terhadap resolver sungguhan (butuh akses port 853). Dijalankan otomatis oleh workflow `Live DoT` di setiap PR dan setiap Senin; tabel latensi dan filter per resolver tampil di ringkasan job.
 - [`docs/TESTING.md`](docs/TESTING.md) — checklist uji di HP sebelum rilis (Shizuku, jeda + reboot, tile, shortcut, bahasa).
 
 ## Rilis Otomatis (Maintainer)

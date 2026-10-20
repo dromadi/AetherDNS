@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
 import org.junit.Test
+import java.io.File
 import java.security.cert.X509Certificate
 import javax.net.ssl.HostnameVerifier
 
@@ -50,7 +51,24 @@ class LiveDotProbeTest {
 
     private val client = DotProbeClient(sanVerifier)
 
-    private fun inspect(host: String) = runBlocking { client.inspect(host) }
+    /**
+     * Menambahkan satu baris tabel Markdown ke file di env `AETHERDNS_LIVE_REPORT` (bila diset),
+     * sebelum assertion, sehingga resolver yang gagal pun tercatat di ringkasan job CI.
+     */
+    private fun report(host: String, result: InspectionResult) {
+        val path = System.getenv("AETHERDNS_LIVE_REPORT") ?: return
+        val row = when (result) {
+            is InspectionResult.Success -> with(result) {
+                "| `$host` | ✅ | ${latency.totalMs} ms (TLS ${latency.handshakeMs} + query ${latency.queryMs}) | " +
+                    "${filter.blocked.size}/${filter.tested} diblokir" +
+                    (if (filter.unknown.isNotEmpty()) ", ${filter.unknown.size} tidak pasti" else "") + " |"
+            }
+            is InspectionResult.Failure -> "| `$host` | ❌ | — | ${result.failure.cause}${result.failure.detail?.let { ": $it" } ?: ""} |"
+        }
+        File(path).apply { parentFile?.mkdirs() }.appendText(row + "\n")
+    }
+
+    private fun inspect(host: String) = runBlocking { client.inspect(host) }.also { report(host, it) }
 
     private fun successOf(host: String): InspectionResult.Success {
         val result = inspect(host)

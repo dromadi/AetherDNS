@@ -110,7 +110,11 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 .\gradlew.bat clean
 ```
 
-> **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, dan `assembleRelease` pada setiap push ke `main` dan pull request. Job `live-dot` (non-blocking) menjalankan `app/src/test/.../live/LiveDotProbeTest.kt` terhadap resolver DoT sungguhan dengan env `AETHERDNS_LIVE_DOT=1`; tanpa env itu test di-skip.
+> **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, dan `lintDebug` pada setiap push ke `main` dan pull request.
+>
+> **Live DoT**: `.github/workflows/live-dot.yml` menjalankan `app/src/test/.../live/LiveDotProbeTest.kt` terhadap resolver DoT sungguhan (env `AETHERDNS_LIVE_DOT=1`; tanpa env itu test di-skip) dan menulis tabel latensi + filter per resolver ke ringkasan job (env `AETHERDNS_LIVE_REPORT`). Tidak memblokir di PR/push; berjalan mingguan (Senin 03:17 UTC) dan manual, dan gagal secara terlihat di sana agar perubahan hostname/blocklist preset cepat ketahuan.
+>
+> **Actions**: gunakan versi mayor berbasis Node 24 (`checkout@v7`, `setup-java@v6`, `upload-artifact@v7`, `setup-gradle@v6` dengan `cache-provider: basic`, `action-gh-release@v3`).
 >
 > **Uji perangkat**: ikuti `docs/TESTING.md` sebelum membuat tag rilis.
 >
