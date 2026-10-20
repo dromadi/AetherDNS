@@ -28,15 +28,17 @@ jobs:
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
-      - name: Build debug & release (R8)
-        run: ./gradlew --no-daemon assembleDebug assembleRelease
+      - name: Build debug & release (R8) + lint
+        run: ./gradlew --no-daemon assembleDebug assembleRelease lintDebug
 
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -44,3 +46,32 @@ jobs:
           name: aetherdns-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
+
+  # Uji DoT terhadap resolver sungguhan (AdGuard, Mullvad, Cloudflare, NextDNS) melalui port 853.
+  # Tidak memblokir PR: resolver publik bisa sedang gangguan atau mengubah blocklist.
+  live-dot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Live DoT probe & filter tests
+        env:
+          AETHERDNS_LIVE_DOT: '1'
+        run: ./gradlew --no-daemon testDebugUnitTest --tests 'com.security.aetherdns.live.*'
+
+      - name: Upload live test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-dot-report
+          path: app/build/test-results/testDebugUnitTest/

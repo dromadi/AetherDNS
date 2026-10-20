@@ -18,6 +18,8 @@
     <application
         android:name=".AetherDnsApplication"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/ic_shield_logo"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
@@ -34,6 +36,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Target App Shortcuts: transparan, tanpa UI, tidak muncul di Recents; tidak diekspor ke aplikasi lain -->
+        <activity
+            android:name=".shortcut.ShortcutActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- Quick Settings Tile Service -->
         <service

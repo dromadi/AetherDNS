@@ -58,12 +58,33 @@ fun interface ResolverInspector {
     suspend fun inspect(hostname: String): InspectionResult
 }
 
-object DotProbe : DotProber, ResolverInspector {
-    private const val DOT_PORT = 853
-    private const val TIMEOUT_MS = 3500
+/** Instance default yang dipakai aplikasi (hostname verifier bawaan Android). */
+object DotProbe : DotProber by DotProbeClient.default, ResolverInspector by DotProbeClient.default
 
-    /** Domain kanari yang tidak masuk blocklist resolver filtering mana pun. */
-    private const val CANARY_DOMAIN = "example.com"
+/**
+ * Klien DoT. [hostnameVerifier] dapat diganti untuk pengujian di JVM desktop, karena di sana
+ * `HttpsURLConnection.getDefaultHostnameVerifier()` selalu menolak (JDK memverifikasi hostname di tempat lain);
+ * di Android verifier default memeriksa SAN/CN sertifikat dengan benar.
+ */
+class DotProbeClient(
+    private val hostnameVerifier: HostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
+) : DotProber, ResolverInspector {
+
+    companion object {
+        private const val DOT_PORT = 853
+        private const val TIMEOUT_MS = 3500
+
+        /** Domain kanari yang tidak masuk blocklist resolver filtering mana pun. */
+        private const val CANARY_DOMAIN = "example.com"
+
+        internal val default by lazy { DotProbeClient() }
+
+        private fun rcodeName(rcode: Int): String = when (rcode) {
+            DnsWireFormat.RCODE_SERVFAIL -> "SERVFAIL"
+            DnsWireFormat.RCODE_REFUSED -> "REFUSED"
+            else -> "RCODE $rcode"
+        }
+    }
 
     /**
      * Pre-flight test resolver DoT:
@@ -169,7 +190,7 @@ object DotProbe : DotProber, ResolverInspector {
             }
 
             // Validasi kecocokan hostname target dengan Subject Alternative Name (SAN) / Common Name (CN) di sertifikat
-            if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(targetFqdn, session)) {
+            if (!hostnameVerifier.verify(targetFqdn, session)) {
                 return@withContext onFailure(DotProbeResult.Failure(DotProbeCause.CERT_MISMATCH, targetFqdn))
             }
 
@@ -194,11 +215,5 @@ object DotProbe : DotProber, ResolverInspector {
                 socket?.close()
             } catch (_: Exception) {}
         }
-    }
-
-    private fun rcodeName(rcode: Int): String = when (rcode) {
-        DnsWireFormat.RCODE_SERVFAIL -> "SERVFAIL"
-        DnsWireFormat.RCODE_REFUSED -> "REFUSED"
-        else -> "RCODE $rcode"
     }
 }

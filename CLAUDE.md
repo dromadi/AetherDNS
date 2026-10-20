@@ -43,7 +43,11 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Semua teks UI berada di `res/values/strings.xml` (English, default) dan `res/values-in/strings.xml` (Indonesia). Per-app language Android 13+ via `res/xml/locales_config.xml`.
    - Lapisan domain/data **tidak** berisi teks untuk pengguna: kegagalan dikembalikan sebagai tipe (`HostnameError`, `ApplyError`, `PauseError`, `ProfileError`, `GrantError`, `DotProbeCause`, `AuditOutcome`) lalu dipetakan ke resource di `ui/UiText.kt`. ViewModel mengirim `UiText`, bukan `String`.
    - Saat menambah teks baru: tambahkan kunci di **kedua** file strings.xml dengan argumen format yang sama.
-9. **Tidak Memonopoli Slot VPN**:
+9. **App Shortcuts (Dinamis)**:
+   - `AppShortcuts.publish()` (dipanggil di `MainActivity.onCreate`) mendaftarkan shortcut Aktifkan / Jeda 15 menit / Matikan via `ShortcutManager`. Dinamis, bukan `shortcuts.xml`, karena `targetPackage` statis tidak bisa mengikuti sufiks `.debug`.
+   - Target-nya `ShortcutActivity` (transparan, `exported=false`, tanpa UI) yang memanggil `DnsRepository` lalu menampilkan Toast.
+10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state` dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
+11. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
 ---
@@ -69,7 +73,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (nama/kategori/deskripsi preset via `@StringRes`).
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
-  - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi; mengimplementasikan interface `DotProber`.
+  - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi. `DotProbeClient` menerima `HostnameVerifier` (verifier default `HttpsURLConnection` selalu menolak di JVM desktop); `object DotProbe` adalah instance default untuk aplikasi.
   - `NextDnsHostname.kt`: Penyusun hostname DoT NextDNS dari Config ID + nama perangkat opsional.
   - `DnsWireFormat.kt`: Encoder query, decoder header, dan parser record A (dengan kompresi nama) pesan DNS (RFC 1035).
   - `AdTestDomains.kt`: Daftar domain iklan uji bersama (audit & pratinjau filter) dan `FilterVerdict`.
@@ -77,6 +81,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
+- `shortcut/`:
+  - `AppShortcuts.kt`, `ShortcutActivity.kt`: App Shortcuts dinamis dan activity transparan pelaksananya.
 - `receiver/`:
   - `PauseResumeReceiver.kt`: Mengaktifkan kembali proteksi setelah jeda / boot (`goAsync`, tanpa service).
 - `ui/`:
@@ -104,7 +110,9 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 .\gradlew.bat clean
 ```
 
-> **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, dan `assembleRelease` pada setiap push ke `main` dan pull request.
+> **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, dan `assembleRelease` pada setiap push ke `main` dan pull request. Job `live-dot` (non-blocking) menjalankan `app/src/test/.../live/LiveDotProbeTest.kt` terhadap resolver DoT sungguhan dengan env `AETHERDNS_LIVE_DOT=1`; tanpa env itu test di-skip.
+>
+> **Uji perangkat**: ikuti `docs/TESTING.md` sebelum membuat tag rilis.
 >
 > **Rilis**: push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
 >

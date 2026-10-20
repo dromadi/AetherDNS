@@ -108,7 +108,7 @@ class AetherDnsTileService : TileService() {
             )
             startActivityAndCollapse(pendingIntent)
         } else {
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated") // API < 34: PendingIntent overload tidak tersedia
             startActivityAndCollapse(intent)
         }
     }

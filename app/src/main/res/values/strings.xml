@@ -139,6 +139,12 @@
     <string name="grant_error_timeout">Shizuku is not responding. Make sure the Shizuku service is running.</string>
     <string name="grant_error_service">The Shizuku helper service is unavailable. Try again.</string>
     <string name="grant_error_generic">Failed: %1$s</string>
+    <string name="shortcut_enable_short">Turn on</string>
+    <string name="shortcut_enable_long">Turn on DNS protection</string>
+    <string name="shortcut_pause_short">Pause 15 min</string>
+    <string name="shortcut_pause_long">Pause protection for 15 minutes</string>
+    <string name="shortcut_disable_short">Turn off</string>
+    <string name="shortcut_disable_long">Turn off DNS protection</string>
     <string name="tile_label">DNS Ad-Block</string>
     <string name="tile_subtitle_needs_permission">Needs ADB permission</string>
     <string name="tile_subtitle_paused">Paused until %1$s</string>

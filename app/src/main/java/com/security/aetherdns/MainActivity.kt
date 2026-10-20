@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import com.security.aetherdns.shortcut.AppShortcuts
 import com.security.aetherdns.ui.AetherDnsApp
 import com.security.aetherdns.ui.MainViewModel
 import com.security.aetherdns.ui.theme.AetherDnsTheme
@@ -19,6 +20,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AppShortcuts.publish(this)
         setContent {
             AetherDnsTheme {
                 AetherDnsApp(viewModel = viewModel)

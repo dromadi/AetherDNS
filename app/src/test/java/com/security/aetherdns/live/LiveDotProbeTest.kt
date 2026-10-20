@@ -1,0 +1,124 @@
+package com.security.aetherdns.live
+
+import com.security.aetherdns.util.DotProbeCause
+import com.security.aetherdns.util.DotProbeClient
+import com.security.aetherdns.util.DotProbeResult
+import com.security.aetherdns.util.InspectionResult
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.BeforeClass
+import org.junit.Test
+import java.security.cert.X509Certificate
+import javax.net.ssl.HostnameVerifier
+
+/**
+ * Uji terhadap resolver DoT sungguhan (butuh akses jaringan ke port 853).
+ * Hanya berjalan bila env `AETHERDNS_LIVE_DOT=1`; dijalankan oleh job CI `live-dot`, tidak di build biasa.
+ *
+ * Ambang dibuat longgar agar perubahan blocklist resolver tidak membuat test rapuh; yang diuji adalah
+ * bahwa handshake, verifikasi hostname, query DNS, dan penilaian filter bekerja end-to-end.
+ */
+class LiveDotProbeTest {
+
+    companion object {
+        @BeforeClass
+        @JvmStatic
+        fun requireLiveNetwork() {
+            assumeTrue("Set AETHERDNS_LIVE_DOT=1 untuk menjalankan uji DoT live", System.getenv("AETHERDNS_LIVE_DOT") == "1")
+        }
+    }
+
+    /**
+     * Di JVM desktop verifier default `HttpsURLConnection` selalu menolak, jadi test memakai pencocokan SAN DNS
+     * sederhana (termasuk wildcard satu label) — setara dengan yang dilakukan verifier Android.
+     */
+    private val sanVerifier = HostnameVerifier { hostname, session ->
+        val cert = session.peerCertificates.firstOrNull() as? X509Certificate ?: return@HostnameVerifier false
+        val dnsNames = cert.subjectAlternativeNames.orEmpty()
+            .filter { it[0] == 2 }
+            .map { (it[1] as String).lowercase() }
+        dnsNames.any { pattern ->
+            pattern == hostname ||
+                (pattern.startsWith("*.") && hostname.substringAfter('.') == pattern.removePrefix("*.") && hostname.count { it == '.' } == pattern.count { it == '.' })
+        }
+    }
+
+    /** Verifier yang selalu menolak: memastikan kegagalan verifikasi hostname dipetakan ke CERT_MISMATCH. */
+    private val rejectAll = HostnameVerifier { _, _ -> false }
+
+    private val client = DotProbeClient(sanVerifier)
+
+    private fun inspect(host: String) = runBlocking { client.inspect(host) }
+
+    private fun successOf(host: String): InspectionResult.Success {
+        val result = inspect(host)
+        assertTrue("$host: $result", result is InspectionResult.Success)
+        return result as InspectionResult.Success
+    }
+
+    @Test
+    fun adguardBlocksAdDomains() {
+        val result = successOf("dns.adguard-dns.com")
+        println("AdGuard: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("AdGuard harus memblokir mayoritas domain iklan: ${result.filter}", result.filter.blocked.size >= 3)
+    }
+
+    @Test
+    fun adguardFamilyBlocksAdDomains() {
+        val result = successOf("family.adguard-dns.com")
+        println("AdGuard Family: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue(result.filter.toString(), result.filter.blocked.size >= 3)
+    }
+
+    @Test
+    fun mullvadAdblockBlocksSomeAdDomains() {
+        val result = successOf("adblock.dns.mullvad.net")
+        println("Mullvad: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue(result.filter.toString(), result.filter.blocked.size >= 2)
+    }
+
+    @Test
+    fun cloudflareSecurityDoesNotBlockAds() {
+        val result = successOf("security.cloudflare-dns.com")
+        println("Cloudflare Security: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("Cloudflare Security bukan ad-blocker: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
+    fun nextdnsAnycastAnswersQueries() {
+        val result = successOf("dns.nextdns.io")
+        println("NextDNS: ${result.latency.totalMs} ms, filter=${result.filter}")
+    }
+
+    @Test
+    fun probeReportsLatency() {
+        val result = runBlocking { client.probe("dns.adguard-dns.com") }
+        assertTrue("$result", result is DotProbeResult.Success)
+        result as DotProbeResult.Success
+        assertTrue(result.handshakeMs > 0 && result.queryMs >= 0)
+    }
+
+    @Test
+    fun hostWithoutDotIsRejected() {
+        // example.com tidak melayani port 853: koneksi ditolak / timeout, tidak boleh dianggap resolver valid
+        val result = runBlocking { client.probe("example.com") }
+        assertTrue("$result", result is DotProbeResult.Failure)
+        val cause = (result as DotProbeResult.Failure).cause
+        assertTrue("$cause", cause == DotProbeCause.TIMEOUT || cause == DotProbeCause.OTHER || cause == DotProbeCause.TLS)
+    }
+
+    @Test
+    fun unresolvableHostReportsResolveFailure() {
+        val result = runBlocking { client.probe("aetherdns-does-not-exist.invalid") }
+        assertEquals(DotProbeResult.Failure(DotProbeCause.RESOLVE), result)
+    }
+
+    @Test
+    fun failedHostnameVerificationIsCertMismatch() {
+        val result = runBlocking { DotProbeClient(rejectAll).probe("dns.adguard-dns.com") }
+        assertTrue("$result", result is DotProbeResult.Failure)
+        assertEquals(DotProbeCause.CERT_MISMATCH, (result as DotProbeResult.Failure).cause)
+    }
+}

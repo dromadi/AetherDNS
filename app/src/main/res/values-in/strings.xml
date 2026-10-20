@@ -138,6 +138,12 @@
     <string name="grant_error_timeout">Shizuku tidak merespons. Pastikan layanan Shizuku sedang berjalan.</string>
     <string name="grant_error_service">Layanan bantuan Shizuku tidak tersedia. Coba lagi.</string>
     <string name="grant_error_generic">Gagal: %1$s</string>
+    <string name="shortcut_enable_short">Aktifkan</string>
+    <string name="shortcut_enable_long">Aktifkan proteksi DNS</string>
+    <string name="shortcut_pause_short">Jeda 15 mnt</string>
+    <string name="shortcut_pause_long">Jeda proteksi 15 menit</string>
+    <string name="shortcut_disable_short">Matikan</string>
+    <string name="shortcut_disable_long">Matikan proteksi DNS</string>
     <string name="tile_label">DNS Anti-Iklan</string>
     <string name="tile_subtitle_needs_permission">Perlu Izin ADB</string>
     <string name="tile_subtitle_paused">Dijeda s/d %1$s</string>

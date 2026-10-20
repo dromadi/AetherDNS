@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.6.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.7.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -40,7 +40,9 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 10. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
    - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
-11. **Bahasa Inggris & Indonesia**:
+11. **App Shortcuts**:
+   - Tekan lama ikon aplikasi untuk **Aktifkan**, **Jeda 15 menit**, atau **Matikan** proteksi tanpa membuka aplikasi.
+12. **Bahasa Inggris & Indonesia**:
    - Antarmuka mengikuti bahasa HP (English sebagai default, Bahasa Indonesia untuk perangkat berbahasa Indonesia). Di Android 13+, bahasa aplikasi dapat dipilih terpisah lewat Settings → Apps → AetherDNS → Language.
 
 ---
@@ -91,6 +93,12 @@ Jika belum sempat mengaktifkan izin:
 - Aplikasi otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP untuk di-paste langsung.
 
 ---
+
+## Pengujian
+
+- `./gradlew testDebugUnitTest` — unit test (logika apply, self-healing, jeda, parser DNS, validator, dsb.).
+- `AETHERDNS_LIVE_DOT=1 ./gradlew testDebugUnitTest --tests 'com.security.aetherdns.live.*'` — uji DoT terhadap resolver sungguhan (butuh akses port 853). Dijalankan otomatis oleh job CI `live-dot`.
+- [`docs/TESTING.md`](docs/TESTING.md) — checklist uji di HP sebelum rilis (Shizuku, jeda + reboot, tile, shortcut, bahasa).
 
 ## Rilis Otomatis (Maintainer)
 
