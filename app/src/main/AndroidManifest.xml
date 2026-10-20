@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Hanya untuk menjadwalkan ulang / menyelesaikan "Jeda 15 menit" setelah reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Notifikasi input kode penyambungan saat aktivasi bawaan (Android 13+ perlu izin runtime) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -83,6 +85,11 @@
                 <action android:name="com.security.aetherdns.action.APPLY" />
             </intent-filter>
         </receiver>
+
+        <!-- Balasan kode penyambungan dari notifikasi aktivasi bawaan (PendingIntent milik aplikasi ini saja) -->
+        <receiver
+            android:name=".adb.PairingCodeReceiver"
+            android:exported="false" />
 
         <!-- Shizuku Provider (Dynamic authority matching debug & release package) -->
         <provider

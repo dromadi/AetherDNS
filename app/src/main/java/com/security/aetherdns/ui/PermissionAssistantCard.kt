@@ -29,14 +29,18 @@ import com.security.aetherdns.ui.theme.WarningOrangeLight
 import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.SystemShortcuts
 
-/** Asisten izin WRITE_SECURE_SETTINGS: Shizuku (tanpa PC) dan perintah ADB manual. */
+/**
+ * Asisten izin WRITE_SECURE_SETTINGS: aktivasi bawaan (Android 11+, [nativeActivation]), Shizuku sebagai
+ * alternatif, dan perintah ADB manual dari PC.
+ */
 @Composable
 fun PermissionAssistantCard(
     shizukuStatus: GranterStatus,
     isGranting: Boolean,
     selectedHostname: String,
     onGrant: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    nativeActivation: NativeActivationUi?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -44,7 +48,15 @@ fun PermissionAssistantCard(
         colors = CardDefaults.cardColors(containerColor = WarningOrangeLight)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            ShizukuSection(shizukuStatus, isGranting, onGrant)
+            if (nativeActivation != null) {
+                NativeActivationSection(nativeActivation)
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            ShizukuSection(shizukuStatus, isGranting, onGrant, isAlternative = nativeActivation != null)
 
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
@@ -56,11 +68,13 @@ fun PermissionAssistantCard(
 }
 
 @Composable
-private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: () -> Unit) {
+private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: () -> Unit, isAlternative: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Default.Bolt, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(stringResource(R.string.perm_shizuku_title), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
+        Text(
+            stringResource(if (isAlternative) R.string.perm_shizuku_title_alt else R.string.perm_shizuku_title),
+            fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
     }
     Spacer(modifier = Modifier.height(6.dp))
     Text(stringResource(R.string.perm_shizuku_desc), fontSize = 12.sp, color = Color(0xFF424242))

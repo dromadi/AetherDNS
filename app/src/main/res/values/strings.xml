@@ -182,4 +182,39 @@
     <string name="tile_subtitle_needs_permission">Needs ADB permission</string>
     <string name="tile_subtitle_paused">Paused until %1$s</string>
     <string name="tile_subtitle_off">Off</string>
+
+    <!-- Aktivasi bawaan (Wireless debugging tanpa Shizuku) -->
+    <string name="native_title">Built-in activation (no extra app)</string>
+    <string name="native_desc">AetherDNS pairs with this phone\'s own Wireless debugging and grants itself the permission once. Nothing keeps running afterwards.</string>
+    <string name="native_steps">1. Connect to Wi-Fi.\n2. Tap the button below: the code box appears as a notification and Wireless debugging opens. Turn it on, then tap \"Pair device with pairing code\".\n3. Keep that dialog open, pull down the notification shade and type the 6-digit code into the AetherDNS notification.</string>
+    <string name="native_show_code_box">Show code box &amp; open Wireless debugging</string>
+    <string name="native_manual_label">Or type the code here (e.g. in split screen):</string>
+    <string name="native_code_hint">6-digit code</string>
+    <string name="native_connect">Connect</string>
+    <string name="native_waiting">Waiting for the code in the notification…</string>
+    <string name="native_notifications_denied">Notifications are off. Allow them, or type the code here using split screen.</string>
+    <string name="native_success">Permission granted! You can turn Wireless debugging off again.</string>
+    <string name="native_forget_hint">\"AetherDNS\" will appear under Paired devices; you can forget it after activation.</string>
+    <string name="perm_shizuku_title_alt">Alternative: Shizuku</string>
+    <string name="native_step_finding_pairing">Looking for the pairing service…</string>
+    <string name="native_step_pairing">Pairing with the code…</string>
+    <string name="native_step_finding_connect">Looking for Wireless debugging…</string>
+    <string name="native_step_connecting">Connecting to Wireless debugging…</string>
+    <string name="native_step_granting">Granting WRITE_SECURE_SETTINGS…</string>
+    <string name="native_error_unsupported">Built-in activation needs Android 11 or later.</string>
+    <string name="native_error_invalid_code">The pairing code must be 6 digits.</string>
+    <string name="native_error_pairing_not_found">Pairing service not found. In Wireless debugging tap \"Pair device with pairing code\", keep the dialog open, then enter the code.</string>
+    <string name="native_error_pairing_unreachable">Can\'t reach the pairing service. Keep the pairing dialog open; on Samsung turn off Auto Blocker temporarily and pause VPN/firewall apps.</string>
+    <string name="native_error_pairing_rejected">The code was rejected. A new code appears each time the dialog opens — use the latest one.</string>
+    <string name="native_error_connect_not_found">Paired, but Wireless debugging was not found. Make sure it is still on and Wi-Fi is connected, then try again.</string>
+    <string name="native_error_connect_failed">Couldn\'t connect to Wireless debugging.</string>
+    <string name="native_error_timeout">Activation took too long. Try again with a new code.</string>
+    <string name="native_error_unexpected">Activation failed.</string>
+    <string name="native_notif_channel">Built-in activation</string>
+    <string name="native_notif_title">AetherDNS activation</string>
+    <string name="native_notif_input_text">In Wireless debugging tap \"Pair device with pairing code\", then reply here with the 6-digit code.</string>
+    <string name="native_notif_input_label">Pairing code</string>
+    <string name="native_notif_action">Enter code</string>
+    <string name="native_notif_action_retry">Try again</string>
+    <string name="native_grant_success">WRITE_SECURE_SETTINGS granted via built-in activation!</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.security.aetherdns
 
 import android.app.Application
+import com.security.aetherdns.adb.PairingNotifier
+import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.ProfileRepository
@@ -8,6 +10,9 @@ import com.security.aetherdns.data.SharedPrefsProfileStore
 import com.security.aetherdns.onboarding.OnboardingStore
 import com.security.aetherdns.shizuku.PermissionGranter
 import com.security.aetherdns.shizuku.ShizukuGranter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import rikka.sui.Sui
 
 class AetherDnsApplication : Application() {
@@ -26,6 +31,12 @@ class AetherDnsApplication : Application() {
     lateinit var onboardingStore: OnboardingStore
         private set
 
+    lateinit var wirelessActivator: WirelessAdbActivator
+        private set
+
+    /** Hanya untuk merender notifikasi aktivasi mengikuti state; tidak ada kerja latar lain. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     override fun onCreate() {
         super.onCreate()
         // Sui (Shizuku via Magisk/KernelSU) hanya mengirim binder bila diinisialisasi; no-op tanpa Sui
@@ -35,5 +46,7 @@ class AetherDnsApplication : Application() {
         profileRepository = ProfileRepository(SharedPrefsProfileStore(this))
         automationSettings = AutomationSettings(this)
         onboardingStore = OnboardingStore(this)
+        wirelessActivator = WirelessAdbActivator(this)
+        PairingNotifier(this).bind(appScope, wirelessActivator)
     }
 }

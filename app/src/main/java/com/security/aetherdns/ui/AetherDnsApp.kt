@@ -42,6 +42,12 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val savedProfiles by viewModel.savedProfiles.collectAsState()
     val automation by viewModel.automation.collectAsState()
     val showOnboarding by viewModel.showOnboarding.collectAsState()
+    val activationState by viewModel.activationState.collectAsState()
+    val nativeActivation = if (viewModel.isNativeActivationSupported) {
+        NativeActivationUi(activationState, viewModel::startNotificationActivation, viewModel::activateWithCode)
+    } else {
+        null
+    }
     val allProfiles = DefaultProfiles.list + savedProfiles
 
     // Handle snackbar events from ViewModel
@@ -81,6 +87,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
             isGranting = isGranting,
             onGrant = viewModel::grantViaShizuku,
             onRefresh = viewModel::refresh,
+            nativeActivation = nativeActivation,
             onFinish = viewModel::finishOnboarding
         )
         return
@@ -125,7 +132,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         isGranting = isGranting,
                         selectedHostname = selectedHostname,
                         onGrant = viewModel::grantViaShizuku,
-                        onRefresh = viewModel::refresh
+                        onRefresh = viewModel::refresh,
+                        nativeActivation = nativeActivation
                     )
                 }
             }

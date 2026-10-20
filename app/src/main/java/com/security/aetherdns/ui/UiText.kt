@@ -5,6 +5,8 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.security.aetherdns.R
+import com.security.aetherdns.adb.ActivationError
+import com.security.aetherdns.adb.ActivationStep
 import com.security.aetherdns.data.ApplyError
 import com.security.aetherdns.data.PauseError
 import com.security.aetherdns.data.ProfileError
@@ -104,6 +106,34 @@ fun Throwable.toGrantUiText(): UiText = when (val error = (this as? GrantExcepti
     GrantError.Timeout -> UiText.of(R.string.grant_error_timeout)
     GrantError.ServiceUnavailable -> UiText.of(R.string.grant_error_service)
     null -> UiText.of(R.string.grant_error_generic, message ?: javaClass.simpleName)
+}
+
+fun ActivationStep.toUiText(): UiText = UiText.of(
+    when (this) {
+        ActivationStep.FINDING_PAIRING -> R.string.native_step_finding_pairing
+        ActivationStep.PAIRING -> R.string.native_step_pairing
+        ActivationStep.FINDING_CONNECT -> R.string.native_step_finding_connect
+        ActivationStep.CONNECTING -> R.string.native_step_connecting
+        ActivationStep.GRANTING -> R.string.native_step_granting
+    }
+)
+
+fun ActivationError.toUiText(): UiText {
+    fun withDetail(base: Int, detail: String?) =
+        if (detail.isNullOrBlank()) UiText.of(base) else UiText.of(R.string.text_with_detail, UiText.of(base), detail)
+
+    return when (this) {
+        ActivationError.Unsupported -> UiText.of(R.string.native_error_unsupported)
+        ActivationError.InvalidCode -> UiText.of(R.string.native_error_invalid_code)
+        ActivationError.PairingServiceNotFound -> UiText.of(R.string.native_error_pairing_not_found)
+        ActivationError.PairingUnreachable -> UiText.of(R.string.native_error_pairing_unreachable)
+        ActivationError.PairingRejected -> UiText.of(R.string.native_error_pairing_rejected)
+        ActivationError.ConnectServiceNotFound -> UiText.of(R.string.native_error_connect_not_found)
+        is ActivationError.ConnectFailed -> withDetail(R.string.native_error_connect_failed, detail)
+        is ActivationError.Grant -> GrantException(error).toGrantUiText()
+        ActivationError.Timeout -> UiText.of(R.string.native_error_timeout)
+        is ActivationError.Unexpected -> withDetail(R.string.native_error_unexpected, detail)
+    }
 }
 
 /** Nama profil: resource terlokalisasi untuk preset, nama ketikan pengguna untuk profil tersimpan. */

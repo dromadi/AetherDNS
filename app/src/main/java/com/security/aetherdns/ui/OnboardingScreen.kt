@@ -44,6 +44,7 @@ fun OnboardingScreen(
     isGranting: Boolean,
     onGrant: () -> Unit,
     onRefresh: () -> Unit,
+    nativeActivation: NativeActivationUi?,
     onFinish: (hostname: String?) -> Unit
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
@@ -83,7 +84,8 @@ fun OnboardingScreen(
                             isGranting = isGranting,
                             selectedHostname = selected.hostname,
                             onGrant = onGrant,
-                            onRefresh = onRefresh
+                            onRefresh = onRefresh,
+                            nativeActivation = nativeActivation
                         )
                     }
                 }

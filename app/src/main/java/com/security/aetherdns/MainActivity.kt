@@ -19,7 +19,8 @@ class MainActivity : ComponentActivity() {
             app.permissionGranter,
             app.profileRepository,
             app.automationSettings,
-            app.onboardingStore
+            app.onboardingStore,
+            app.wirelessActivator
         )
     }
 
@@ -32,5 +33,11 @@ class MainActivity : ComponentActivity() {
                 AetherDnsApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Izin bisa diberikan dari luar layar ini (notifikasi aktivasi, Shizuku, ADB PC)
+        viewModel.refresh()
     }
 }

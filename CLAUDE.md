@@ -19,6 +19,12 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Menggunakan `daemon(false)` sehingga proses shell langsung dimatikan setelah izin diberikan (0% persistent overhead).
    - Mendukung Sui (Shizuku via Magisk/KernelSU) melalui `Sui.init()`; status binder dicek sebelum pengecekan paket Shizuku.
    - Panggilan binder `pm grant` dijalankan di `Dispatchers.IO`; keberhasilan ditentukan oleh status izin aktual, bukan exit code.
+2b. **Aktivasi Bawaan Tanpa Shizuku (Wireless Debugging Android 11+)**:
+   - `adb/WirelessAdbActivator` menemukan layanan `_adb-tls-pairing._tcp` lalu `_adb-tls-connect._tcp` milik perangkat sendiri via mDNS (`AdbServiceDiscovery`, alamat dicocokkan ke antarmuka lokal), pairing dengan kode 6 digit, tersambung ke adbd, menjalankan `shell:pm grant <paket> WRITE_SECURE_SETTINGS`, lalu memutus koneksi. Alamat hasil mDNS dicoba dulu, `127.0.0.1` sebagai cadangan.
+   - Library: `com.github.MuntashirAkon:libadb-android` (JitPack, dipakai di bawah **Apache-2.0** dari lisensi ganda), `conscrypt-android` (TLS 1.3 + `exportKeyingMaterial` tanpa hidden API), `bcpkix` (sertifikat self-signed). Repo JitPack dibatasi `includeGroupByRegex` di `settings.gradle.kts`.
+   - `AdbIdentity`: kunci RSA + sertifikat dibuat di memori, satu instance per proses (libadb meng-cache `SSLContext` statis untuk kunci pertama), tidak pernah ditulis ke disk. Jangan memanggil `close()` (menghancurkan kunci); cukup `disconnect()`.
+   - Kode dimasukkan lewat notifikasi `RemoteInput` (`PairingNotifier` → `PairingCodeReceiver`, `exported=false`, `goAsync`) agar dialog kode di Settings tidak tertutup, atau langsung di aplikasi (layar terpisah). Batas waktu total 45 s; keberhasilan = status izin aktual. Kegagalan bertipe `ActivationError` (pemetaan exception murni di `ActivationFailures`, diuji `ActivationModelTest`).
+   - Shizuku dan ADB PC tetap tersedia sebagai alternatif.
 3. **Reaktivitas Tanpa Polling (`ContentObserver` & `NetworkCallback`)**:
    - `DnsRepository` mendaftarkan `ContentObserver` pada database `Settings.Global`. Setiap perubahan DNS dari Settings HP atau Quick Settings Tile langsung memicu pembaruan `StateFlow` secara instan.
    - Mendaftarkan `ConnectivityManager.NetworkCallback` (`onLinkPropertiesChanged`) untuk memantau status validasi DoT kernel OS (`isPrivateDnsActive`) secara real-time.
@@ -41,7 +47,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - `NextDnsHostname` menyusun `<config-id>.dns.nextdns.io` atau `<nama-perangkat>-<config-id>.dns.nextdns.io` (spasi → `--`) dari Config ID / URL DoH / hostname DoT.
 8. **Lokalisasi (English default + Bahasa Indonesia)**:
    - Semua teks UI berada di `res/values/strings.xml` (English, default) dan `res/values-in/strings.xml` (Indonesia). Per-app language Android 13+ via `res/xml/locales_config.xml`.
-   - Lapisan domain/data **tidak** berisi teks untuk pengguna: kegagalan dikembalikan sebagai tipe (`HostnameError`, `ApplyError`, `PauseError`, `ProfileError`, `GrantError`, `DotProbeCause`, `AuditOutcome`) lalu dipetakan ke resource di `ui/UiText.kt`. ViewModel mengirim `UiText`, bukan `String`.
+   - Lapisan domain/data **tidak** berisi teks untuk pengguna: kegagalan dikembalikan sebagai tipe (`HostnameError`, `ApplyError`, `PauseError`, `ProfileError`, `GrantError`, `ActivationError`, `DotProbeCause`, `AuditOutcome`) lalu dipetakan ke resource di `ui/UiText.kt`. ViewModel mengirim `UiText`, bukan `String`.
    - Saat menambah teks baru: tambahkan kunci di **kedua** file strings.xml dengan argumen format yang sama.
 9. **App Shortcuts (Dinamis)**:
    - `AppShortcuts.publish()` (dipanggil di `MainActivity.onCreate`) mendaftarkan shortcut Aktifkan / Jeda 15 menit / Matikan via `ShortcutManager`. Dinamis, bukan `shortcuts.xml`, karena `targetPackage` statis tidak bisa mengikuti sufiks `.debug`.
@@ -62,6 +68,10 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 
 - `AetherDnsApplication.kt`: Application class singleton untuk container dependency injection manual (`dnsRepository`, `permissionGranter`).
+- `adb/`:
+  - `ActivationModel.kt`: `ActivationState`, `ActivationStep`, `ActivationError`, `PairingCode`, `ActivationFailures` (logika murni).
+  - `AdbIdentity.kt`, `AdbServiceDiscovery.kt`, `WirelessAdbActivator.kt`: identitas ADB sekali pakai, mDNS, dan alur aktivasi.
+  - `PairingNotifier.kt`, `PairingCodeReceiver.kt`: notifikasi input kode dan penerima balasannya.
 - `shizuku/`:
   - `IGrantService.aidl`: Interface AIDL transaksi Shizuku (`destroy() = 16777114`, `grantSecureSettings() = 1`).
   - `GrantService.kt`: Implementasi AIDL yang mengeksekusi `pm grant` di sisi proses ber-UID shell.
@@ -98,6 +108,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, state pilihan profil, dan susunan section.
+  - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
   - `StatusCard.kt`, `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
   - `OnboardingScreen.kt`: Onboarding 3 langkah (memakai ulang `PermissionAssistantCard`, `PresetCard`, `AddTileButton`).
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
@@ -107,7 +118,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.security.aetherdns.R
+import com.security.aetherdns.adb.ActivationState
+import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
 import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
@@ -52,6 +54,7 @@ class MainViewModel(
     private val profileRepository: ProfileRepository,
     private val automationSettings: AutomationSettings,
     private val onboardingStore: OnboardingStore,
+    private val activator: WirelessAdbActivator,
     private val inspector: ResolverInspector = DotProbe,
     private val auditor: DnsAuditor = DnsAuditor()
 ) : ViewModel() {
@@ -83,6 +86,10 @@ class MainViewModel(
 
     private val _auditSummary = MutableStateFlow<AuditSummary?>(null)
     val auditSummary: StateFlow<AuditSummary?> = _auditSummary.asStateFlow()
+
+    /** Aktivasi bawaan (Wireless debugging tanpa Shizuku), Android 11+. */
+    val activationState: StateFlow<ActivationState> = activator.state
+    val isNativeActivationSupported: Boolean get() = activator.isSupported
 
     private val _eventChannel = Channel<UiEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -145,6 +152,18 @@ class MainViewModel(
                 repository.refresh()
                 _shizukuStatus.value = granter.status()
             }
+        }
+    }
+
+    /** Pengguna akan memasukkan kode lewat notifikasi (dirender oleh `PairingNotifier`). */
+    fun startNotificationActivation() = activator.awaitCode()
+
+    /** Kode diketik langsung di aplikasi (mis. layar terpisah dengan Settings). */
+    fun activateWithCode(code: String) {
+        viewModelScope.launch {
+            val result = activator.activate(code)
+            repository.refresh()
+            if (result is ActivationState.Success) snackbar(UiText.of(R.string.native_grant_success))
         }
     }
 
@@ -254,12 +273,13 @@ class MainViewModel(
         private val granter: PermissionGranter,
         private val profileRepository: ProfileRepository,
         private val automationSettings: AutomationSettings,
-        private val onboardingStore: OnboardingStore
+        private val onboardingStore: OnboardingStore,
+        private val activator: WirelessAdbActivator
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

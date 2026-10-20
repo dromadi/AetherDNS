@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.8.1)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.9.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -6,7 +6,11 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 
 ## Arsitektur & Keunggulan Teknis
 
-1. **Aktivasi Tanpa PC via Shizuku (Wireless Debugging Android 11+)**:
+1. **Aktivasi Bawaan Tanpa PC & Tanpa Aplikasi Lain (Wireless Debugging Android 11+)**:
+   - AetherDNS melakukan pairing langsung ke Wireless debugging HP sendiri (mDNS + TLS + SPAKE2 via `libadb-android`, Apache-2.0), menjalankan `pm grant` sekali, lalu memutus koneksi.
+   - Kode 6 digit diketik di notifikasi AetherDNS (dialog kode di Settings tetap terbuka) atau di aplikasi lewat layar terpisah.
+   - Kunci ADB dibuat di memori per proses dan tidak pernah disimpan; tidak ada service yang tertinggal.
+   - **Shizuku tetap didukung** sebagai alternatif:
    - Terintegrasi dengan Shizuku API v13 melalui AIDL UserService (`IGrantService.aidl`).
    - Memberikan izin `WRITE_SECURE_SETTINGS` langsung dari HP tanpa perlu laptop/kabel data.
    - Menggunakan `daemon(false)` sehingga proses shell langsung berhenti setelah izin diberikan (0% overhead).
@@ -70,7 +74,13 @@ Unduh build biner terbaru dari menu **[GitHub Releases](https://github.com/droma
 
 ### 2. Cara Aktivasi Izin WRITE_SECURE_SETTINGS
 
-#### Jalur A: Tanpa PC Menggunakan Shizuku (Rekomendasi)
+#### Jalur A: Aktivasi Bawaan (Rekomendasi, Android 11+)
+1. Sambungkan HP ke Wi-Fi, buka **AetherDNS**, lalu ketuk **"Tampilkan kolom kode & buka Wireless debugging"**.
+2. Aktifkan **Wireless debugging** (Samsung: *Proses debug nirkabel*), lalu ketuk **"Pair device with pairing code"** (*Sambungkan perangkat dengan kode penyambungan*).
+3. Biarkan dialog kode terbuka, tarik bilah notifikasi, dan ketik 6 digit kode di notifikasi AetherDNS. Selesai — Wireless debugging boleh dimatikan lagi.
+*(Alternatif: buka AetherDNS dan Settings dalam layar terpisah, lalu ketik kode di kolom aplikasi. Samsung: bila "tidak bisa dihubungi", matikan sementara Pemblokir Otomatis / Auto Blocker.)*
+
+#### Jalur A2: Tanpa PC Menggunakan Shizuku
 1. Pasang dan aktifkan aplikasi **Shizuku** via Wireless Debugging di HP Anda (Android 11+).
 2. Buka **AetherDNS**. Aplikasi akan otomatis mendeteksi status Shizuku.
 3. Tekan tombol **"Berikan Izin Otomatis Sekarang"**. Izin akan aktif secara instan!

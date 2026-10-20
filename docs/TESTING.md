@@ -2,9 +2,24 @@
 
 Unit test (`./gradlew testDebugUnitTest`) dan job CI `live-dot` menguji logika dan resolver DoT sungguhan, tetapi bagian berikut hanya bisa dibuktikan di HP. Jalankan sebelum membuat tag rilis.
 
-Siapkan: satu HP Android 11+ (Shizuku via Wireless Debugging) dan, bila ada, satu HP Xiaomi/HyperOS. Pasang build release (`AetherDNS-vX.Y.Z.apk`) di atas versi sebelumnya untuk sekaligus menguji update.
+Siapkan: satu HP Android 11+ (aktivasi bawaan / Shizuku via Wireless Debugging) dan, bila ada, satu HP Xiaomi/HyperOS. Pasang build release (`AetherDNS-vX.Y.Z.apk`) di atas versi sebelumnya untuk sekaligus menguji update.
 
 ## 1. Pemasangan & izin
+
+Aktivasi bawaan (Android 11+, tanpa Shizuku) — uji dengan izin belum ada (`adb shell pm revoke <paket> android.permission.WRITE_SECURE_SETTINGS`):
+
+- [ ] Tombol **Tampilkan kolom kode & buka Wireless debugging**: Android 13+ meminta izin notifikasi; notifikasi "Aktivasi AetherDNS" muncul dan Wireless debugging terbuka.
+- [ ] Tolak izin notifikasi → Toast petunjuk layar terpisah; kolom kode di aplikasi tetap bisa dipakai.
+- [ ] Buka dialog kode penyambungan → balas notifikasi dengan kode → progres (mencari → menyambungkan → memberi izin) → "Izin diberikan"; kartu asisten izin hilang setelah kembali ke aplikasi.
+- [ ] Kode salah → "Kode ditolak"; notifikasi menawarkan **Coba lagi**.
+- [ ] Balas notifikasi saat dialog kode sudah ditutup → "Layanan penyambungan tidak ditemukan".
+- [ ] Layar terpisah (aplikasi + Settings): ketik kode di kolom aplikasi → berhasil.
+- [ ] "AetherDNS" muncul di daftar perangkat tersambung Wireless debugging dan bisa dilupakan; aktivasi berikutnya tetap bisa.
+- [ ] Samsung (One UI): uji dengan Pemblokir Otomatis (Auto Blocker) aktif dan nonaktif; catat hasilnya.
+- [ ] Android 9/10: bagian aktivasi bawaan tidak tampil; Shizuku/ADB tetap ada.
+
+Shizuku:
+
 
 - [ ] Update dari versi sebelumnya berhasil tanpa uninstall (kunci tanda tangan sama).
 - [ ] Shizuku **belum terpasang** → status "Belum Terpasang / Not installed".

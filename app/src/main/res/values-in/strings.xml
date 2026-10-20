@@ -181,4 +181,39 @@
     <string name="tile_subtitle_needs_permission">Perlu Izin ADB</string>
     <string name="tile_subtitle_paused">Dijeda s/d %1$s</string>
     <string name="tile_subtitle_off">Nonaktif</string>
+
+    <!-- Aktivasi bawaan (Wireless debugging tanpa Shizuku) -->
+    <string name="native_title">Aktivasi bawaan (tanpa aplikasi lain)</string>
+    <string name="native_desc">AetherDNS menyambung ke Wireless debugging (Proses debug nirkabel) HP ini sendiri dan memberi izin sekali saja. Tidak ada yang tetap berjalan setelahnya.</string>
+    <string name="native_steps">1. Sambungkan ke Wi-Fi.\n2. Ketuk tombol di bawah: kolom kode muncul sebagai notifikasi dan Wireless debugging terbuka. Aktifkan, lalu ketuk \"Sambungkan perangkat dengan kode penyambungan\".\n3. Biarkan dialog itu terbuka, tarik bilah notifikasi, lalu ketik 6 digit kode di notifikasi AetherDNS.</string>
+    <string name="native_show_code_box">Tampilkan kolom kode &amp; buka Wireless debugging</string>
+    <string name="native_manual_label">Atau ketik kode di sini (mis. lewat layar terpisah):</string>
+    <string name="native_code_hint">Kode 6 digit</string>
+    <string name="native_connect">Sambungkan</string>
+    <string name="native_waiting">Menunggu kode di notifikasi…</string>
+    <string name="native_notifications_denied">Notifikasi nonaktif. Izinkan, atau ketik kode di sini lewat layar terpisah.</string>
+    <string name="native_success">Izin diberikan! Wireless debugging boleh dimatikan lagi.</string>
+    <string name="native_forget_hint">\"AetherDNS\" akan muncul di daftar perangkat yang disambungkan; boleh dilupakan setelah aktivasi.</string>
+    <string name="perm_shizuku_title_alt">Alternatif: Shizuku</string>
+    <string name="native_step_finding_pairing">Mencari layanan penyambungan…</string>
+    <string name="native_step_pairing">Menyambungkan dengan kode…</string>
+    <string name="native_step_finding_connect">Mencari Wireless debugging…</string>
+    <string name="native_step_connecting">Menghubungkan ke Wireless debugging…</string>
+    <string name="native_step_granting">Memberikan izin WRITE_SECURE_SETTINGS…</string>
+    <string name="native_error_unsupported">Aktivasi bawaan butuh Android 11 atau lebih baru.</string>
+    <string name="native_error_invalid_code">Kode penyambungan harus 6 digit.</string>
+    <string name="native_error_pairing_not_found">Layanan penyambungan tidak ditemukan. Di Wireless debugging ketuk \"Sambungkan perangkat dengan kode penyambungan\", biarkan dialognya terbuka, lalu masukkan kodenya.</string>
+    <string name="native_error_pairing_unreachable">Layanan penyambungan tidak bisa dihubungi. Biarkan dialog kode tetap terbuka; di Samsung matikan sementara Pemblokir Otomatis (Auto Blocker) dan jeda aplikasi VPN/firewall.</string>
+    <string name="native_error_pairing_rejected">Kode ditolak. Kode baru muncul setiap dialog dibuka — gunakan kode terbaru.</string>
+    <string name="native_error_connect_not_found">Penyambungan berhasil, tetapi Wireless debugging tidak ditemukan. Pastikan masih aktif dan Wi-Fi tersambung, lalu coba lagi.</string>
+    <string name="native_error_connect_failed">Gagal terhubung ke Wireless debugging.</string>
+    <string name="native_error_timeout">Aktivasi terlalu lama. Coba lagi dengan kode baru.</string>
+    <string name="native_error_unexpected">Aktivasi gagal.</string>
+    <string name="native_notif_channel">Aktivasi bawaan</string>
+    <string name="native_notif_title">Aktivasi AetherDNS</string>
+    <string name="native_notif_input_text">Di Wireless debugging ketuk \"Sambungkan perangkat dengan kode penyambungan\", lalu balas di sini dengan 6 digit kodenya.</string>
+    <string name="native_notif_input_label">Kode penyambungan</string>
+    <string name="native_notif_action">Masukkan kode</string>
+    <string name="native_notif_action_retry">Coba lagi</string>
+    <string name="native_grant_success">WRITE_SECURE_SETTINGS diberikan lewat aktivasi bawaan!</string>
 </resources>

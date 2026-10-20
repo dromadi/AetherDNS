@@ -12,8 +12,8 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.8.1"
+        versionCode = 11
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,6 +59,13 @@ android {
         jvmTarget = "17"
     }
 
+    packaging {
+        resources {
+            // Data BouncyCastle yang tidak dipakai (post-quantum, pesan CertPath) — menghemat ±1,5 MB
+            excludes += setOf("org/bouncycastle/pqc/**", "org/bouncycastle/x509/*.properties", "org/bouncycastle/pkix/*.properties")
+        }
+    }
+
     buildFeatures {
         compose = true
         aidl = true
@@ -83,6 +90,14 @@ dependencies {
     // Shizuku API (Rootless Permission Granter via Wireless Debugging)
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+
+    // Aktivasi bawaan tanpa Shizuku: pairing + koneksi ke adbd perangkat sendiri via Wireless debugging (Android 11+).
+    // libadb-android dipakai di bawah lisensi Apache-2.0 (dual GPL-3.0-or-later / Apache-2.0).
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1")
+    // TLS 1.3 + exportKeyingMaterial untuk protokol pairing (API publik, tanpa hidden API platform)
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
+    // Sertifikat X.509 self-signed untuk kunci ADB sekali pakai (versi sama dengan bcprov milik libadb)
+    implementation("org.bouncycastle:bcpkix-jdk15to18:1.81")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(libs.kotlinx.coroutines.test)
