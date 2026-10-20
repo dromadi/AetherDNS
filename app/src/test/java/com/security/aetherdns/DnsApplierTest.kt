@@ -2,7 +2,6 @@ package com.security.aetherdns
 
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsApplier
-import com.security.aetherdns.data.SecureSettings
 import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.DotProbeCause
 import com.security.aetherdns.util.DotProbeResult
@@ -19,31 +18,6 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class DnsApplierTest {
 
-    private class FakeSettings(
-        var mode: String = DnsManager.MODE_OFF,
-        var specifier: String = "",
-        var permission: Boolean = true,
-        var rejectSpecifier: String? = null
-    ) : SecureSettings {
-        val modeHistory = mutableListOf<String>()
-
-        override fun hasPermission() = permission
-        override fun mode() = mode
-        override fun specifier() = specifier
-
-        override fun writeMode(mode: String): Boolean {
-            this.mode = mode
-            modeHistory += mode
-            return true
-        }
-
-        override fun writeSpecifier(specifier: String): Boolean {
-            if (specifier == rejectSpecifier) return false
-            this.specifier = specifier
-            return true
-        }
-    }
-
     /** Mengembalikan hasil probe berurutan; panggilan melebihi daftar memakai hasil terakhir. */
     private class ScriptedProber(private vararg val results: DotProbeResult) : DotProber {
         var calls = 0
@@ -55,11 +29,11 @@ class DnsApplierTest {
     private val resolveFail = DotProbeResult.Failure(DotProbeCause.RESOLVE, "NXDOMAIN")
     private val tlsFail = DotProbeResult.Failure(DotProbeCause.TLS, "handshake")
 
-    private fun brokenStrictMode() = FakeSettings(mode = DnsManager.MODE_HOSTNAME, specifier = "dead.example.net")
+    private fun brokenStrictMode() = FakeSecureSettings(mode = DnsManager.MODE_HOSTNAME, specifier = "dead.example.net")
 
     @Test
     fun appliesNormalizedHostnameWhenProbeSucceeds() = runTest {
-        val settings = FakeSettings()
+        val settings = FakeSecureSettings()
         val result = DnsApplier(settings, ScriptedProber(ok), retryDelayMs = 0).apply("  DNS.AdGuard-DNS.com. ")
 
         assertEquals(ApplyResult.Success("dns.adguard-dns.com", ok), result)
@@ -70,7 +44,7 @@ class DnsApplierTest {
     @Test
     fun rejectsWithoutPermissionAndDoesNotProbe() = runTest {
         val prober = ScriptedProber(ok)
-        val result = DnsApplier(FakeSettings(permission = false), prober, retryDelayMs = 0).apply("dns.adguard-dns.com")
+        val result = DnsApplier(FakeSecureSettings(permission = false), prober, retryDelayMs = 0).apply("dns.adguard-dns.com")
 
         assertTrue(result is ApplyResult.Failure)
         assertEquals(0, prober.calls)
@@ -78,7 +52,7 @@ class DnsApplierTest {
 
     @Test
     fun rejectsInvalidHostnameWithoutTouchingSettings() = runTest {
-        val settings = FakeSettings()
+        val settings = FakeSecureSettings()
         val result = DnsApplier(settings, ScriptedProber(ok), retryDelayMs = 0).apply("https://dns.adguard-dns.com")
 
         assertTrue(result is ApplyResult.Failure)
@@ -88,7 +62,7 @@ class DnsApplierTest {
     @Test
     fun skipsProbeWhenDisabled() = runTest {
         val prober = ScriptedProber(tlsFail)
-        val result = DnsApplier(FakeSettings(), prober, retryDelayMs = 0).apply("dns.adguard-dns.com", probe = false)
+        val result = DnsApplier(FakeSecureSettings(), prober, retryDelayMs = 0).apply("dns.adguard-dns.com", probe = false)
 
         assertEquals(ApplyResult.Success("dns.adguard-dns.com", null), result)
         assertEquals(0, prober.calls)
@@ -106,7 +80,7 @@ class DnsApplierTest {
 
     @Test
     fun resolveFailureOutsideStrictModeDoesNotSelfHeal() = runTest {
-        val settings = FakeSettings(mode = DnsManager.MODE_OPPORTUNISTIC)
+        val settings = FakeSecureSettings(mode = DnsManager.MODE_OPPORTUNISTIC)
         val result = DnsApplier(settings, ScriptedProber(resolveFail), retryDelayMs = 0).apply("dns.adguard-dns.com")
 
         assertTrue(result is ApplyResult.Failure)

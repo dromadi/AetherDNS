@@ -32,7 +32,14 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
-6. **Tidak Memonopoli Slot VPN**:
+   - Semua toggle tile melewati `DnsRepository` (`disable()` / `enableQuick()`): melanjutkan jeda bila ada, atau menerapkan specifier tersimpan via `DnsApplier` tanpa probe dengan fallback ke resolver default.
+6. **Jeda Sementara (Captive Portal) Tanpa Service Persisten**:
+   - `PauseController` mematikan mode Private DNS (specifier dibiarkan), menyimpan waktu akhir jeda (`SharedPrefsPauseStore`), dan menjadwalkan satu alarm inexact (`AlarmManager.setAndAllowWhileIdle`, tanpa izin `SCHEDULE_EXACT_ALARM`).
+   - `PauseResumeReceiver` mengaktifkan kembali proteksi tanpa probe; juga menangani `BOOT_COMPLETED` / `MY_PACKAGE_REPLACED` karena alarm hilang saat reboot/update. Perubahan DNS manual selama jeda dihormati.
+7. **Profil Kustom Tersimpan & Helper NextDNS**:
+   - `ProfileRepository` menyimpan hingga 20 hostname kustom (SharedPreferences, format baris `id<TAB>nama<TAB>hostname`), divalidasi `HostnameValidator`.
+   - `NextDnsHostname` menyusun `<config-id>.dns.nextdns.io` atau `<nama-perangkat>-<config-id>.dns.nextdns.io` (spasi → `--`) dari Config ID / URL DoH / hostname DoT.
+8. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
 ---
@@ -50,20 +57,27 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsState.kt`: Model data immutable untuk status DoT sistem.
   - `SecureSettings.kt`: Interface baca/tulis `Settings.Global` Private DNS + implementasi `AndroidSecureSettings`.
   - `DnsApplier.kt`: Pipeline apply murni (validasi → probe → self-healing → tulis) tanpa dependensi Android framework, dilindungi `Mutex`. Diuji penuh di `DnsApplierTest`.
-  - `DnsRepository.kt`: Single source of truth state (`StateFlow`), `ContentObserver`, `NetworkCallback`; mendelegasikan apply ke `DnsApplier`.
+  - `DnsRepository.kt`: Single source of truth state (`StateFlow`), `ContentObserver`, `NetworkCallback`; mendelegasikan apply ke `DnsApplier` dan jeda ke `PauseController`. Satu-satunya jalur tulis konfigurasi DNS (UI, tile, receiver).
+  - `PauseController.kt`: Logika jeda murni (interface `PauseStore`, `ResumeAlarm`). Diuji di `PauseControllerTest`.
+  - `AndroidPause.kt`: Implementasi `SharedPrefsPauseStore` dan `AlarmManagerResumeAlarm`.
+  - `ProfileRepository.kt`: Profil kustom tersimpan (`ProfileStore`, `ProfileCodec`). Diuji di `ProfileRepositoryTest`.
 - `model/`:
   - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles`.
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
   - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi; mengimplementasikan interface `DotProber`.
+  - `NextDnsHostname.kt`: Penyusun hostname DoT NextDNS dari Config ID + nama perangkat opsional.
   - `DnsWireFormat.kt`: Encoder query / decoder header pesan DNS (RFC 1035) minimal untuk probe.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
+- `receiver/`:
+  - `PauseResumeReceiver.kt`: Mengaktifkan kembali proteksi setelah jeda / boot (`goAsync`, tanpa service).
 - `ui/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit, benchmark latensi preset (`BenchmarkState`), dan `Channel<UiEvent>` untuk Snackbar.
   - `AetherDnsApp.kt`: Tampilan deklaratif Jetpack Compose (Material 3) dengan kartu status Shizuku multi-state.
+  - `ProfileComponents.kt`: Komponen profil tersimpan, helper NextDNS, dan form simpan profil.
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
 ---
@@ -71,7 +85,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, DnsWireFormat, GrantOutputParser, BenchmarkState)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, GrantOutputParser, BenchmarkState)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

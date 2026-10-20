@@ -37,6 +37,8 @@ import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.HostnameValidator
 import kotlinx.coroutines.flow.collectLatest
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +53,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val isAuditing by viewModel.isAuditing.collectAsState()
     val auditSummary by viewModel.auditSummary.collectAsState()
     val benchmark by viewModel.benchmark.collectAsState()
+    val savedProfiles by viewModel.savedProfiles.collectAsState()
+    val allProfiles = DefaultProfiles.list + savedProfiles
 
     // Handle snackbar events from ViewModel
     LaunchedEffect(Unit) {
@@ -63,8 +67,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
         }
     }
 
-    var selectedProfileId by remember(dnsState.specifier) {
-        val matched = DefaultProfiles.list.find { it.hostname.equals(dnsState.specifier, ignoreCase = true) }
+    var selectedProfileId by remember(dnsState.specifier, savedProfiles) {
+        val matched = allProfiles.find { it.hostname.equals(dnsState.specifier, ignoreCase = true) }
         mutableStateOf(matched?.id ?: if (dnsState.specifier.isNotBlank()) "custom" else "adguard_default")
     }
 
@@ -181,6 +185,29 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
+                        // Indikator jeda sementara (captive portal)
+                        dnsState.pausedUntil?.takeIf { !dnsState.isProtectionActive }?.let { until ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = WarningOrange.copy(alpha = 0.12f),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.PauseCircle, contentDescription = null, tint = WarningOrange, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Dijeda — aktif kembali otomatis sekitar pukul ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(until))}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = WarningOrange
+                                    )
+                                }
+                            }
+                        }
+
                         // Indikator Validasi Kernel OS (LinkProperties API 28+)
                         if (dnsState.isProtectionActive) {
                             Surface(
@@ -224,11 +251,13 @@ fun AetherDnsApp(viewModel: MainViewModel) {
 
                                 if (dnsState.isProtectionActive) {
                                     viewModel.disableDns()
+                                } else if (dnsState.pausedUntil != null) {
+                                    viewModel.resumeDns()
                                 } else {
                                     val targetHostname = if (selectedProfileId == "custom") {
                                         customHostname.trim()
                                     } else {
-                                        DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
+                                        allProfiles.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
                                     }
                                     viewModel.applyDns(targetHostname, probe = true)
                                 }
@@ -254,9 +283,28 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (dnsState.isProtectionActive) "Matikan Proteksi" else "Aktifkan Proteksi Sekarang",
+                                    text = when {
+                                        dnsState.isProtectionActive -> "Matikan Proteksi"
+                                        dnsState.pausedUntil != null -> "Lanjutkan Proteksi Sekarang"
+                                        else -> "Aktifkan Proteksi Sekarang"
+                                    },
                                     fontWeight = FontWeight.SemiBold
                                 )
+                            }
+                        }
+
+                        // Jeda sementara untuk login Wi-Fi captive portal (hotel, bandara, kafe)
+                        if (dnsState.isProtectionActive && dnsState.hasPermission) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.pauseDns(15) },
+                                enabled = !isProbing,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.PauseCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Jeda 15 Menit (Login Wi-Fi Publik)", fontSize = 13.sp)
                             }
                         }
 
@@ -612,7 +660,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 Button(
                                     onClick = {
                                         val targetHostname = if (selectedProfileId == "custom") customHostname.trim()
-                                        else DefaultProfiles.list.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
+                                        else allProfiles.find { it.id == selectedProfileId }?.hostname ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME
 
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("DNS Hostname", targetHostname))
@@ -744,6 +792,23 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 }
             }
 
+            // 4b. Profil kustom tersimpan
+            items(savedProfiles, key = { it.id }) { profile ->
+                SavedProfileCard(
+                    profile = profile,
+                    isSelected = selectedProfileId == profile.id,
+                    benchmarkResult = benchmark.results[profile.id],
+                    isFastest = benchmark.fastestId == profile.id,
+                    onSelect = {
+                        selectedProfileId = profile.id
+                        if (dnsState.hasPermission && dnsState.isProtectionActive) {
+                            viewModel.applyDns(profile.hostname, probe = true)
+                        }
+                    },
+                    onDelete = { viewModel.deleteProfile(profile.id) }
+                )
+            }
+
             // 5. Custom Hostname Option
             item {
                 val isCustomSelected = selectedProfileId == "custom"
@@ -793,6 +858,13 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 modifier = Modifier.fillMaxWidth()
                             )
 
+                            NextDnsHelper(onUseHostname = { customHostname = it })
+
+                            if (customValidation is HostnameValidator.Result.Valid) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                SaveProfileRow(onSave = { name -> viewModel.saveProfile(name, customHostname) })
+                            }
+
                             if (dnsState.hasPermission && dnsState.isProtectionActive && customHostname.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
@@ -829,7 +901,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun BenchmarkChip(result: DotProbeResult, isFastest: Boolean) {
+internal fun BenchmarkChip(result: DotProbeResult, isFastest: Boolean) {
     val (text, color) = when (result) {
         is DotProbeResult.Success -> {
             val label = "${result.totalMs} ms (TLS ${result.handshakeMs} + query ${result.queryMs})"

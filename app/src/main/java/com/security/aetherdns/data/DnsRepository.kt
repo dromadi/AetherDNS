@@ -19,10 +19,13 @@ import kotlinx.coroutines.flow.asStateFlow
 class DnsRepository(
     private val context: Context,
     settings: SecureSettings = AndroidSecureSettings(context),
-    prober: DotProber = DotProbe
+    prober: DotProber = DotProbe,
+    pauseStore: PauseStore = SharedPrefsPauseStore(context),
+    resumeAlarm: ResumeAlarm = AlarmManagerResumeAlarm(context)
 ) {
     private val contentResolver = context.contentResolver
     private val applier = DnsApplier(settings, prober)
+    private val pauseController = PauseController(settings, applier, pauseStore, resumeAlarm)
 
     private val _state = MutableStateFlow(loadCurrentState())
     val state: StateFlow<DnsState> = _state.asStateFlow()
@@ -48,7 +51,8 @@ class DnsRepository(
             specifier = specifier,
             isProtectionActive = isProtected,
             isSystemDoTValidated = isDoTValidated,
-            validatedServerName = serverName
+            validatedServerName = serverName,
+            pausedUntil = pauseController.pausedUntil()
         )
     }
 
@@ -97,12 +101,48 @@ class DnsRepository(
     }
 
     suspend fun apply(hostname: String, probe: Boolean = true): ApplyResult = withContext(Dispatchers.IO) {
-        applier.apply(hostname, probe).also { refresh() }
+        applier.apply(hostname, probe).also { result ->
+            // Pilihan manual pengguna menggantikan jeda yang sedang berjalan
+            if (result is ApplyResult.Success) pauseController.cancel()
+            refresh()
+        }
     }
 
     fun disable(): Boolean {
+        pauseController.cancel()
         val result = DnsManager.disablePrivateDns(context)
         refresh()
         return result.isSuccess
+    }
+
+    /**
+     * Mengaktifkan proteksi tanpa UI (Quick Settings Tile): melanjutkan jeda bila ada, jika tidak memakai
+     * specifier tersimpan, dengan fallback ke resolver default bila specifier tidak valid.
+     * Tanpa probe agar respons tile instan; specifier tersimpan sudah lolos probe saat pertama diterapkan.
+     */
+    suspend fun enableQuick(): ApplyResult = withContext(Dispatchers.IO) {
+        if (pauseController.pausedUntil() != null) {
+            return@withContext pauseController.resumeNow().also { refresh() }
+        }
+        val stored = DnsManager.getPrivateDnsSpecifier(context).trim()
+        var result = apply(stored.ifEmpty { DnsManager.DEFAULT_FALLBACK_HOSTNAME }, probe = false)
+        if (result is ApplyResult.Failure && stored.isNotEmpty()) {
+            result = apply(DnsManager.DEFAULT_FALLBACK_HOSTNAME, probe = false)
+        }
+        result
+    }
+
+    suspend fun pause(durationMs: Long): PauseResult = withContext(Dispatchers.IO) {
+        pauseController.pause(durationMs).also { refresh() }
+    }
+
+    suspend fun resumeNow(): ApplyResult = withContext(Dispatchers.IO) {
+        pauseController.resumeNow().also { refresh() }
+    }
+
+    /** Dipanggil oleh alarm jeda dan setelah boot. */
+    suspend fun resumeIfDue() = withContext(Dispatchers.IO) {
+        pauseController.onAlarmOrBoot()
+        refresh()
     }
 }

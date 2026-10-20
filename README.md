@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.4.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.5.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -20,19 +20,24 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
    - Mengirim satu query DNS sungguhan (RFC 7858) untuk memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
    - Tombol **Uji Kecepatan** mengukur latensi DoT (handshake + query) setiap preset dan menandai resolver tercepat di jaringan Anda.
    - Dilengkapi *self-healing fallback* aman: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru, dilindungi oleh `Mutex` dan blok `finally { NonCancellable }`.
-4. **Quick Settings Tile (Status Bar 1-Klik)**:
+4. **Jeda 15 Menit untuk Wi-Fi Publik (Captive Portal)**:
+   - Wi-Fi hotel/bandara/kafe sering mewajibkan login yang terblokir mode strict. Tombol **Jeda 15 Menit** mematikan proteksi sementara dan mengaktifkannya kembali otomatis lewat satu alarm sistem (tanpa service background), termasuk bila HP di-reboot selama jeda.
+5. **Profil Kustom Tersimpan & Helper NextDNS**:
+   - Simpan hingga 20 hostname kustom (mis. "Rumah – Pi-hole", "Kantor") dan ganti dengan 1 ketukan.
+   - Cukup masukkan Config ID NextDNS (`abc123`) atau URL `https://dns.nextdns.io/abc123`; nama perangkat opsional agar perangkat terpisah di analytics NextDNS.
+6. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
    - Mendukung proteksi lockscreen (`unlockAndRun`) dan otomatis sinkronisasi status aktif/nonaktif.
    - Jika izin belum diberikan, tile tetap dapat diklik untuk langsung membuka panduan ADB / Shizuku di `MainActivity`.
    - Pada Android 13+, terdapat pintasan langsung untuk menambahkan tile ke Status Bar.
-5. **Verifikasi Status Kernel OS (`LinkProperties`)**:
+7. **Verifikasi Status Kernel OS (`LinkProperties`)**:
    - Membaca status `LinkProperties.isPrivateDnsActive` (API 28+) untuk memverifikasi apakah Android OS telah berhasil menyelesaikan enkripsi DoT.
-6. **Bebas Monopoli Slot VPN**:
+8. **Bebas Monopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
-7. **Validasi Ketat Hostname FQDN**:
+9. **Validasi Ketat Hostname FQDN**:
    - Dilengkapi `HostnameValidator` untuk menolak format URL (`https://`), path/query, port/IPv6, dan raw IP address, serta menormalisasi IDN ke Punycode ASCII (RFC 1035 / RFC 1123).
-8. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
+10. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
    - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
 

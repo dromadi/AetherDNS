@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.data.PauseResult
+import com.security.aetherdns.data.ProfileRepository
+import com.security.aetherdns.data.ProfileSaveResult
+import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.shizuku.PermissionGranter
@@ -19,6 +23,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
+import java.text.DateFormat
+import java.util.Date
 
 sealed class UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent()
@@ -38,8 +44,11 @@ data class BenchmarkState(
 class MainViewModel(
     private val repository: DnsRepository,
     private val granter: PermissionGranter,
+    private val profileRepository: ProfileRepository,
     private val prober: DotProber = DotProbe
 ) : ViewModel() {
+
+    val savedProfiles: StateFlow<List<DnsProfile>> = profileRepository.profiles
 
     private val _benchmark = MutableStateFlow(BenchmarkState())
     val benchmark: StateFlow<BenchmarkState> = _benchmark.asStateFlow()
@@ -169,7 +178,7 @@ class MainViewModel(
         if (_benchmark.value.isRunning) return
         viewModelScope.launch {
             _benchmark.value = BenchmarkState(isRunning = true)
-            for (profile in DefaultProfiles.list) {
+            for (profile in DefaultProfiles.list + profileRepository.profiles.value) {
                 val result = prober.probe(profile.hostname)
                 _benchmark.update { it.copy(results = it.results + (profile.id to result)) }
             }
@@ -177,14 +186,53 @@ class MainViewModel(
         }
     }
 
+    fun pauseDns(minutes: Int) {
+        viewModelScope.launch {
+            val message = when (val result = repository.pause(minutes * 60_000L)) {
+                is PauseResult.Paused -> "Proteksi dijeda $minutes menit. Aktif kembali otomatis sekitar pukul ${formatTime(result.untilMs)}."
+                is PauseResult.Failure -> result.reason
+            }
+            _eventChannel.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
+    fun resumeDns() {
+        viewModelScope.launch {
+            val message = when (val result = repository.resumeNow()) {
+                is ApplyResult.Success -> "Proteksi DNS aktif kembali ke ${result.hostname}"
+                is ApplyResult.Failure -> result.reason
+            }
+            _eventChannel.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
+    fun saveProfile(name: String, hostname: String) {
+        viewModelScope.launch {
+            val message = when (val result = profileRepository.add(name, hostname)) {
+                is ProfileSaveResult.Saved -> "Profil \"${result.profile.name}\" disimpan"
+                is ProfileSaveResult.Failure -> result.reason
+            }
+            _eventChannel.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
+    fun deleteProfile(id: String) {
+        profileRepository.remove(id)
+        _benchmark.update { it.copy(results = it.results - id) }
+    }
+
+    private fun formatTime(epochMs: Long): String =
+        DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(epochMs))
+
     class Factory(
         private val repository: DnsRepository,
-        private val granter: PermissionGranter
+        private val granter: PermissionGranter,
+        private val profileRepository: ProfileRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter) as T
+                return MainViewModel(repository, granter, profileRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
