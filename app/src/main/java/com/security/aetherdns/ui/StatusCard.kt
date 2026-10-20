@@ -189,7 +189,7 @@ private fun StatusPill(icon: ImageVector, color: Color, text: String) {
 
 /** Pintasan menambahkan Quick Settings Tile (Android 13+). */
 @Composable
-private fun AddTileButton() {
+internal fun AddTileButton() {
     val context = LocalContext.current
     TextButton(
         onClick = {

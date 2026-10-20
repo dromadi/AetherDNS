@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 ke bawah: status jeda tidak dicadangkan. -->
+<!-- Android 11 ke bawah: status jeda dan token otomasi tidak dicadangkan. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="pause_state.xml" />
+    <exclude domain="sharedpref" path="automation.xml" />
 </full-backup-content>

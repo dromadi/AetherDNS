@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.security.aetherdns.R
+import com.security.aetherdns.automation.AutomationSettings
+import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
@@ -12,6 +14,7 @@ import com.security.aetherdns.data.ProfileRepository
 import com.security.aetherdns.data.ProfileSaveResult
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.model.DnsProfile
+import com.security.aetherdns.onboarding.OnboardingStore
 import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.shizuku.PermissionGranter
 import com.security.aetherdns.util.AuditSummary
@@ -47,9 +50,18 @@ class MainViewModel(
     private val repository: DnsRepository,
     private val granter: PermissionGranter,
     private val profileRepository: ProfileRepository,
+    private val automationSettings: AutomationSettings,
+    private val onboardingStore: OnboardingStore,
     private val inspector: ResolverInspector = DotProbe,
     private val auditor: DnsAuditor = DnsAuditor()
 ) : ViewModel() {
+
+    val automation: StateFlow<AutomationState> = automationSettings.state
+
+    private val _showOnboarding = MutableStateFlow(
+        repository.state.value.let { onboardingStore.shouldShow(it.hasPermission, it.isProtectionActive) }
+    )
+    val showOnboarding: StateFlow<Boolean> = _showOnboarding.asStateFlow()
 
     val dnsState: StateFlow<DnsState> = repository.state
     val savedProfiles: StateFlow<List<DnsProfile>> = profileRepository.profiles
@@ -220,18 +232,34 @@ class MainViewModel(
         _benchmark.update { it.copy(results = it.results - id) }
     }
 
+    /** Menutup onboarding; bila izin sudah ada dan [hostname] dipilih, langsung menerapkannya (dengan probe). */
+    fun finishOnboarding(hostname: String?) {
+        onboardingStore.markCompleted()
+        _showOnboarding.value = false
+        if (hostname != null && dnsState.value.hasPermission) applyDns(hostname, probe = true)
+    }
+
+    fun setAutomationEnabled(enabled: Boolean) = automationSettings.setEnabled(enabled)
+
+    fun regenerateAutomationToken() {
+        automationSettings.regenerateToken()
+        viewModelScope.launch { snackbar(UiText.of(R.string.automation_token_regenerated)) }
+    }
+
     private fun formatTime(epochMs: Long): String =
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(epochMs))
 
     class Factory(
         private val repository: DnsRepository,
         private val granter: PermissionGranter,
-        private val profileRepository: ProfileRepository
+        private val profileRepository: ProfileRepository,
+        private val automationSettings: AutomationSettings,
+        private val onboardingStore: OnboardingStore
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

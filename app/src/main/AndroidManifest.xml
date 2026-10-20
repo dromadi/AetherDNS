@@ -68,6 +68,22 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Integrasi Tasker / MacroDroid. Nonaktif secara default; diaktifkan lewat sakelar di aplikasi
+            (AutomationSettings) dan setiap perintah wajib membawa token rahasia.
+        -->
+        <receiver
+            android:name=".automation.AutomationReceiver"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.security.aetherdns.action.ENABLE" />
+                <action android:name="com.security.aetherdns.action.DISABLE" />
+                <action android:name="com.security.aetherdns.action.PAUSE" />
+                <action android:name="com.security.aetherdns.action.APPLY" />
+            </intent-filter>
+        </receiver>
+
         <!-- Shizuku Provider (Dynamic authority matching debug & release package) -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

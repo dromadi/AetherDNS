@@ -40,6 +40,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val auditSummary by viewModel.auditSummary.collectAsState()
     val benchmark by viewModel.benchmark.collectAsState()
     val savedProfiles by viewModel.savedProfiles.collectAsState()
+    val automation by viewModel.automation.collectAsState()
+    val showOnboarding by viewModel.showOnboarding.collectAsState()
     val allProfiles = DefaultProfiles.list + savedProfiles
 
     // Handle snackbar events from ViewModel
@@ -70,6 +72,18 @@ fun AetherDnsApp(viewModel: MainViewModel) {
         if (dnsState.hasPermission && dnsState.isProtectionActive) {
             viewModel.applyDns(hostname, probe = true)
         }
+    }
+
+    if (showOnboarding) {
+        OnboardingScreen(
+            dnsState = dnsState,
+            shizukuStatus = shizukuStatus,
+            isGranting = isGranting,
+            onGrant = viewModel::grantViaShizuku,
+            onRefresh = viewModel::refresh,
+            onFinish = viewModel::finishOnboarding
+        )
+        return
     }
 
     Scaffold(
@@ -151,6 +165,14 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                     isProbing = isProbing,
                     onApply = { viewModel.applyDns(customHostname.trim(), probe = true) },
                     onSaveProfile = { name -> viewModel.saveProfile(name, customHostname) }
+                )
+            }
+
+            item {
+                AutomationCard(
+                    state = automation,
+                    onToggle = viewModel::setAutomationEnabled,
+                    onRegenerateToken = viewModel::regenerateAutomationToken
                 )
             }
 

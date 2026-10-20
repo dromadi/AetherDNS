@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+: profil kustom ikut dicadangkan, status jeda tidak (hanya bermakna di perangkat & waktu asal). -->
+<!-- Android 12+: profil kustom ikut dicadangkan, status jeda (hanya bermakna di perangkat & waktu asal) dan token otomasi (rahasia) tidak. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="pause_state.xml" />
+        <exclude domain="sharedpref" path="automation.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="pause_state.xml" />
+        <exclude domain="sharedpref" path="automation.xml" />
     </device-transfer>
 </data-extraction-rules>

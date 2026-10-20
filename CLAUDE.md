@@ -46,8 +46,13 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 9. **App Shortcuts (Dinamis)**:
    - `AppShortcuts.publish()` (dipanggil di `MainActivity.onCreate`) mendaftarkan shortcut Aktifkan / Jeda 15 menit / Matikan via `ShortcutManager`. Dinamis, bukan `shortcuts.xml`, karena `targetPackage` statis tidak bisa mengikuti sufiks `.debug`.
    - Target-nya `ShortcutActivity` (transparan, `exported=false`, tanpa UI) yang memanggil `DnsRepository` lalu menampilkan Toast.
-10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state` dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
-11. **Tidak Memonopoli Slot VPN**:
+10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state` dan `automation` (token rahasia) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
+11. **Otomasi (Tasker / MacroDroid)**:
+   - `AutomationReceiver` (exported, tetapi `android:enabled="false"` di manifest) hanya diaktifkan lewat sakelar di aplikasi (`AutomationSettings` → `setComponentEnabledSetting`). Setiap perintah wajib membawa extra `token` yang dibandingkan waktu-konstan dengan token acak 128-bit.
+   - Action: `com.security.aetherdns.action.ENABLE|DISABLE|PAUSE|APPLY`; extra `minutes`, `profile`, `hostname`. Parsing murni di `AutomationProtocol` (diuji di `AutomationProtocolTest`). `APPLY` selalu dengan probe dan dibatasi `withTimeoutOrNull(9 s)`; pembatalan aman karena `DnsApplier` memulihkan konfigurasi.
+   - Jangan pernah melonggarkan: tanpa token valid tidak ada perintah yang dijalankan, termasuk `DISABLE`.
+12. **Onboarding**: `OnboardingScreen` (3 langkah) tampil sekali untuk pengguna baru; `OnboardingStore.shouldShow()` otomatis menganggap selesai bila izin sudah ada atau proteksi aktif (pengguna lama yang update).
+13. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
 ---
@@ -81,6 +86,10 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
+- `automation/`:
+  - `AutomationProtocol.kt` (parsing perintah + token), `AutomationSettings.kt` (sakelar komponen + token), `AutomationReceiver.kt` (eksekusi via `DnsRepository`).
+- `onboarding/`:
+  - `OnboardingStore.kt`: Penanda onboarding selesai.
 - `shortcut/`:
   - `AppShortcuts.kt`, `ShortcutActivity.kt`: App Shortcuts dinamis dan activity transparan pelaksananya.
 - `receiver/`:
@@ -89,7 +98,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, state pilihan profil, dan susunan section.
-  - `StatusCard.kt`, `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`: Komponen per section.
+  - `StatusCard.kt`, `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
+  - `OnboardingScreen.kt`: Onboarding 3 langkah (memakai ulang `PermissionAssistantCard`, `PresetCard`, `AddTileButton`).
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
 ---

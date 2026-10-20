@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.7.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.8.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -42,7 +42,10 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
 11. **App Shortcuts**:
    - Tekan lama ikon aplikasi untuk **Aktifkan**, **Jeda 15 menit**, atau **Matikan** proteksi tanpa membuka aplikasi.
-12. **Bahasa Inggris & Indonesia**:
+12. **Otomasi (Tasker / MacroDroid / Automate)**:
+   - Nyalakan, matikan, jeda, atau ganti resolver dari aplikasi otomasi (mis. profil Family pada jam tertentu, Pi-hole saat tersambung Wi-Fi rumah) tanpa AetherDNS berjalan di background. Lihat [Otomasi](#otomasi-tasker--macrodroid).
+13. **Onboarding Pertama Kali**: 3 langkah singkat — penjelasan, pemberian izin (Shizuku/ADB), dan pilih resolver + pasang tile.
+14. **Bahasa Inggris & Indonesia**:
    - Antarmuka mengikuti bahasa HP (English sebagai default, Bahasa Indonesia untuk perangkat berbahasa Indonesia). Di Android 13+, bahasa aplikasi dapat dipilih terpisah lewat Settings → Apps → AetherDNS → Language.
 
 ---
@@ -93,6 +96,23 @@ Jika belum sempat mengaktifkan izin:
 - Aplikasi otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP untuk di-paste langsung.
 
 ---
+
+## Otomasi (Tasker / MacroDroid)
+
+1. Di AetherDNS, nyalakan sakelar **Otomasi** (kartu paling bawah) dan salin **token rahasia**. Selama sakelar mati, receiver otomasi dinonaktifkan sepenuhnya.
+2. Di Tasker buat aksi **System → Send Intent** (MacroDroid: **Send Intent**):
+
+| Kolom | Nilai |
+| :--- | :--- |
+| Action | `com.security.aetherdns.action.ENABLE` / `.DISABLE` / `.PAUSE` / `.APPLY` |
+| Package | `com.security.aetherdns` (build debug: `com.security.aetherdns.debug`) |
+| Target | Broadcast Receiver |
+| Extra | `token:<token>` (wajib) |
+| Extra tambahan | `.PAUSE`: `minutes:15` (1–1440, opsional). `.APPLY`: `profile:<nama/ID profil>` atau `hostname:<FQDN DoT>` |
+
+- Package wajib diisi: Android 8+ tidak mengirim broadcast implisit ke aplikasi.
+- `.APPLY` tetap menjalankan uji DoT sebelum menerapkan resolver; bila gagal (atau lebih dari ±9 detik), konfigurasi lama dipertahankan.
+- Siapa pun yang memegang token dapat mengendalikan proteksi. Buat token baru di aplikasi bila token pernah bocor.
 
 ## Pengujian
 

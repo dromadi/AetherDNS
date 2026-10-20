@@ -14,7 +14,13 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels {
         val app = application as AetherDnsApplication
-        MainViewModel.Factory(app.dnsRepository, app.permissionGranter, app.profileRepository)
+        MainViewModel.Factory(
+            app.dnsRepository,
+            app.permissionGranter,
+            app.profileRepository,
+            app.automationSettings,
+            app.onboardingStore
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

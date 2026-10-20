@@ -63,6 +63,22 @@ Siapkan: satu HP Android 11+ (Shizuku via Wireless Debugging) dan, bila ada, sat
 - [ ] (Android 13+) Settings → Apps → AetherDNS → Language: ganti bahasa tanpa mengubah bahasa HP.
 - [ ] Tidak ada teks terpotong pada layar kecil (cek kartu preset dan chip hasil uji).
 
-## 8. Backup
+## 8. Onboarding
 
-- [ ] (Opsional) `adb shell bmgr backupnow <paket>` lalu restore di perangkat lain → profil tersimpan kembali, status jeda **tidak** ikut.
+- [ ] Instal bersih → onboarding 3 langkah muncul; "Lewati" di langkah 1 langsung ke layar utama dan tidak muncul lagi.
+- [ ] Beri izin via Shizuku di langkah 2 → langkah 3 tombolnya "Aktifkan & Selesai" → resolver terpilih langsung aktif.
+- [ ] Tanpa izin → langkah 3 "Selesai" → layar utama dengan asisten izin.
+- [ ] Update dari versi sebelumnya yang sudah punya izin → onboarding **tidak** muncul.
+
+## 9. Otomasi (Tasker / MacroDroid)
+
+- [ ] Sakelar Otomasi mati → Send Intent dari Tasker tidak berpengaruh apa pun.
+- [ ] Sakelar nyala, token benar: `.DISABLE`, `.ENABLE`, `.PAUSE` (minutes:5), `.APPLY` (profile:AdGuard DNS) semuanya bekerja.
+- [ ] `.APPLY` dengan hostname:example.com → ditolak, resolver lama tetap aktif.
+- [ ] Token salah / tanpa token → tidak ada perubahan.
+- [ ] Buat token baru → perintah dengan token lama ditolak.
+- [ ] Reboot → status sakelar otomasi tetap sama.
+
+## 10. Backup
+
+- [ ] (Opsional) `adb shell bmgr backupnow <paket>` lalu restore di perangkat lain → profil tersimpan kembali, status jeda dan token otomasi **tidak** ikut.
