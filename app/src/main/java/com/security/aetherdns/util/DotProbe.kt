@@ -2,34 +2,51 @@ package com.security.aetherdns.util
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.DataInputStream
+import java.io.EOFException
 import java.net.InetSocketAddress
 import java.security.cert.CertificateException
 import javax.net.ssl.*
+import kotlin.random.Random
 
 enum class DotProbeCause {
     RESOLVE,
     TIMEOUT,
     TLS,
     CERT_MISMATCH,
+    DNS_QUERY,
     INVALID_INPUT,
     OTHER
 }
 
 sealed class DotProbeResult {
-    data object Success : DotProbeResult()
+    /** [handshakeMs]: TCP connect + TLS handshake, [queryMs]: round-trip satu query DNS di atas TLS. */
+    data class Success(val handshakeMs: Long, val queryMs: Long) : DotProbeResult() {
+        val totalMs: Long get() = handshakeMs + queryMs
+    }
     data class Failure(val cause: DotProbeCause, val reason: String) : DotProbeResult()
 }
 
-object DotProbe {
+/** Abstraksi probe DoT agar logika apply dapat diuji di JVM dengan implementasi palsu. */
+fun interface DotProber {
+    suspend fun probe(hostname: String): DotProbeResult
+}
+
+object DotProbe : DotProber {
     private const val DOT_PORT = 853
     private const val TIMEOUT_MS = 3500
 
+    /** Domain kanari yang tidak masuk blocklist resolver filtering mana pun. */
+    private const val CANARY_DOMAIN = "example.com"
+
     /**
-     * Melakukan uji koneksi TLS handshake ke server DoT port 853 dengan verifikasi sertifikat X.509,
-     * Server Name Indication (SNI), dan pencocokan Hostname Verifier (SAN / CN).
-     * Mencegah pemutusan total DNS sistem akibat memasukkan hostname yang tidak melayani DoT.
+     * Pre-flight test resolver DoT:
+     * 1. TCP connect + TLS handshake port 853 dengan SNI.
+     * 2. Verifikasi rantai sertifikat X.509 dan kecocokan hostname (SAN / CN).
+     * 3. Mengirim satu query DNS (A [CANARY_DOMAIN]) dengan framing RFC 7858 dan memvalidasi respons.
+     * Langkah 3 memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
      */
-    suspend fun probe(hostname: String): DotProbeResult = withContext(Dispatchers.IO) {
+    override suspend fun probe(hostname: String): DotProbeResult = withContext(Dispatchers.IO) {
         val validation = HostnameValidator.validate(hostname)
         if (validation is HostnameValidator.Result.Invalid) {
             return@withContext DotProbeResult.Failure(DotProbeCause.INVALID_INPUT, validation.reason)
@@ -51,8 +68,10 @@ object DotProbe {
             socket.sslParameters = sslParams
 
             // Connect & perform TLS handshake
+            val handshakeStart = System.nanoTime()
             socket.connect(InetSocketAddress(targetFqdn, DOT_PORT), TIMEOUT_MS)
             socket.startHandshake()
+            val handshakeMs = (System.nanoTime() - handshakeStart) / 1_000_000
 
             val session = socket.session
             if (!session.isValid) {
@@ -68,7 +87,26 @@ object DotProbe {
                 )
             }
 
-            DotProbeResult.Success
+            // Kirim satu query DNS di atas sesi TLS dan validasi respons
+            val queryId = Random.nextInt(0, 0x10000)
+            val queryStart = System.nanoTime()
+            socket.outputStream.apply {
+                write(DnsWireFormat.frame(DnsWireFormat.buildQuery(queryId, CANARY_DOMAIN)))
+                flush()
+            }
+            val input = DataInputStream(socket.inputStream)
+            val length = input.readUnsignedShort()
+            val response = ByteArray(length).also { input.readFully(it) }
+            val queryMs = (System.nanoTime() - queryStart) / 1_000_000
+
+            val header = DnsWireFormat.parseHeader(response)
+            when {
+                header == null || !header.isResponse || header.id != queryId ->
+                    DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Server port 853 tidak membalas dengan pesan DNS yang valid")
+                header.rcode != DnsWireFormat.RCODE_NOERROR && header.rcode != DnsWireFormat.RCODE_NXDOMAIN ->
+                    DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Resolver menolak query DNS (${rcodeName(header.rcode)})")
+                else -> DotProbeResult.Success(handshakeMs, queryMs)
+            }
         } catch (e: SSLException) {
             val rootCause = e.cause
             val message = if (rootCause is CertificateException) {
@@ -83,6 +121,8 @@ object DotProbe {
             DotProbeResult.Failure(DotProbeCause.TIMEOUT, "Batas waktu terlampaui (Timeout): Server tidak merespons di port 853")
         } catch (e: java.net.UnknownHostException) {
             DotProbeResult.Failure(DotProbeCause.RESOLVE, "Hostname tidak dapat di-resolve (NXDOMAIN)")
+        } catch (e: EOFException) {
+            DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Server menutup koneksi sebelum membalas query DNS")
         } catch (e: Exception) {
             DotProbeResult.Failure(DotProbeCause.OTHER, "Gagal terhubung ke port 853: ${e.javaClass.simpleName} - ${e.message}")
         } finally {
@@ -90,5 +130,11 @@ object DotProbe {
                 socket?.close()
             } catch (_: Exception) {}
         }
+    }
+
+    private fun rcodeName(rcode: Int): String = when (rcode) {
+        DnsWireFormat.RCODE_SERVFAIL -> "SERVFAIL"
+        DnsWireFormat.RCODE_REFUSED -> "REFUSED"
+        else -> "RCODE $rcode"
     }
 }

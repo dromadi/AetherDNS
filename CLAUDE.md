@@ -17,12 +17,16 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Terintegrasi dengan Shizuku API v13 melalui AIDL UserService (`IGrantService.aidl`).
    - Berjalan pada proses terpisah dengan UID shell (2000) untuk mengeksekusi `pm grant <packageName> android.permission.WRITE_SECURE_SETTINGS`.
    - Menggunakan `daemon(false)` sehingga proses shell langsung dimatikan setelah izin diberikan (0% persistent overhead).
+   - Mendukung Sui (Shizuku via Magisk/KernelSU) melalui `Sui.init()`; status binder dicek sebelum pengecekan paket Shizuku.
+   - Panggilan binder `pm grant` dijalankan di `Dispatchers.IO`; keberhasilan ditentukan oleh status izin aktual, bukan exit code.
 3. **Reaktivitas Tanpa Polling (`ContentObserver` & `NetworkCallback`)**:
    - `DnsRepository` mendaftarkan `ContentObserver` pada database `Settings.Global`. Setiap perubahan DNS dari Settings HP atau Quick Settings Tile langsung memicu pembaruan `StateFlow` secara instan.
    - Mendaftarkan `ConnectivityManager.NetworkCallback` (`onLinkPropertiesChanged`) untuk memantau status validasi DoT kernel OS (`isPrivateDnsActive`) secara real-time.
 4. **Pre-flight DoT Handshake Probe & Hostname Verifier**:
    - `DotProbe` menguji handshake TLS port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap Subject Alternative Name (SAN) sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
-   - Dilengkapi *self-healing* aman: Jika probe gagal karena resolusi DNS mati (`DotProbeCause.RESOLVE`) saat mode strict aktif, repository sementara beralih ke `opportunistic`, melakukan retry bertahap (3x percobaan), dan selalu memulihkan setting di blok `finally { withContext(NonCancellable) { ... } }` jika pemulihan gagal.
+   - Setelah handshake, `DotProbe` mengirim satu query DNS sungguhan (A `example.com`, framing RFC 7858) dan memvalidasi ID, bit QR, serta RCODE respons. Server yang menerima TLS tetapi tidak melayani DNS ditolak (`DotProbeCause.DNS_QUERY`).
+   - Hasil probe memuat latensi (`handshakeMs`, `queryMs`) yang dipakai fitur "Uji Kecepatan" pada daftar preset.
+   - Dilengkapi *self-healing* aman (`DnsApplier`): Jika probe gagal karena resolusi DNS mati (`DotProbeCause.RESOLVE`) saat mode strict aktif, konfigurasi sementara beralih ke `opportunistic`, melakukan retry bertahap (3x percobaan), dan memulihkan setting semula di blok `finally { withContext(NonCancellable) { ... } }` bila resolver baru tidak berhasil **tertulis** (gagal, dibatalkan, atau ditolak sistem).
    - Dilindungi `Mutex` untuk mencegah *race condition* akibat penekanan preset ganda secara cepat.
 5. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
@@ -44,18 +48,21 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `PermissionGranter.kt`: Interface dan implementasi `ShizukuGranter` (`status()`, `requestPermission()`, `grant()`).
 - `data/`:
   - `DnsState.kt`: Model data immutable untuk status DoT sistem.
-  - `DnsRepository.kt`: Single source of truth. Mengelola pembacaan/penulisan settings, `ContentObserver`, `NetworkCallback`, `Mutex` concurrency, dan pemulihan deadlock DNS (*self-healing*).
+  - `SecureSettings.kt`: Interface baca/tulis `Settings.Global` Private DNS + implementasi `AndroidSecureSettings`.
+  - `DnsApplier.kt`: Pipeline apply murni (validasi → probe → self-healing → tulis) tanpa dependensi Android framework, dilindungi `Mutex`. Diuji penuh di `DnsApplierTest`.
+  - `DnsRepository.kt`: Single source of truth state (`StateFlow`), `ContentObserver`, `NetworkCallback`; mendelegasikan apply ke `DnsApplier`.
 - `model/`:
   - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles`.
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
-  - `DotProbe.kt`: Pre-flight test koneksi port 853 DoT via SSLSocket + SNI + `HttpsURLConnection.getDefaultHostnameVerifier()` dengan typed `DotProbeCause`.
+  - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi; mengimplementasikan interface `DotProber`.
+  - `DnsWireFormat.kt`: Encoder query / decoder header pesan DNS (RFC 1035) minimal untuk probe.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
 - `ui/`:
-  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit, dan `Channel<UiEvent>` untuk Snackbar.
+  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit, benchmark latensi preset (`BenchmarkState`), dan `Channel<UiEvent>` untuk Snackbar.
   - `AetherDnsApp.kt`: Tampilan deklaratif Jetpack Compose (Material 3) dengan kartu status Shizuku multi-state.
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
@@ -64,8 +71,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, dsb.)
-.\gradlew.bat test
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, DnsWireFormat, GrantOutputParser, BenchmarkState)
+.\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK
 .\gradlew.bat assembleDebug
@@ -76,5 +83,9 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 # Bersihkan build cache
 .\gradlew.bat clean
 ```
+
+> **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, dan `assembleRelease` pada setiap push ke `main` dan pull request.
+>
+> **Catatan JDK**: Jangan menulis `org.gradle.java.home` di `gradle.properties` proyek (path mesin lokal merusak build di CI/mesin lain). Simpan di `~/.gradle/gradle.properties` milik pengguna.
 
 > **Catatan Windows / OneDrive**: `build.gradle.kts` root telah mengalihkan `buildDirectory` ke direktori lokal temporer (`C:\Users\...\AppData\Local\Temp\gradle_build\AetherDNS\...`) untuk menghindari *file lock* oleh sinkronisasi cloud OneDrive.

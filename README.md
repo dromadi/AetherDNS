@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.3.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.4.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -10,12 +10,15 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
    - Terintegrasi dengan Shizuku API v13 melalui AIDL UserService (`IGrantService.aidl`).
    - Memberikan izin `WRITE_SECURE_SETTINGS` langsung dari HP tanpa perlu laptop/kabel data.
    - Menggunakan `daemon(false)` sehingga proses shell langsung berhenti setelah izin diberikan (0% overhead).
+   - Mendukung Sui (Shizuku via Magisk/KernelSU) untuk perangkat root.
 2. **Clean Architecture (DnsRepository + MainViewModel + StateFlow)**:
    - Memisahkan logika bisnis sepenuhnya dari lapisan tampilan Jetpack Compose.
    - Pendaftaran `ContentObserver` pada database `Settings.Global` memastikan status di UI selalu reaktif secara real-time tanpa *polling loop*.
    - Mendaftarkan `ConnectivityManager.NetworkCallback` (`onLinkPropertiesChanged`) untuk pembaruan instan status validasi DoT kernel OS.
-3. **Pre-flight DoT Handshake Probe & Hostname Matching (`DotProbe`)**:
+3. **Pre-flight DoT Probe: Handshake, Hostname Matching & Query DNS (`DotProbe`)**:
    - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
+   - Mengirim satu query DNS sungguhan (RFC 7858) untuk memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
+   - Tombol **Uji Kecepatan** mengukur latensi DoT (handshake + query) setiap preset dan menandai resolver tercepat di jaringan Anda.
    - Dilengkapi *self-healing fallback* aman: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru, dilindungi oleh `Mutex` dan blok `finally { NonCancellable }`.
 4. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.

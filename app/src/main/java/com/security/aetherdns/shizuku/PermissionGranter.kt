@@ -1,14 +1,19 @@
 package com.security.aetherdns.shizuku
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import com.security.aetherdns.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import rikka.shizuku.Shizuku
 import kotlin.coroutines.resume
 
@@ -26,6 +31,28 @@ interface PermissionGranter {
     suspend fun grant(): Result<Unit>
 }
 
+/** Menerjemahkan keluaran `GrantService` menjadi hasil yang bisa ditampilkan ke pengguna. */
+object GrantOutputParser {
+    fun toResult(raw: String, permissionGranted: Boolean): Result<Unit> {
+        // Sumber kebenaran adalah status izin aktual, bukan exit code `pm grant`
+        if (permissionGranted) return Result.success(Unit)
+
+        val exitCode = raw.substringBefore('\n').trim()
+        val output = raw.substringAfter('\n', "").trim()
+        val message = when {
+            isOemRestriction(output) ->
+                "Sistem menolak pm grant (SecurityException). Di MIUI/HyperOS aktifkan 'USB debugging (Security settings)'; " +
+                    "di ColorOS/realme UI aktifkan 'Disable permission monitoring' di Opsi Pengembang, lalu coba lagi."
+            output.isNotEmpty() -> "pm grant gagal (exit $exitCode): ${output.lineSequence().first()}"
+            else -> "pm grant gagal (exit $exitCode)"
+        }
+        return Result.failure(Exception(message))
+    }
+
+    fun isOemRestriction(output: String): Boolean =
+        output.contains("SecurityException") || output.contains("GRANT_RUNTIME_PERMISSIONS")
+}
+
 class ShizukuGranter(private val context: Context) : PermissionGranter {
 
     private val args by lazy {
@@ -37,86 +64,106 @@ class ShizukuGranter(private val context: Context) : PermissionGranter {
     }
 
     override fun status(): GranterStatus {
-        val isInstalled = try {
-            context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
+        // Binder dicek lebih dulu: Sui (Shizuku via Magisk) menyediakan binder tanpa aplikasi Shizuku terpasang
+        val binderAlive = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        if (!binderAlive) {
+            return if (isShizukuAppInstalled()) GranterStatus.NOT_RUNNING else GranterStatus.NOT_INSTALLED
         }
 
-        if (!isInstalled) return GranterStatus.NOT_INSTALLED
-        if (!Shizuku.pingBinder()) return GranterStatus.NOT_RUNNING
-        if (Shizuku.isPreV11()) return GranterStatus.UNSUPPORTED
-
-        return if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            GranterStatus.READY
-        } else {
-            GranterStatus.NEEDS_AUTHORIZATION
-        }
+        return runCatching {
+            when {
+                Shizuku.isPreV11() -> GranterStatus.UNSUPPORTED
+                Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED -> GranterStatus.READY
+                else -> GranterStatus.NEEDS_AUTHORIZATION
+            }
+        }.getOrDefault(GranterStatus.NOT_RUNNING) // binder mati di antara pengecekan
     }
 
     override suspend fun requestPermission(): Boolean = suspendCancellableCoroutine { cont ->
-        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            cont.resume(true)
-            return@suspendCancellableCoroutine
-        }
-
         val listener = object : Shizuku.OnRequestPermissionResultListener {
             override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
+                if (requestCode != REQUEST_CODE) return
                 Shizuku.removeRequestPermissionResultListener(this)
-                cont.resume(grantResult == PackageManager.PERMISSION_GRANTED)
+                if (cont.isActive) cont.resume(grantResult == PackageManager.PERMISSION_GRANTED)
             }
         }
 
-        Shizuku.addRequestPermissionResultListener(listener)
-        cont.invokeOnCancellation {
+        try {
+            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                cont.resume(true)
+                return@suspendCancellableCoroutine
+            }
+            Shizuku.addRequestPermissionResultListener(listener)
+            cont.invokeOnCancellation { Shizuku.removeRequestPermissionResultListener(listener) }
+            Shizuku.requestPermission(REQUEST_CODE)
+        } catch (e: Exception) {
+            // IllegalStateException bila binder Shizuku mati (mis. Wireless Debugging dimatikan)
             Shizuku.removeRequestPermissionResultListener(listener)
+            if (cont.isActive) cont.resume(false)
         }
-
-        Shizuku.requestPermission(1001)
     }
 
-    override suspend fun grant(): Result<Unit> = withContext(Dispatchers.IO) {
-        suspendCancellableCoroutine { cont ->
-            val conn = object : ServiceConnection {
-                override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                    val exitCode = runCatching {
-                        val service = IGrantService.Stub.asInterface(binder)
-                        service.grantSecureSettings()
-                    }
+    override suspend fun grant(): Result<Unit> {
+        val connection = GrantConnection()
+        return try {
+            val service = withTimeout(BIND_TIMEOUT_MS) { connection.bind() }
+            // Callback ServiceConnection berjalan di main thread; panggilan binder sinkron dipindah ke IO
+            val raw = withContext(Dispatchers.IO) { service.grantSecureSettings() }
+            GrantOutputParser.toResult(raw, hasSecurePermission())
+        } catch (e: TimeoutCancellationException) {
+            Result.failure(Exception("Shizuku tidak merespons. Pastikan layanan Shizuku sedang berjalan."))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            connection.unbind()
+        }
+    }
 
-                    // Lepas dan hentikan UserService segera
-                    try {
-                        Shizuku.unbindUserService(args, this, true)
-                    } catch (_: Exception) {}
+    private fun hasSecurePermission(): Boolean =
+        context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
-                    val result = exitCode.fold(
-                        onSuccess = { code ->
-                            if (code == 0) {
-                                Result.success(Unit)
-                            } else {
-                                Result.failure(Exception("pm grant gagal (exit $code). Jika di MIUI/HyperOS, aktifkan 'USB debugging (Security settings)' di Opsi Pengembang."))
-                            }
-                        },
-                        onFailure = { Result.failure(it) }
-                    )
-                    cont.resume(result)
-                }
+    private fun isShizukuAppInstalled(): Boolean = try {
+        context.packageManager.getPackageInfo(SHIZUKU_PACKAGE, 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
+    }
 
-                override fun onServiceDisconnected(name: ComponentName?) {}
-            }
+    private inner class GrantConnection : ServiceConnection {
+        private val service = CompletableDeferred<IGrantService>()
+        private var bound = false
 
-            try {
-                Shizuku.bindUserService(args, conn)
-            } catch (e: Exception) {
-                cont.resume(Result.failure(e))
-            }
+        suspend fun bind(): IGrantService {
+            Shizuku.bindUserService(args, this)
+            bound = true
+            return service.await()
+        }
 
-            cont.invokeOnCancellation {
-                try {
-                    Shizuku.unbindUserService(args, conn, true)
-                } catch (_: Exception) {}
+        fun unbind() {
+            if (!bound) return
+            bound = false
+            // remove = true → proses UserService dihentikan
+            runCatching { Shizuku.unbindUserService(args, this, true) }
+        }
+
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            if (binder != null && binder.pingBinder()) {
+                service.complete(IGrantService.Stub.asInterface(binder))
+            } else {
+                service.completeExceptionally(IllegalStateException("UserService Shizuku tidak valid"))
             }
         }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            service.completeExceptionally(IllegalStateException("UserService Shizuku terputus"))
+        }
+    }
+
+    private companion object {
+        const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
+        const val REQUEST_CODE = 1001
+        const val BIND_TIMEOUT_MS = 10_000L
     }
 }

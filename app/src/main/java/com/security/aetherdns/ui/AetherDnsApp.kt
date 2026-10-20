@@ -28,11 +28,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.security.aetherdns.BuildConfig
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.service.AetherDnsTileService
 import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.ui.theme.*
 import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.HostnameValidator
 import kotlinx.coroutines.flow.collectLatest
 
@@ -48,6 +50,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val isGranting by viewModel.isGranting.collectAsState()
     val isAuditing by viewModel.isAuditing.collectAsState()
     val auditSummary by viewModel.auditSummary.collectAsState()
+    val benchmark by viewModel.benchmark.collectAsState()
 
     // Handle snackbar events from ViewModel
     LaunchedEffect(Unit) {
@@ -87,7 +90,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             fontSize = 20.sp
                         )
                         Text(
-                            text = "Native DoT & Ad-Sinkhole Controller (v1.3.0)",
+                            text = "Native DoT & Ad-Sinkhole Controller (v${BuildConfig.VERSION_NAME})",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -647,8 +650,21 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                     Text(
                         text = "Pilih Preset DNS Filtering",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f)
                     )
+                    TextButton(
+                        onClick = { viewModel.runBenchmark() },
+                        enabled = !benchmark.isRunning
+                    ) {
+                        if (benchmark.isRunning) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (benchmark.isRunning) "Mengukur..." else "Uji Kecepatan", fontSize = 12.sp)
+                    }
                 }
             }
 
@@ -720,6 +736,9 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 color = PrimaryBlue,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
+                            benchmark.results[profile.id]?.let { result ->
+                                BenchmarkChip(result = result, isFastest = benchmark.fastestId == profile.id)
+                            }
                         }
                     }
                 }
@@ -806,5 +825,30 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun BenchmarkChip(result: DotProbeResult, isFastest: Boolean) {
+    val (text, color) = when (result) {
+        is DotProbeResult.Success -> {
+            val label = "${result.totalMs} ms (TLS ${result.handshakeMs} + query ${result.queryMs})"
+            (if (isFastest) "Tercepat · $label" else label) to (if (isFastest) SuccessGreen else PrimaryBlue)
+        }
+        is DotProbeResult.Failure -> "Gagal: ${result.reason}" to ErrorRed
+    }
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.12f),
+        modifier = Modifier.padding(top = 6.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+            maxLines = 2,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
     }
 }
