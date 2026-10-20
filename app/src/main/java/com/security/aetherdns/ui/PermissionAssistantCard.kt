@@ -27,6 +27,7 @@ import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.ui.theme.WarningOrangeLight
 import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.SystemShortcuts
 
 /** Asisten izin WRITE_SECURE_SETTINGS: Shizuku (tanpa PC) dan perintah ADB manual. */
 @Composable
@@ -99,6 +100,10 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
 
             Spacer(modifier = Modifier.height(6.dp))
             Text(stringResource(statusHint), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            if (status == GranterStatus.NOT_RUNNING || status == GranterStatus.NOT_INSTALLED) {
+                ShizukuSetupShortcuts(isInstalled = status == GranterStatus.NOT_RUNNING)
+            }
 
             if (status == GranterStatus.READY || status == GranterStatus.NEEDS_AUTHORIZATION) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -201,4 +206,42 @@ private fun AdbSection(selectedHostname: String, onRefresh: () -> Unit) {
 private fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+}
+
+/** Pintasan menyiapkan Shizuku: buka Wireless debugging / Shizuku, plus langkah singkat. */
+@Composable
+private fun ShizukuSetupShortcuts(isInstalled: Boolean) {
+    val context = LocalContext.current
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(
+            onClick = {
+                if (SystemShortcuts.openWirelessDebugging(context) == SystemShortcuts.DeveloperTarget.ABOUT_PHONE) {
+                    Toast.makeText(context, R.string.shizuku_enable_developer_options, Toast.LENGTH_LONG).show()
+                }
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Icon(Icons.Default.Wifi, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.shizuku_open_wireless_debugging), fontSize = 11.sp)
+        }
+        OutlinedButton(
+            onClick = { SystemShortcuts.openShizuku(context) },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                stringResource(if (isInstalled) R.string.shizuku_open_app else R.string.shizuku_download),
+                fontSize = 11.sp
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(stringResource(R.string.shizuku_setup_steps), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

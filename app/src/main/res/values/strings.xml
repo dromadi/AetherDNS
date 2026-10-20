@@ -173,6 +173,11 @@
     <string name="automation_token_warning">Anyone with this token can control your DNS protection. Only paste it into apps you trust.</string>
     <string name="automation_howto_title">Send Intent setup (Tasker / MacroDroid)</string>
     <string name="automation_howto_body">Target: Broadcast Receiver\nPackage: %1$s\nAction (pick one):\n  %2$s\n  %3$s\n  %4$s  (extra minutes:15)\n  %5$s  (extra profile:&lt;name&gt; or hostname:&lt;fqdn&gt;)\nExtra: token:%6$s</string>
+    <string name="shizuku_open_wireless_debugging">Open Wireless debugging</string>
+    <string name="shizuku_open_app">Open Shizuku</string>
+    <string name="shizuku_download">Download Shizuku</string>
+    <string name="shizuku_enable_developer_options">Developer options is off. Tap \"Build number\" 7 times (Software information), then come back.</string>
+    <string name="shizuku_setup_steps">1. Connect to Wi-Fi and turn on Wireless debugging.\n2. First time only: in Shizuku tap Pairing, then in Wireless debugging choose \"Pair device with pairing code\" and type the code into the Shizuku notification.\n3. Tap Start in Shizuku, then come back here.\nTip: Developer options → Quick settings developer tiles → Wireless debugging adds a one-tap toggle. Samsung: turn off Auto Blocker temporarily if it keeps searching.</string>
     <string name="tile_label">DNS Ad-Block</string>
     <string name="tile_subtitle_needs_permission">Needs ADB permission</string>
     <string name="tile_subtitle_paused">Paused until %1$s</string>

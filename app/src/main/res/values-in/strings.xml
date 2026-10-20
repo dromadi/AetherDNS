@@ -172,6 +172,11 @@
     <string name="automation_token_warning">Siapa pun yang memegang token ini bisa mengendalikan proteksi DNS. Tempel hanya di aplikasi yang Anda percaya.</string>
     <string name="automation_howto_title">Pengaturan Send Intent (Tasker / MacroDroid)</string>
     <string name="automation_howto_body">Target: Broadcast Receiver\nPackage: %1$s\nAction (pilih satu):\n  %2$s\n  %3$s\n  %4$s  (extra minutes:15)\n  %5$s  (extra profile:&lt;nama&gt; atau hostname:&lt;fqdn&gt;)\nExtra: token:%6$s</string>
+    <string name="shizuku_open_wireless_debugging">Buka Wireless debugging</string>
+    <string name="shizuku_open_app">Buka Shizuku</string>
+    <string name="shizuku_download">Unduh Shizuku</string>
+    <string name="shizuku_enable_developer_options">Opsi Pengembang belum aktif. Ketuk \"Build number\" 7 kali (Software information), lalu kembali ke sini.</string>
+    <string name="shizuku_setup_steps">1. Sambungkan ke Wi-Fi dan nyalakan Wireless debugging.\n2. Pertama kali saja: di Shizuku tekan Pairing, lalu di Wireless debugging pilih \"Pair device with pairing code\" dan ketik kodenya di notifikasi Shizuku.\n3. Tekan Start di Shizuku, lalu kembali ke sini.\nTips: Developer options → Quick settings developer tiles → Wireless debugging menambah tombol 1 ketuk. Samsung: matikan sementara Auto Blocker bila terus mencari.</string>
     <string name="tile_label">DNS Anti-Iklan</string>
     <string name="tile_subtitle_needs_permission">Perlu Izin ADB</string>
     <string name="tile_subtitle_paused">Dijeda s/d %1$s</string>

@@ -9,6 +9,7 @@ Siapkan: satu HP Android 11+ (Shizuku via Wireless Debugging) dan, bila ada, sat
 - [ ] Update dari versi sebelumnya berhasil tanpa uninstall (kunci tanda tangan sama).
 - [ ] Shizuku **belum terpasang** → status "Belum Terpasang / Not installed".
 - [ ] Shizuku terpasang tapi **belum Start** → "Belum Berjalan / Not running".
+- [ ] Saat "Belum Berjalan": tombol **Buka Wireless debugging** membuka Developer options (item Wireless debugging disorot bila ROM mendukung); bila Developer options belum aktif, membuka About phone + petunjuk Build number. Tombol **Buka Shizuku** membuka aplikasi Shizuku.
 - [ ] Shizuku berjalan → "Perlu Otorisasi" → tombol izinkan → dialog Shizuku muncul → "Siap".
 - [ ] "Berikan Izin Otomatis" → snackbar sukses, kartu asisten izin hilang, badge "Mode Native Aktif".
 - [ ] Matikan Wireless Debugging saat dialog otorisasi Shizuku terbuka → aplikasi **tidak crash**, muncul pesan gagal.
