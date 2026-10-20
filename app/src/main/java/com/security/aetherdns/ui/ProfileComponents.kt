@@ -1,7 +1,5 @@
 package com.security.aetherdns.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,14 +12,16 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.security.aetherdns.R
 import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.ui.theme.ErrorRed
 import com.security.aetherdns.ui.theme.PrimaryBlue
-import com.security.aetherdns.util.DotProbeResult
+import com.security.aetherdns.util.InspectionResult
 import com.security.aetherdns.util.NextDnsHostname
 
 /** Kartu profil kustom tersimpan, dengan tombol hapus. */
@@ -29,21 +29,12 @@ import com.security.aetherdns.util.NextDnsHostname
 fun SavedProfileCard(
     profile: DnsProfile,
     isSelected: Boolean,
-    benchmarkResult: DotProbeResult?,
+    benchmarkResult: InspectionResult?,
     isFastest: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) PrimaryBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
-        ),
-        border = if (isSelected) BorderStroke(1.5.dp, PrimaryBlue) else null
-    ) {
+    SelectableCard(isSelected = isSelected, onClick = onSelect) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -56,19 +47,17 @@ fun SavedProfileCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Bookmark, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(profile.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(profile.displayName(), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 }
-                Text(
-                    text = profile.hostname,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    color = PrimaryBlue,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                HostnameText(profile.hostname)
                 benchmarkResult?.let { BenchmarkChip(result = it, isFastest = isFastest) }
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Hapus profil ${profile.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.profile_delete, profile.displayName()),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -89,21 +78,21 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
         TextButton(onClick = { expanded = !expanded }) {
             Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Pakai NextDNS? Susun hostname dari Config ID", fontSize = 12.sp)
+            Text(stringResource(R.string.nextdns_toggle), fontSize = 12.sp)
         }
 
         if (expanded) {
             OutlinedTextField(
                 value = configInput,
                 onValueChange = { configInput = it },
-                label = { Text("Config ID / URL NextDNS", fontSize = 12.sp) },
-                placeholder = { Text("abc123 atau https://dns.nextdns.io/abc123", fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.nextdns_config_label), fontSize = 12.sp) },
+                placeholder = { Text(stringResource(R.string.nextdns_config_placeholder), fontSize = 12.sp) },
                 singleLine = true,
                 isError = result is NextDnsHostname.Result.Invalid,
                 supportingText = {
                     when (result) {
-                        is NextDnsHostname.Result.Invalid -> Text(result.reason, color = ErrorRed, fontSize = 11.sp)
-                        else -> Text("Lihat di my.nextdns.io → Setup → Endpoints", fontSize = 11.sp)
+                        is NextDnsHostname.Result.Invalid -> Text(result.error.toUiText().resolve(), color = ErrorRed, fontSize = 11.sp)
+                        else -> Text(stringResource(R.string.nextdns_config_hint), fontSize = 11.sp)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -111,10 +100,10 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
             OutlinedTextField(
                 value = deviceName,
                 onValueChange = { deviceName = it },
-                label = { Text("Nama perangkat (opsional)", fontSize = 12.sp) },
-                placeholder = { Text("mis. Pixel 8", fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.nextdns_device_label), fontSize = 12.sp) },
+                placeholder = { Text(stringResource(R.string.nextdns_device_placeholder), fontSize = 12.sp) },
                 singleLine = true,
-                supportingText = { Text("Agar perangkat ini terpisah di log & analytics NextDNS", fontSize = 11.sp) },
+                supportingText = { Text(stringResource(R.string.nextdns_device_hint), fontSize = 11.sp) },
                 modifier = Modifier.fillMaxWidth()
             )
             if (result is NextDnsHostname.Result.Valid) {
@@ -127,7 +116,7 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = { onUseHostname(result.hostname) }) {
-                        Text("Gunakan", fontSize = 12.sp)
+                        Text(stringResource(R.string.nextdns_use), fontSize = 12.sp)
                     }
                 }
             }
@@ -143,8 +132,8 @@ fun SaveProfileRow(onSave: (name: String) -> Unit) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Nama profil (opsional)", fontSize = 12.sp) },
-            placeholder = { Text("mis. Rumah – Pi-hole", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.profile_name_label), fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.profile_name_placeholder), fontSize = 12.sp) },
             singleLine = true,
             modifier = Modifier.weight(1f)
         )
@@ -156,7 +145,7 @@ fun SaveProfileRow(onSave: (name: String) -> Unit) {
             },
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Simpan", fontSize = 12.sp)
+            Text(stringResource(R.string.profile_save), fontSize = 12.sp)
         }
     }
 }

@@ -25,6 +25,9 @@ object DnsWireFormat {
         val answerCount: Int
     )
 
+    /** Respons DNS: header + alamat IPv4 dari semua record A di bagian answer. */
+    data class Response(val header: Header, val ipv4Answers: List<String>)
+
     /** Membangun query rekursif (RD = 1) untuk [name] dengan tipe [type]. */
     fun buildQuery(id: Int, name: String, type: Int = TYPE_A): ByteArray {
         require(id in 0..0xFFFF) { "ID DNS harus 16-bit" }
@@ -64,6 +67,48 @@ object DnsWireFormat {
             questionCount = message.u16(4),
             answerCount = message.u16(6)
         )
+    }
+
+    /**
+     * Membaca header dan record A pada bagian answer. Mendukung kompresi nama (RFC 1035 §4.1.4).
+     * Mengembalikan null bila pesan terpotong atau tidak valid.
+     */
+    fun parseResponse(message: ByteArray): Response? {
+        val header = parseHeader(message) ?: return null
+        var offset = HEADER_SIZE
+        repeat(header.questionCount) {
+            offset = skipName(message, offset) ?: return null
+            offset += 4 // QTYPE + QCLASS
+            if (offset > message.size) return null
+        }
+        val ipv4 = mutableListOf<String>()
+        repeat(header.answerCount) {
+            offset = skipName(message, offset) ?: return null
+            if (offset + 10 > message.size) return null
+            val type = message.u16(offset)
+            val rdLength = message.u16(offset + 8)
+            val rdStart = offset + 10
+            if (rdStart + rdLength > message.size) return null
+            if (type == TYPE_A && rdLength == 4) {
+                ipv4 += (0 until 4).joinToString(".") { (message[rdStart + it].toInt() and 0xFF).toString() }
+            }
+            offset = rdStart + rdLength
+        }
+        return Response(header, ipv4)
+    }
+
+    /** Melewati satu nama domain (label atau pointer kompresi); null bila keluar batas pesan. */
+    private fun skipName(message: ByteArray, start: Int): Int? {
+        var offset = start
+        while (offset < message.size) {
+            val length = message[offset].toInt() and 0xFF
+            when {
+                length == 0 -> return offset + 1
+                length and 0xC0 == 0xC0 -> return (offset + 2).takeIf { it <= message.size }
+                else -> offset += length + 1
+            }
+        }
+        return null
     }
 
     private fun ByteArray.u16(offset: Int): Int =

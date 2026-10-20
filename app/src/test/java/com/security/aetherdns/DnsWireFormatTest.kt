@@ -66,4 +66,45 @@ class DnsWireFormatTest {
     fun truncatedMessageReturnsNull() {
         assertNull(DnsWireFormat.parseHeader(ByteArray(11)))
     }
+
+    /** Respons untuk query example.com (ID 0x1234) dengan [answers] record A memakai pointer kompresi ke offset 12. */
+    private fun response(rcode: Int, vararg answers: List<Int>): ByteArray {
+        val question = DnsWireFormat.buildQuery(0x1234, "example.com").drop(12)
+        val header = bytes(0x12, 0x34, 0x81, 0x80 or rcode, 0, 1, 0, answers.size, 0, 0, 0, 0).toList()
+        val records = answers.flatMap { ip ->
+            listOf(0xC0, 0x0C, 0, 1, 0, 1, 0, 0, 0, 60, 0, 4) + ip
+        }.map { it.toByte() }
+        return (header + question + records).toByteArray()
+    }
+
+    @Test
+    fun parsesCompressedARecords() {
+        val parsed = DnsWireFormat.parseResponse(response(0, listOf(93, 184, 215, 14), listOf(0, 0, 0, 0)))!!
+        assertEquals(0x1234, parsed.header.id)
+        assertEquals(listOf("93.184.215.14", "0.0.0.0"), parsed.ipv4Answers)
+    }
+
+    @Test
+    fun skipsNonARecords() {
+        // Record CNAME (type 5) dengan RDATA berupa pointer, lalu satu record A
+        val cname = listOf(0xC0, 0x0C, 0, 5, 0, 1, 0, 0, 0, 60, 0, 2, 0xC0, 0x0C)
+        val a = listOf(0xC0, 0x0C, 0, 1, 0, 1, 0, 0, 0, 60, 0, 4, 1, 2, 3, 4)
+        val base = response(0).toMutableList()
+        base[7] = 2 // ANCOUNT
+        val message = (base + (cname + a).map { it.toByte() }).toByteArray()
+        assertEquals(listOf("1.2.3.4"), DnsWireFormat.parseResponse(message)!!.ipv4Answers)
+    }
+
+    @Test
+    fun truncatedAnswerReturnsNull() {
+        val full = response(0, listOf(1, 2, 3, 4))
+        assertNull(DnsWireFormat.parseResponse(full.copyOf(full.size - 2)))
+    }
+
+    @Test
+    fun answerCountBeyondMessageReturnsNull() {
+        val message = response(0)
+        message[7] = 3 // klaim 3 answer, tidak ada data
+        assertNull(DnsWireFormat.parseResponse(message))
+    }
 }

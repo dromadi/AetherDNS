@@ -12,14 +12,31 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.5.0"
+        versionCode = 7
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Penandatanganan rilis dari environment (dipakai workflow .github/workflows/release.yml).
+    // Tanpa variabel ini, assembleRelease tetap menghasilkan APK unsigned seperti sebelumnya.
+    val releaseKeystore = System.getenv("AETHERDNS_KEYSTORE_PATH")
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("AETHERDNS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("AETHERDNS_KEY_ALIAS")
+                keyPassword = System.getenv("AETHERDNS_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

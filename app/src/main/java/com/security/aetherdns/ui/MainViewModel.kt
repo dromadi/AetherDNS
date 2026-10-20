@@ -3,21 +3,22 @@ package com.security.aetherdns.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.security.aetherdns.R
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
 import com.security.aetherdns.data.PauseResult
 import com.security.aetherdns.data.ProfileRepository
 import com.security.aetherdns.data.ProfileSaveResult
-import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.model.DefaultProfiles
+import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.shizuku.PermissionGranter
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DotProbe
-import com.security.aetherdns.util.DotProbeResult
-import com.security.aetherdns.util.DotProber
+import com.security.aetherdns.util.InspectionResult
+import com.security.aetherdns.util.ResolverInspector
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -27,17 +28,18 @@ import java.text.DateFormat
 import java.util.Date
 
 sealed class UiEvent {
-    data class ShowSnackbar(val message: String) : UiEvent()
+    data class ShowSnackbar(val message: UiText) : UiEvent()
 }
 
+/** Hasil "Uji Kecepatan & Filter" per ID profil. */
 data class BenchmarkState(
     val isRunning: Boolean = false,
-    val results: Map<String, DotProbeResult> = emptyMap()
+    val results: Map<String, InspectionResult> = emptyMap()
 ) {
-    /** ID profil dengan total latensi terendah di antara probe yang berhasil. */
+    /** ID profil dengan total latensi terendah di antara pemeriksaan yang berhasil. */
     val fastestId: String?
         get() = results.entries
-            .mapNotNull { (id, r) -> (r as? DotProbeResult.Success)?.let { id to it.totalMs } }
+            .mapNotNull { (id, r) -> (r as? InspectionResult.Success)?.let { id to it.latency.totalMs } }
             .minByOrNull { it.second }?.first
 }
 
@@ -45,15 +47,15 @@ class MainViewModel(
     private val repository: DnsRepository,
     private val granter: PermissionGranter,
     private val profileRepository: ProfileRepository,
-    private val prober: DotProber = DotProbe
+    private val inspector: ResolverInspector = DotProbe,
+    private val auditor: DnsAuditor = DnsAuditor()
 ) : ViewModel() {
 
+    val dnsState: StateFlow<DnsState> = repository.state
     val savedProfiles: StateFlow<List<DnsProfile>> = profileRepository.profiles
 
     private val _benchmark = MutableStateFlow(BenchmarkState())
     val benchmark: StateFlow<BenchmarkState> = _benchmark.asStateFlow()
-
-    val dnsState: StateFlow<DnsState> = repository.state
 
     private val _shizukuStatus = MutableStateFlow(granter.status())
     val shizukuStatus: StateFlow<GranterStatus> = _shizukuStatus.asStateFlow()
@@ -96,6 +98,8 @@ class MainViewModel(
         } catch (_: Exception) {}
     }
 
+    private suspend fun snackbar(text: UiText) = _eventChannel.send(UiEvent.ShowSnackbar(text))
+
     fun refresh() {
         repository.refresh()
         _shizukuStatus.value = granter.status()
@@ -110,24 +114,20 @@ class MainViewModel(
                     val authorized = granter.requestPermission()
                     _shizukuStatus.value = granter.status()
                     if (!authorized) {
-                        _eventChannel.send(UiEvent.ShowSnackbar("Otorisasi Shizuku ditolak atau Shizuku berhenti."))
+                        snackbar(UiText.of(R.string.grant_authorization_denied))
                         return@launch
                     }
                 }
 
                 granter.grant().fold(
-                    onSuccess = {
-                        _eventChannel.send(UiEvent.ShowSnackbar("Izin WRITE_SECURE_SETTINGS berhasil diberikan via Shizuku!"))
-                    },
-                    onFailure = { error ->
-                        _eventChannel.send(UiEvent.ShowSnackbar("Gagal: ${error.message}"))
-                    }
+                    onSuccess = { snackbar(UiText.of(R.string.grant_success)) },
+                    onFailure = { error -> snackbar(error.toGrantUiText()) }
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // Mis. binder Shizuku mati di tengah alur; jangan biarkan crash di viewModelScope
-                _eventChannel.send(UiEvent.ShowSnackbar("Gagal: ${e.message ?: e.javaClass.simpleName}"))
+                snackbar(e.toGrantUiText())
             } finally {
                 _isGranting.value = false
                 repository.refresh()
@@ -143,43 +143,39 @@ class MainViewModel(
             _isProbing.value = false
 
             when (result) {
-                is ApplyResult.Success -> {
-                    val latency = result.probe?.let { " (${it.totalMs} ms)" } ?: ""
-                    _eventChannel.send(UiEvent.ShowSnackbar("Proteksi DNS berhasil diaktifkan ke ${result.hostname}$latency"))
-                }
-                is ApplyResult.Failure -> {
-                    _eventChannel.send(UiEvent.ShowSnackbar(result.reason))
-                }
+                is ApplyResult.Success -> snackbar(
+                    result.probe?.let { UiText.of(R.string.apply_success_latency, result.hostname, it.totalMs) }
+                        ?: UiText.of(R.string.apply_success, result.hostname)
+                )
+                is ApplyResult.Failure -> snackbar(result.error.toUiText())
             }
         }
     }
 
     fun disableDns() {
         viewModelScope.launch {
-            val success = repository.disable()
-            if (success) {
-                _eventChannel.send(UiEvent.ShowSnackbar("Proteksi DNS dinonaktifkan"))
-            } else {
-                _eventChannel.send(UiEvent.ShowSnackbar("Gagal menonaktifkan DNS"))
-            }
+            snackbar(UiText.of(if (repository.disable()) R.string.disable_success else R.string.disable_failed))
         }
     }
 
     fun runAudit() {
         viewModelScope.launch {
             _isAuditing.value = true
-            _auditSummary.value = DnsAuditor.runAudit()
+            _auditSummary.value = auditor.runAudit()
             _isAuditing.value = false
         }
     }
 
-    /** Mengukur latensi DoT (handshake + query) setiap preset secara berurutan agar hasil tidak saling mengganggu. */
+    /**
+     * Mengukur latensi DoT dan pratinjau filter (berapa domain iklan uji yang diblokir) untuk setiap
+     * preset dan profil tersimpan, berurutan agar hasil latensi tidak saling mengganggu.
+     */
     fun runBenchmark() {
         if (_benchmark.value.isRunning) return
         viewModelScope.launch {
             _benchmark.value = BenchmarkState(isRunning = true)
             for (profile in DefaultProfiles.list + profileRepository.profiles.value) {
-                val result = prober.probe(profile.hostname)
+                val result = inspector.inspect(profile.hostname)
                 _benchmark.update { it.copy(results = it.results + (profile.id to result)) }
             }
             _benchmark.update { it.copy(isRunning = false) }
@@ -188,31 +184,34 @@ class MainViewModel(
 
     fun pauseDns(minutes: Int) {
         viewModelScope.launch {
-            val message = when (val result = repository.pause(minutes * 60_000L)) {
-                is PauseResult.Paused -> "Proteksi dijeda $minutes menit. Aktif kembali otomatis sekitar pukul ${formatTime(result.untilMs)}."
-                is PauseResult.Failure -> result.reason
-            }
-            _eventChannel.send(UiEvent.ShowSnackbar(message))
+            snackbar(
+                when (val result = repository.pause(minutes * 60_000L)) {
+                    is PauseResult.Paused -> UiText.of(R.string.pause_success, minutes, formatTime(result.untilMs))
+                    is PauseResult.Failure -> result.error.toUiText()
+                }
+            )
         }
     }
 
     fun resumeDns() {
         viewModelScope.launch {
-            val message = when (val result = repository.resumeNow()) {
-                is ApplyResult.Success -> "Proteksi DNS aktif kembali ke ${result.hostname}"
-                is ApplyResult.Failure -> result.reason
-            }
-            _eventChannel.send(UiEvent.ShowSnackbar(message))
+            snackbar(
+                when (val result = repository.resumeNow()) {
+                    is ApplyResult.Success -> UiText.of(R.string.resume_success, result.hostname)
+                    is ApplyResult.Failure -> result.error.toUiText()
+                }
+            )
         }
     }
 
     fun saveProfile(name: String, hostname: String) {
         viewModelScope.launch {
-            val message = when (val result = profileRepository.add(name, hostname)) {
-                is ProfileSaveResult.Saved -> "Profil \"${result.profile.name}\" disimpan"
-                is ProfileSaveResult.Failure -> result.reason
-            }
-            _eventChannel.send(UiEvent.ShowSnackbar(message))
+            snackbar(
+                when (val result = profileRepository.add(name, hostname)) {
+                    is ProfileSaveResult.Saved -> UiText.of(R.string.profile_saved, result.profile.name)
+                    is ProfileSaveResult.Failure -> result.error.toUiText()
+                }
+            )
         }
     }
 

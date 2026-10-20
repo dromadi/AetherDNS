@@ -4,7 +4,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.DataInputStream
 import java.io.EOFException
+import java.io.IOException
 import java.net.InetSocketAddress
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.security.cert.CertificateException
 import javax.net.ssl.*
 import kotlin.random.Random
@@ -13,8 +16,10 @@ enum class DotProbeCause {
     RESOLVE,
     TIMEOUT,
     TLS,
+    CERT_UNTRUSTED,
     CERT_MISMATCH,
     DNS_QUERY,
+    DNS_REFUSED,
     INVALID_INPUT,
     OTHER
 }
@@ -24,7 +29,23 @@ sealed class DotProbeResult {
     data class Success(val handshakeMs: Long, val queryMs: Long) : DotProbeResult() {
         val totalMs: Long get() = handshakeMs + queryMs
     }
-    data class Failure(val cause: DotProbeCause, val reason: String) : DotProbeResult()
+
+    /** [detail]: keterangan teknis opsional (pesan exception / RCODE); teks utama dipetakan dari [cause] di UI. */
+    data class Failure(val cause: DotProbeCause, val detail: String? = null) : DotProbeResult()
+}
+
+/** Hasil pemeriksaan filter: domain iklan uji yang diblokir / lolos / tidak dapat disimpulkan. */
+data class FilterReport(
+    val blocked: List<String>,
+    val allowed: List<String>,
+    val unknown: List<String>
+) {
+    val tested: Int get() = blocked.size + allowed.size
+}
+
+sealed class InspectionResult {
+    data class Success(val latency: DotProbeResult.Success, val filter: FilterReport) : InspectionResult()
+    data class Failure(val failure: DotProbeResult.Failure) : InspectionResult()
 }
 
 /** Abstraksi probe DoT agar logika apply dapat diuji di JVM dengan implementasi palsu. */
@@ -32,7 +53,12 @@ fun interface DotProber {
     suspend fun probe(hostname: String): DotProbeResult
 }
 
-object DotProbe : DotProber {
+/** Latensi + pratinjau filter sebuah resolver DoT sebelum diterapkan. */
+fun interface ResolverInspector {
+    suspend fun inspect(hostname: String): InspectionResult
+}
+
+object DotProbe : DotProber, ResolverInspector {
     private const val DOT_PORT = 853
     private const val TIMEOUT_MS = 3500
 
@@ -46,10 +72,76 @@ object DotProbe : DotProber {
      * 3. Mengirim satu query DNS (A [CANARY_DOMAIN]) dengan framing RFC 7858 dan memvalidasi respons.
      * Langkah 3 memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
      */
-    override suspend fun probe(hostname: String): DotProbeResult = withContext(Dispatchers.IO) {
+    override suspend fun probe(hostname: String): DotProbeResult =
+        withSession(hostname, onFailure = { it }) { session -> session.canary() }
+
+    /**
+     * Seperti [probe], lalu memakai koneksi TLS yang sama untuk meng-query [AdTestDomains] dan
+     * menilai apakah resolver memblokirnya (NXDOMAIN / NODATA / REFUSED / 0.0.0.0).
+     */
+    override suspend fun inspect(hostname: String): InspectionResult =
+        withSession(hostname, onFailure = { InspectionResult.Failure(it) }) { session ->
+            when (val latency = session.canary()) {
+                is DotProbeResult.Failure -> InspectionResult.Failure(latency)
+                is DotProbeResult.Success -> {
+                    val verdicts = AdTestDomains.domains.associateWith { domain ->
+                        FilterVerdict.of(session.query(domain))
+                    }
+                    InspectionResult.Success(
+                        latency,
+                        FilterReport(
+                            blocked = verdicts.filterValues { it == FilterVerdict.Verdict.BLOCKED }.keys.toList(),
+                            allowed = verdicts.filterValues { it == FilterVerdict.Verdict.ALLOWED }.keys.toList(),
+                            unknown = verdicts.filterValues { it == FilterVerdict.Verdict.UNKNOWN }.keys.toList()
+                        )
+                    )
+                }
+            }
+        }
+
+    /** Koneksi DoT yang sudah lolos handshake dan verifikasi hostname. */
+    private class Session(private val socket: SSLSocket, val handshakeMs: Long) {
+        private val input = DataInputStream(socket.inputStream)
+
+        fun query(name: String): DnsWireFormat.Response {
+            val id = Random.nextInt(0, 0x10000)
+            socket.outputStream.apply {
+                write(DnsWireFormat.frame(DnsWireFormat.buildQuery(id, name)))
+                flush()
+            }
+            val length = input.readUnsignedShort()
+            val message = ByteArray(length).also { input.readFully(it) }
+            val response = DnsWireFormat.parseResponse(message)
+            if (response == null || !response.header.isResponse || response.header.id != id) {
+                throw DnsProtocolException()
+            }
+            return response
+        }
+
+        fun canary(): DotProbeResult {
+            val start = System.nanoTime()
+            val response = query(CANARY_DOMAIN)
+            val queryMs = (System.nanoTime() - start) / 1_000_000
+            val rcode = response.header.rcode
+            return if (rcode == DnsWireFormat.RCODE_NOERROR || rcode == DnsWireFormat.RCODE_NXDOMAIN) {
+                DotProbeResult.Success(handshakeMs, queryMs)
+            } else {
+                DotProbeResult.Failure(DotProbeCause.DNS_REFUSED, rcodeName(rcode))
+            }
+        }
+    }
+
+    private class DnsProtocolException : IOException()
+
+    /** Membuka sesi DoT terverifikasi, menjalankan [block], dan memetakan setiap kegagalan ke [DotProbeCause]. */
+    private suspend fun <T> withSession(
+        hostname: String,
+        onFailure: (DotProbeResult.Failure) -> T,
+        block: (Session) -> T
+    ): T = withContext(Dispatchers.IO) {
         val validation = HostnameValidator.validate(hostname)
         if (validation is HostnameValidator.Result.Invalid) {
-            return@withContext DotProbeResult.Failure(DotProbeCause.INVALID_INPUT, validation.reason)
+            return@withContext onFailure(DotProbeResult.Failure(DotProbeCause.INVALID_INPUT, validation.error.name))
         }
         val targetFqdn = (validation as HostnameValidator.Result.Valid).fqdn
 
@@ -57,9 +149,7 @@ object DotProbe : DotProber {
         try {
             val sslContext = SSLContext.getInstance("TLS")
             sslContext.init(null, null, null)
-            val factory: SSLSocketFactory = sslContext.socketFactory
-
-            socket = factory.createSocket() as SSLSocket
+            socket = sslContext.socketFactory.createSocket() as SSLSocket
             socket.soTimeout = TIMEOUT_MS
 
             // Enable SNI (Server Name Indication)
@@ -75,56 +165,30 @@ object DotProbe : DotProber {
 
             val session = socket.session
             if (!session.isValid) {
-                return@withContext DotProbeResult.Failure(DotProbeCause.TLS, "Sesi TLS tidak valid")
+                return@withContext onFailure(DotProbeResult.Failure(DotProbeCause.TLS))
             }
 
             // Validasi kecocokan hostname target dengan Subject Alternative Name (SAN) / Common Name (CN) di sertifikat
-            val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
-            if (!verifier.verify(targetFqdn, session)) {
-                return@withContext DotProbeResult.Failure(
-                    DotProbeCause.CERT_MISMATCH,
-                    "Sertifikat SSL/TLS yang diterima tidak cocok dengan hostname $targetFqdn"
-                )
+            if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(targetFqdn, session)) {
+                return@withContext onFailure(DotProbeResult.Failure(DotProbeCause.CERT_MISMATCH, targetFqdn))
             }
 
-            // Kirim satu query DNS di atas sesi TLS dan validasi respons
-            val queryId = Random.nextInt(0, 0x10000)
-            val queryStart = System.nanoTime()
-            socket.outputStream.apply {
-                write(DnsWireFormat.frame(DnsWireFormat.buildQuery(queryId, CANARY_DOMAIN)))
-                flush()
-            }
-            val input = DataInputStream(socket.inputStream)
-            val length = input.readUnsignedShort()
-            val response = ByteArray(length).also { input.readFully(it) }
-            val queryMs = (System.nanoTime() - queryStart) / 1_000_000
-
-            val header = DnsWireFormat.parseHeader(response)
-            when {
-                header == null || !header.isResponse || header.id != queryId ->
-                    DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Server port 853 tidak membalas dengan pesan DNS yang valid")
-                header.rcode != DnsWireFormat.RCODE_NOERROR && header.rcode != DnsWireFormat.RCODE_NXDOMAIN ->
-                    DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Resolver menolak query DNS (${rcodeName(header.rcode)})")
-                else -> DotProbeResult.Success(handshakeMs, queryMs)
-            }
+            block(Session(socket, handshakeMs))
         } catch (e: SSLException) {
-            val rootCause = e.cause
-            val message = if (rootCause is CertificateException) {
-                "Sertifikat SSL/TLS tidak tepercaya atau kadaluarsa (${rootCause.message})"
-            } else {
-                "Handshake TLS gagal pada port 853: ${e.message}"
-            }
-            DotProbeResult.Failure(DotProbeCause.TLS, message)
+            val cause = if (e.cause is CertificateException) DotProbeCause.CERT_UNTRUSTED else DotProbeCause.TLS
+            onFailure(DotProbeResult.Failure(cause, (e.cause ?: e).message))
         } catch (e: CertificateException) {
-            DotProbeResult.Failure(DotProbeCause.TLS, "Sertifikat SSL/TLS server tidak valid atau kadaluarsa")
-        } catch (e: java.net.SocketTimeoutException) {
-            DotProbeResult.Failure(DotProbeCause.TIMEOUT, "Batas waktu terlampaui (Timeout): Server tidak merespons di port 853")
-        } catch (e: java.net.UnknownHostException) {
-            DotProbeResult.Failure(DotProbeCause.RESOLVE, "Hostname tidak dapat di-resolve (NXDOMAIN)")
+            onFailure(DotProbeResult.Failure(DotProbeCause.CERT_UNTRUSTED, e.message))
+        } catch (e: SocketTimeoutException) {
+            onFailure(DotProbeResult.Failure(DotProbeCause.TIMEOUT))
+        } catch (e: UnknownHostException) {
+            onFailure(DotProbeResult.Failure(DotProbeCause.RESOLVE))
         } catch (e: EOFException) {
-            DotProbeResult.Failure(DotProbeCause.DNS_QUERY, "Server menutup koneksi sebelum membalas query DNS")
+            onFailure(DotProbeResult.Failure(DotProbeCause.DNS_QUERY))
+        } catch (e: DnsProtocolException) {
+            onFailure(DotProbeResult.Failure(DotProbeCause.DNS_QUERY))
         } catch (e: Exception) {
-            DotProbeResult.Failure(DotProbeCause.OTHER, "Gagal terhubung ke port 853: ${e.javaClass.simpleName} - ${e.message}")
+            onFailure(DotProbeResult.Failure(DotProbeCause.OTHER, "${e.javaClass.simpleName}: ${e.message}"))
         } finally {
             try {
                 socket?.close()

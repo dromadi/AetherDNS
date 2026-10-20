@@ -7,6 +7,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.security.aetherdns.AetherDnsApplication
 import com.security.aetherdns.MainActivity
+import com.security.aetherdns.R
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import kotlinx.coroutines.CoroutineScope
@@ -73,15 +74,18 @@ class AetherDnsTileService : TileService() {
     private fun updateTileState() {
         val tile = qsTile ?: return
         val state = repository.loadCurrentState()
-        tile.label = "DNS Anti-Iklan"
+        tile.label = getString(R.string.tile_label)
 
         val (tileState, subtitle) = when {
             // STATE_INACTIVE agar klik tetap diterima sistem dan diarahkan ke openMainActivity()
-            !state.hasPermission -> Tile.STATE_INACTIVE to "Perlu Izin ADB"
+            !state.hasPermission -> Tile.STATE_INACTIVE to getString(R.string.tile_subtitle_needs_permission)
             state.isProtectionActive -> Tile.STATE_ACTIVE to state.specifier
             state.pausedUntil != null ->
-                Tile.STATE_INACTIVE to "Dijeda s/d ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(state.pausedUntil))}"
-            else -> Tile.STATE_INACTIVE to "Nonaktif"
+                Tile.STATE_INACTIVE to getString(
+                    R.string.tile_subtitle_paused,
+                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(state.pausedUntil))
+                )
+            else -> Tile.STATE_INACTIVE to getString(R.string.tile_subtitle_off)
         }
         tile.state = tileState
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

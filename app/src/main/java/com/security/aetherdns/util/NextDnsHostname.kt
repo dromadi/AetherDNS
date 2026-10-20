@@ -11,9 +11,11 @@ object NextDnsHostname {
     private val CONFIG_ID = Regex("^[a-f0-9]{6}$")
     private val DEVICE_ALLOWED = Regex("[^a-z0-9 -]")
 
+    enum class Error { INVALID_CONFIG_ID, DEVICE_NAME_TOO_LONG }
+
     sealed class Result {
         data class Valid(val hostname: String) : Result()
-        data class Invalid(val reason: String) : Result()
+        data class Invalid(val error: Error) : Result()
     }
 
     /**
@@ -32,12 +34,12 @@ object NextDnsHostname {
 
     fun build(configInput: String, deviceName: String = ""): Result {
         val configId = extractConfigId(configInput)
-            ?: return Result.Invalid("Config ID NextDNS harus 6 karakter heksadesimal (contoh: abc123)")
+            ?: return Result.Invalid(Error.INVALID_CONFIG_ID)
 
         val device = sanitizeDeviceName(deviceName)
         val label = if (device.isEmpty()) configId else "$device-$configId"
         if (label.length > 63) {
-            return Result.Invalid("Nama perangkat terlalu panjang")
+            return Result.Invalid(Error.DEVICE_NAME_TOO_LONG)
         }
         return Result.Valid("$label.$SUFFIX")
     }

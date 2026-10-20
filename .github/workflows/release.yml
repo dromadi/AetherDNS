@@ -1,0 +1,75 @@
+name: Release
+
+# Membangun APK release bertanda tangan dan melampirkannya ke GitHub Release saat tag v* di-push.
+# Secrets yang dibutuhkan (Settings → Secrets and variables → Actions):
+#   AETHERDNS_KEYSTORE_BASE64   keystore .jks dalam base64 (base64 -w0 release.jks)
+#   AETHERDNS_KEYSTORE_PASSWORD
+#   AETHERDNS_KEY_ALIAS
+#   AETHERDNS_KEY_PASSWORD
+# PENTING: gunakan keystore yang sama dengan rilis sebelumnya; kunci berbeda membuat update gagal dipasang.
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AETHERDNS_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Secret AETHERDNS_KEYSTORE_BASE64 belum diisi. Lihat komentar di atas workflow ini."
+            exit 1
+          fi
+
+      - name: Check tag matches versionName
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME tidak cocok dengan versionName $version di app/build.gradle.kts"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AETHERDNS_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Unit tests & signed release build
+        env:
+          AETHERDNS_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          AETHERDNS_KEYSTORE_PASSWORD: ${{ secrets.AETHERDNS_KEYSTORE_PASSWORD }}
+          AETHERDNS_KEY_ALIAS: ${{ secrets.AETHERDNS_KEY_ALIAS }}
+          AETHERDNS_KEY_PASSWORD: ${{ secrets.AETHERDNS_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease
+
+      - name: Prepare artifacts
+        run: |
+          apk="AetherDNS-$GITHUB_REF_NAME.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          rm -f "$RUNNER_TEMP/release.jks"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            AetherDNS-${{ github.ref_name }}.apk
+            AetherDNS-${{ github.ref_name }}.apk.sha256
+          generate_release_notes: true

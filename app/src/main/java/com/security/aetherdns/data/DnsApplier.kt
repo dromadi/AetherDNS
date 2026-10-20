@@ -4,6 +4,7 @@ import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.DotProbeCause
 import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.DotProber
+import com.security.aetherdns.util.HostnameError
 import com.security.aetherdns.util.HostnameValidator
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -14,7 +15,15 @@ import kotlinx.coroutines.withContext
 sealed class ApplyResult {
     /** [probe] berisi hasil uji DoT (latensi) bila probe dijalankan. */
     data class Success(val hostname: String, val probe: DotProbeResult.Success? = null) : ApplyResult()
-    data class Failure(val reason: String) : ApplyResult()
+    data class Failure(val error: ApplyError) : ApplyResult()
+}
+
+/** Penyebab kegagalan apply; teks untuk pengguna dipetakan di lapisan UI. */
+sealed class ApplyError {
+    data object NoPermission : ApplyError()
+    data class InvalidHostname(val error: HostnameError) : ApplyError()
+    data class ProbeFailed(val failure: DotProbeResult.Failure) : ApplyError()
+    data object WriteRejected : ApplyError()
 }
 
 /**
@@ -31,12 +40,12 @@ class DnsApplier(
 
     suspend fun apply(hostname: String, probe: Boolean = true): ApplyResult = mutex.withLock {
         if (!settings.hasPermission()) {
-            return ApplyResult.Failure("Izin WRITE_SECURE_SETTINGS belum diberikan.")
+            return ApplyResult.Failure(ApplyError.NoPermission)
         }
 
         val validation = HostnameValidator.validate(hostname)
         if (validation is HostnameValidator.Result.Invalid) {
-            return ApplyResult.Failure(validation.reason)
+            return ApplyResult.Failure(ApplyError.InvalidHostname(validation.error))
         }
         val targetFqdn = (validation as HostnameValidator.Result.Valid).fqdn
 
@@ -53,11 +62,11 @@ class DnsApplier(
         // Self-healing HANYA bila resolusi gagal saat strict mode aktif (resolver lama mati sehingga DNS lumpuh).
         val originalMode = settings.mode()
         if (firstProbe.cause != DotProbeCause.RESOLVE || originalMode != DnsManager.MODE_HOSTNAME) {
-            return ApplyResult.Failure("Uji DoT gagal: ${firstProbe.reason}")
+            return ApplyResult.Failure(ApplyError.ProbeFailed(firstProbe))
         }
         val originalSpecifier = settings.specifier()
 
-        var failure = ApplyResult.Failure("Uji DoT gagal: ${firstProbe.reason}")
+        var failure = ApplyResult.Failure(ApplyError.ProbeFailed(firstProbe))
         var committed: ApplyResult.Success? = null
         try {
             // Alihkan sementara ke opportunistic agar DNS dasar hidup dan targetFqdn dapat di-resolve
@@ -75,7 +84,7 @@ class DnsApplier(
                         }
                         break
                     }
-                    is DotProbeResult.Failure -> failure = ApplyResult.Failure("Uji DoT gagal: ${retry.reason}")
+                    is DotProbeResult.Failure -> failure = ApplyResult.Failure(ApplyError.ProbeFailed(retry))
                 }
             }
         } finally {
@@ -94,7 +103,7 @@ class DnsApplier(
         // Specifier ditulis lebih dulu agar mode "hostname" tidak pernah menunjuk ke specifier lama
         val ok = runCatching { settings.writeSpecifier(fqdn) && settings.writeMode(DnsManager.MODE_HOSTNAME) }
             .getOrDefault(false)
-        if (!ok) return ApplyResult.Failure("Gagal memperbarui konfigurasi sistem")
+        if (!ok) return ApplyResult.Failure(ApplyError.WriteRejected)
         settings.onConfigChanged()
         return ApplyResult.Success(fqdn, probe)
     }

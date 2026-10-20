@@ -15,9 +15,11 @@ interface ResumeAlarm {
     fun cancel()
 }
 
+enum class PauseError { NO_PERMISSION, NOT_ACTIVE, WRITE_REJECTED }
+
 sealed class PauseResult {
     data class Paused(val untilMs: Long) : PauseResult()
-    data class Failure(val reason: String) : PauseResult()
+    data class Failure(val error: PauseError) : PauseResult()
 }
 
 /**
@@ -35,10 +37,10 @@ class PauseController(
 
     fun pause(durationMs: Long): PauseResult {
         if (!settings.hasPermission()) {
-            return PauseResult.Failure("Izin WRITE_SECURE_SETTINGS belum diberikan.")
+            return PauseResult.Failure(PauseError.NO_PERMISSION)
         }
         if (settings.mode() != DnsManager.MODE_HOSTNAME || settings.specifier().isBlank()) {
-            return PauseResult.Failure("Proteksi DNS sedang tidak aktif.")
+            return PauseResult.Failure(PauseError.NOT_ACTIVE)
         }
 
         val until = clock() + durationMs
@@ -48,7 +50,7 @@ class PauseController(
         val disabled = runCatching { settings.writeMode(DnsManager.MODE_OFF) }.getOrDefault(false)
         if (!disabled) {
             cancel()
-            return PauseResult.Failure("Gagal menjeda proteksi DNS")
+            return PauseResult.Failure(PauseError.WRITE_REJECTED)
         }
         settings.onConfigChanged()
         return PauseResult.Paused(until)

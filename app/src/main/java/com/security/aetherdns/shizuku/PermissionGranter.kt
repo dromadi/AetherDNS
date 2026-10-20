@@ -31,7 +31,18 @@ interface PermissionGranter {
     suspend fun grant(): Result<Unit>
 }
 
-/** Menerjemahkan keluaran `GrantService` menjadi hasil yang bisa ditampilkan ke pengguna. */
+/** Penyebab kegagalan pemberian izin via Shizuku; teks untuk pengguna dipetakan di lapisan UI. */
+sealed class GrantError {
+    /** `pm grant` ditolak oleh kebijakan OEM (MIUI/HyperOS, ColorOS, dsb.). */
+    data object OemRestricted : GrantError()
+    data class PmFailed(val exitCode: String, val firstOutputLine: String?) : GrantError()
+    data object Timeout : GrantError()
+    data object ServiceUnavailable : GrantError()
+}
+
+class GrantException(val error: GrantError) : Exception(error.toString())
+
+/** Menerjemahkan keluaran `GrantService` menjadi hasil bertipe. */
 object GrantOutputParser {
     fun toResult(raw: String, permissionGranted: Boolean): Result<Unit> {
         // Sumber kebenaran adalah status izin aktual, bukan exit code `pm grant`
@@ -39,14 +50,11 @@ object GrantOutputParser {
 
         val exitCode = raw.substringBefore('\n').trim()
         val output = raw.substringAfter('\n', "").trim()
-        val message = when {
-            isOemRestriction(output) ->
-                "Sistem menolak pm grant (SecurityException). Di MIUI/HyperOS aktifkan 'USB debugging (Security settings)'; " +
-                    "di ColorOS/realme UI aktifkan 'Disable permission monitoring' di Opsi Pengembang, lalu coba lagi."
-            output.isNotEmpty() -> "pm grant gagal (exit $exitCode): ${output.lineSequence().first()}"
-            else -> "pm grant gagal (exit $exitCode)"
+        val error = when {
+            isOemRestriction(output) -> GrantError.OemRestricted
+            else -> GrantError.PmFailed(exitCode, output.lineSequence().firstOrNull()?.takeIf { it.isNotBlank() })
         }
-        return Result.failure(Exception(message))
+        return Result.failure(GrantException(error))
     }
 
     fun isOemRestriction(output: String): Boolean =
@@ -111,7 +119,7 @@ class ShizukuGranter(private val context: Context) : PermissionGranter {
             val raw = withContext(Dispatchers.IO) { service.grantSecureSettings() }
             GrantOutputParser.toResult(raw, hasSecurePermission())
         } catch (e: TimeoutCancellationException) {
-            Result.failure(Exception("Shizuku tidak merespons. Pastikan layanan Shizuku sedang berjalan."))
+            Result.failure(GrantException(GrantError.Timeout))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -152,12 +160,12 @@ class ShizukuGranter(private val context: Context) : PermissionGranter {
             if (binder != null && binder.pingBinder()) {
                 service.complete(IGrantService.Stub.asInterface(binder))
             } else {
-                service.completeExceptionally(IllegalStateException("UserService Shizuku tidak valid"))
+                service.completeExceptionally(GrantException(GrantError.ServiceUnavailable))
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            service.completeExceptionally(IllegalStateException("UserService Shizuku terputus"))
+            service.completeExceptionally(GrantException(GrantError.ServiceUnavailable))
         }
     }
 

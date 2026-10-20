@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.5.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.6.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -18,7 +18,7 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 3. **Pre-flight DoT Probe: Handshake, Hostname Matching & Query DNS (`DotProbe`)**:
    - Menjalankan uji koneksi TLS handshake ke server DoT port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
    - Mengirim satu query DNS sungguhan (RFC 7858) untuk memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
-   - Tombol **Uji Kecepatan** mengukur latensi DoT (handshake + query) setiap preset dan menandai resolver tercepat di jaringan Anda.
+   - Tombol **Uji Kecepatan & Filter** mengukur latensi DoT (handshake + query) setiap preset/profil, menandai resolver tercepat, dan menampilkan berapa domain iklan uji yang benar-benar diblokir resolver tersebut **sebelum** Anda menerapkannya.
    - Dilengkapi *self-healing fallback* aman: Jika resolver lama sedang mati sehingga DNS sistem lumpuh, repository secara sementara mengaktifkan mode `opportunistic` untuk menguji dan menghubungkan ke resolver sehat yang baru, dilindungi oleh `Mutex` dan blok `finally { NonCancellable }`.
 4. **Jeda 15 Menit untuk Wi-Fi Publik (Captive Portal)**:
    - Wi-Fi hotel/bandara/kafe sering mewajibkan login yang terblokir mode strict. Tombol **Jeda 15 Menit** mematikan proteksi sementara dan mengaktifkannya kembali otomatis lewat satu alarm sistem (tanpa service background), termasuk bila HP di-reboot selama jeda.
@@ -40,6 +40,8 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 10. **Live Diagnostic / Sinkhole Audit Terverifikasi**:
    - Memiliki engine audit real-time (`DnsAuditor`) dengan domain kontrol konektivitas (`connectivitycheck.gstatic.com`) untuk mencegah *false-positive* saat offline.
    - Menguji domain AdMob, DoubleClick, dan AppLovin untuk mendeteksi status sinkhole (0.0.0.0 / NXDOMAIN).
+11. **Bahasa Inggris & Indonesia**:
+   - Antarmuka mengikuti bahasa HP (English sebagai default, Bahasa Indonesia untuk perangkat berbahasa Indonesia). Di Android 13+, bahasa aplikasi dapat dipilih terpisah lewat Settings → Apps → AetherDNS → Language.
 
 ---
 
@@ -87,3 +89,20 @@ Jika belum sempat mengaktifkan izin:
 - Pilih preset DNS yang diinginkan di dalam aplikasi.
 - Klik tombol **"Buka DNS HP"**.
 - Aplikasi otomatis menyalin hostname ke clipboard dan membuka menu pengaturan Private DNS bawaan HP untuk di-paste langsung.
+
+---
+
+## Rilis Otomatis (Maintainer)
+
+Push tag `vX.Y.Z` yang sama dengan `versionName` di `app/build.gradle.kts` untuk menjalankan workflow `Release`. Workflow membangun APK release bertanda tangan dan melampirkannya (beserta checksum SHA-256) ke halaman GitHub Releases.
+
+Isi secrets berikut sekali di **Settings → Secrets and variables → Actions**:
+
+| Secret | Isi |
+| :--- | :--- |
+| `AETHERDNS_KEYSTORE_BASE64` | Keystore `.jks` dalam base64 (`base64 -w0 release.jks`) |
+| `AETHERDNS_KEYSTORE_PASSWORD` | Password keystore |
+| `AETHERDNS_KEY_ALIAS` | Alias kunci |
+| `AETHERDNS_KEY_PASSWORD` | Password kunci |
+
+> Gunakan keystore yang **sama** dengan rilis sebelumnya. Android menolak update yang ditandatangani kunci berbeda, sehingga pengguna harus uninstall terlebih dahulu.

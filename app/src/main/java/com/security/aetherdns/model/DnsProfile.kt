@@ -1,11 +1,19 @@
 package com.security.aetherdns.model
 
+import androidx.annotation.StringRes
+import com.security.aetherdns.R
+
+/**
+ * Profil resolver DoT. Preset bawaan memakai resource string (dilokalkan);
+ * profil kustom tersimpan memakai [name] yang diketik pengguna.
+ */
 data class DnsProfile(
     val id: String,
-    val name: String,
     val hostname: String,
-    val category: String,
-    val description: String,
+    val name: String = "",
+    @StringRes val nameRes: Int = 0,
+    @StringRes val categoryRes: Int = 0,
+    @StringRes val descriptionRes: Int = 0,
     val isCustom: Boolean = false
 )
 
@@ -13,38 +21,38 @@ object DefaultProfiles {
     val list = listOf(
         DnsProfile(
             id = "adguard_default",
-            name = "AdGuard DNS (Rekomendasi)",
             hostname = "dns.adguard-dns.com",
-            category = "Anti-Iklan & Tracker",
-            description = "Memblokir iklan banner, pop-up, rewarded ads di aplikasi Android dan pelacak telemetri."
+            nameRes = R.string.preset_adguard_name,
+            categoryRes = R.string.preset_adguard_category,
+            descriptionRes = R.string.preset_adguard_desc
         ),
         DnsProfile(
             id = "adguard_family",
-            name = "AdGuard Family",
             hostname = "family.adguard-dns.com",
-            category = "Keluarga & Anti-Iklan",
-            description = "Proteksi iklan aplikasi sekaligus memblokir situs konten dewasa dan mengaktifkan SafeSearch."
+            nameRes = R.string.preset_adguard_family_name,
+            categoryRes = R.string.preset_adguard_family_category,
+            descriptionRes = R.string.preset_adguard_family_desc
         ),
         DnsProfile(
             id = "mullvad_adblock",
-            name = "Mullvad Privacy Adblock",
             hostname = "adblock.dns.mullvad.net",
-            category = "Privasi & Anti-Iklan",
-            description = "Resolver zero-logging resmi dari Mullvad dengan blocklist iklan dan tracker aktif."
+            nameRes = R.string.preset_mullvad_name,
+            categoryRes = R.string.preset_mullvad_category,
+            descriptionRes = R.string.preset_mullvad_desc
         ),
         DnsProfile(
             id = "cloudflare_security",
-            name = "Cloudflare 1.1.1.2 (Security)",
             hostname = "security.cloudflare-dns.com",
-            category = "Anti-Malware",
-            description = "Fokus memblokir domain malware, phishing, ransomware, dan C2 server secara real-time."
+            nameRes = R.string.preset_cloudflare_name,
+            categoryRes = R.string.preset_cloudflare_category,
+            descriptionRes = R.string.preset_cloudflare_desc
         ),
         DnsProfile(
             id = "nextdns_public",
-            name = "NextDNS Anycast",
             hostname = "dns.nextdns.io",
-            category = "Resolver Bersih (Tanpa Filter)",
-            description = "Anycast resolver DoT berlatensi rendah tanpa filter bawaan. Untuk anti-iklan NextDNS, gunakan opsi Hostname Kustom dengan ID profil Anda."
+            nameRes = R.string.preset_nextdns_name,
+            categoryRes = R.string.preset_nextdns_category,
+            descriptionRes = R.string.preset_nextdns_desc
         )
     )
 }

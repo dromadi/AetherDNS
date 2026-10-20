@@ -25,7 +25,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 4. **Pre-flight DoT Handshake Probe & Hostname Verifier**:
    - `DotProbe` menguji handshake TLS port 853 dengan SNI dan verifikasi kesesuaian hostname terhadap Subject Alternative Name (SAN) sertifikat X.509 (`HttpsURLConnection.getDefaultHostnameVerifier()`).
    - Setelah handshake, `DotProbe` mengirim satu query DNS sungguhan (A `example.com`, framing RFC 7858) dan memvalidasi ID, bit QR, serta RCODE respons. Server yang menerima TLS tetapi tidak melayani DNS ditolak (`DotProbeCause.DNS_QUERY`).
-   - Hasil probe memuat latensi (`handshakeMs`, `queryMs`) yang dipakai fitur "Uji Kecepatan" pada daftar preset.
+   - Hasil probe memuat latensi (`handshakeMs`, `queryMs`). `DotProbe.inspect()` memakai koneksi TLS yang sama untuk meng-query `AdTestDomains` dan menilai blokir (`FilterVerdict`: NXDOMAIN / NODATA / REFUSED / 0.0.0.0) — dipakai fitur "Uji Kecepatan & Filter" sebelum resolver diterapkan.
    - Dilengkapi *self-healing* aman (`DnsApplier`): Jika probe gagal karena resolusi DNS mati (`DotProbeCause.RESOLVE`) saat mode strict aktif, konfigurasi sementara beralih ke `opportunistic`, melakukan retry bertahap (3x percobaan), dan memulihkan setting semula di blok `finally { withContext(NonCancellable) { ... } }` bila resolver baru tidak berhasil **tertulis** (gagal, dibatalkan, atau ditolak sistem).
    - Dilindungi `Mutex` untuk mencegah *race condition* akibat penekanan preset ganda secara cepat.
 5. **Quick Settings Tile (Status Bar 1-Klik)**:
@@ -39,7 +39,11 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 7. **Profil Kustom Tersimpan & Helper NextDNS**:
    - `ProfileRepository` menyimpan hingga 20 hostname kustom (SharedPreferences, format baris `id<TAB>nama<TAB>hostname`), divalidasi `HostnameValidator`.
    - `NextDnsHostname` menyusun `<config-id>.dns.nextdns.io` atau `<nama-perangkat>-<config-id>.dns.nextdns.io` (spasi → `--`) dari Config ID / URL DoH / hostname DoT.
-8. **Tidak Memonopoli Slot VPN**:
+8. **Lokalisasi (English default + Bahasa Indonesia)**:
+   - Semua teks UI berada di `res/values/strings.xml` (English, default) dan `res/values-in/strings.xml` (Indonesia). Per-app language Android 13+ via `res/xml/locales_config.xml`.
+   - Lapisan domain/data **tidak** berisi teks untuk pengguna: kegagalan dikembalikan sebagai tipe (`HostnameError`, `ApplyError`, `PauseError`, `ProfileError`, `GrantError`, `DotProbeCause`, `AuditOutcome`) lalu dipetakan ke resource di `ui/UiText.kt`. ViewModel mengirim `UiText`, bukan `String`.
+   - Saat menambah teks baru: tambahkan kunci di **kedua** file strings.xml dengan argumen format yang sama.
+9. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
 ---
@@ -62,22 +66,24 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AndroidPause.kt`: Implementasi `SharedPrefsPauseStore` dan `AlarmManagerResumeAlarm`.
   - `ProfileRepository.kt`: Profil kustom tersimpan (`ProfileStore`, `ProfileCodec`). Diuji di `ProfileRepositoryTest`.
 - `model/`:
-  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles`.
+  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (nama/kategori/deskripsi preset via `@StringRes`).
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
   - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi; mengimplementasikan interface `DotProber`.
   - `NextDnsHostname.kt`: Penyusun hostname DoT NextDNS dari Config ID + nama perangkat opsional.
-  - `DnsWireFormat.kt`: Encoder query / decoder header pesan DNS (RFC 1035) minimal untuk probe.
+  - `DnsWireFormat.kt`: Encoder query, decoder header, dan parser record A (dengan kompresi nama) pesan DNS (RFC 1035).
+  - `AdTestDomains.kt`: Daftar domain iklan uji bersama (audit & pratinjau filter) dan `FilterVerdict`.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
-  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas.
+  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
 - `receiver/`:
   - `PauseResumeReceiver.kt`: Mengaktifkan kembali proteksi setelah jeda / boot (`goAsync`, tanpa service).
 - `ui/`:
-  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit, benchmark latensi preset (`BenchmarkState`), dan `Channel<UiEvent>` untuk Snackbar.
-  - `AetherDnsApp.kt`: Tampilan deklaratif Jetpack Compose (Material 3) dengan kartu status Shizuku multi-state.
-  - `ProfileComponents.kt`: Komponen profil tersimpan, helper NextDNS, dan form simpan profil.
+  - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
+  - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
+  - `AetherDnsApp.kt`: Scaffold, top bar, state pilihan profil, dan susunan section.
+  - `StatusCard.kt`, `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`: Komponen per section.
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
 ---
@@ -85,7 +91,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, GrantOutputParser, BenchmarkState)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK
@@ -99,6 +105,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ```
 
 > **CI**: `.github/workflows/android.yml` menjalankan `testDebugUnitTest`, `assembleDebug`, dan `assembleRelease` pada setiap push ke `main` dan pull request.
+>
+> **Rilis**: push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
 >
 > **Catatan JDK**: Jangan menulis `org.gradle.java.home` di `gradle.properties` proyek (path mesin lokal merusak build di CI/mesin lain). Simpan di `~/.gradle/gradle.properties` milik pengguna.
 

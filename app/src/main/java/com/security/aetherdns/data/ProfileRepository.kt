@@ -2,6 +2,7 @@ package com.security.aetherdns.data
 
 import android.content.Context
 import com.security.aetherdns.model.DnsProfile
+import com.security.aetherdns.util.HostnameError
 import com.security.aetherdns.util.HostnameValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,19 +42,19 @@ object ProfileCodec {
             customProfile(id, name, valid.fqdn)
         }.toList()
 
-    fun customProfile(id: String, name: String, hostname: String) = DnsProfile(
-        id = id,
-        name = name,
-        hostname = hostname,
-        category = "Profil Tersimpan",
-        description = "",
-        isCustom = true
-    )
+    fun customProfile(id: String, name: String, hostname: String) =
+        DnsProfile(id = id, hostname = hostname, name = name, isCustom = true)
+}
+
+sealed class ProfileError {
+    data class InvalidHostname(val error: HostnameError) : ProfileError()
+    data object Duplicate : ProfileError()
+    data class LimitReached(val max: Int) : ProfileError()
 }
 
 sealed class ProfileSaveResult {
     data class Saved(val profile: DnsProfile) : ProfileSaveResult()
-    data class Failure(val reason: String) : ProfileSaveResult()
+    data class Failure(val error: ProfileError) : ProfileSaveResult()
 }
 
 class ProfileRepository(private val store: ProfileStore) {
@@ -62,12 +63,14 @@ class ProfileRepository(private val store: ProfileStore) {
 
     fun add(name: String, hostname: String): ProfileSaveResult {
         val validation = HostnameValidator.validate(hostname)
-        if (validation is HostnameValidator.Result.Invalid) return ProfileSaveResult.Failure(validation.reason)
+        if (validation is HostnameValidator.Result.Invalid) {
+            return ProfileSaveResult.Failure(ProfileError.InvalidHostname(validation.error))
+        }
         val fqdn = (validation as HostnameValidator.Result.Valid).fqdn
 
         val current = _profiles.value
-        if (current.any { it.hostname == fqdn }) return ProfileSaveResult.Failure("Hostname ini sudah tersimpan")
-        if (current.size >= MAX_PROFILES) return ProfileSaveResult.Failure("Maksimal $MAX_PROFILES profil tersimpan")
+        if (current.any { it.hostname == fqdn }) return ProfileSaveResult.Failure(ProfileError.Duplicate)
+        if (current.size >= MAX_PROFILES) return ProfileSaveResult.Failure(ProfileError.LimitReached(MAX_PROFILES))
 
         val displayName = name.trim().ifEmpty { fqdn }.take(MAX_NAME_LENGTH)
         val profile = ProfileCodec.customProfile("saved_${UUID.randomUUID()}", displayName, fqdn)

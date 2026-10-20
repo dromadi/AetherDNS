@@ -1,7 +1,9 @@
 package com.security.aetherdns
 
+import com.security.aetherdns.shizuku.GrantError
+import com.security.aetherdns.shizuku.GrantException
 import com.security.aetherdns.shizuku.GrantOutputParser
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -17,19 +19,23 @@ class GrantOutputParserTest {
         assertTrue(GrantOutputParser.toResult("0\n", permissionGranted = false).isFailure)
     }
 
+    private fun errorOf(raw: String) =
+        (GrantOutputParser.toResult(raw, permissionGranted = false).exceptionOrNull() as GrantException).error
+
     @Test
-    fun oemSecurityExceptionShowsDeveloperOptionHint() {
+    fun oemSecurityExceptionIsRecognised() {
         val raw = "255\nException occurred while executing 'grant':\njava.lang.SecurityException: grantRuntimePermission: Neither user 2000 nor current process has android.permission.GRANT_RUNTIME_PERMISSIONS."
-        val message = GrantOutputParser.toResult(raw, permissionGranted = false).exceptionOrNull()!!.message!!
-        assertTrue(message.contains("MIUI/HyperOS"))
+        assertEquals(GrantError.OemRestricted, errorOf(raw))
     }
 
     @Test
-    fun genericFailureShowsFirstOutputLineWithoutOemHint() {
+    fun genericFailureKeepsExitCodeAndFirstOutputLine() {
         val raw = "255\nUnknown package: com.security.aetherdns\nmore details"
-        val message = GrantOutputParser.toResult(raw, permissionGranted = false).exceptionOrNull()!!.message!!
-        assertTrue(message.contains("Unknown package: com.security.aetherdns"))
-        assertFalse(message.contains("more details"))
-        assertFalse(message.contains("MIUI"))
+        assertEquals(GrantError.PmFailed("255", "Unknown package: com.security.aetherdns"), errorOf(raw))
+    }
+
+    @Test
+    fun failureWithoutOutputHasNoOutputLine() {
+        assertEquals(GrantError.PmFailed("1", null), errorOf("1\n"))
     }
 }

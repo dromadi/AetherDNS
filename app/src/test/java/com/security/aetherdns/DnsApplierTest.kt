@@ -1,5 +1,6 @@
 package com.security.aetherdns
 
+import com.security.aetherdns.data.ApplyError
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsApplier
 import com.security.aetherdns.util.DnsManager
@@ -117,7 +118,7 @@ class DnsApplierTest {
         val settings = brokenStrictMode().apply { rejectSpecifier = "dns.adguard-dns.com" }
         val result = DnsApplier(settings, ScriptedProber(resolveFail, ok), retryDelayMs = 0).apply("dns.adguard-dns.com")
 
-        assertEquals(ApplyResult.Failure("Gagal memperbarui konfigurasi sistem"), result)
+        assertEquals(ApplyResult.Failure(ApplyError.WriteRejected), result)
         assertEquals(DnsManager.MODE_HOSTNAME, settings.mode)
         assertEquals("dead.example.net", settings.specifier)
     }
