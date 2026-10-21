@@ -19,6 +19,7 @@ import com.security.aetherdns.R
 import com.security.aetherdns.ui.theme.ErrorRed
 import com.security.aetherdns.ui.theme.PrimaryBlue
 import com.security.aetherdns.ui.theme.SuccessGreen
+import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.util.AuditItem
 import com.security.aetherdns.util.AuditOutcome
 import com.security.aetherdns.util.AuditSummary
@@ -100,6 +101,14 @@ private fun AuditResult(summary: AuditSummary) {
                 }
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = color)
                 Text(text = description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (summary.cachedCount > 0) {
+                    Text(
+                        text = stringResource(R.string.audit_cached_note, summary.cachedCount),
+                        fontSize = 12.sp,
+                        color = WarningOrange,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         }
     }
@@ -110,7 +119,10 @@ private fun AuditResult(summary: AuditSummary) {
 
 @Composable
 private fun AuditRow(item: AuditItem) {
-    val color = if (item.isBlocked) SuccessGreen else ErrorRed
+    val color = when (item.outcome) {
+        AuditOutcome.CACHED -> WarningOrange
+        else -> if (item.isBlocked) SuccessGreen else ErrorRed
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,23 +130,41 @@ private fun AuditRow(item: AuditItem) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier
+            .weight(1f)
+            .padding(end = 8.dp)) {
             Text(item.label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Text(item.domain, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
+        // Lebar chip dibatasi: daftar IP panjang tidak boleh menjepit kolom nama domain
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = color.copy(alpha = 0.15f),
+            modifier = Modifier.widthIn(max = 170.dp)
+        ) {
             Text(
                 text = when (item.outcome) {
                     AuditOutcome.SINKHOLE -> stringResource(R.string.audit_outcome_sinkhole, item.detail)
                     AuditOutcome.NXDOMAIN -> stringResource(R.string.audit_outcome_nxdomain)
-                    AuditOutcome.RESOLVED -> item.detail
+                    AuditOutcome.RESOLVED -> firstAddress(item.detail)
+                    AuditOutcome.CACHED -> stringResource(R.string.audit_outcome_cached)
                     AuditOutcome.ERROR -> stringResource(R.string.audit_outcome_error, item.detail)
                 },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = color,
+                maxLines = 2,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
+    }
+}
+
+/** "a, b, c" → "a +2" agar chip tetap ringkas. */
+private fun firstAddress(joined: String): String {
+    val parts = joined.split(", ").filter { it.isNotBlank() }
+    return when {
+        parts.size <= 1 -> joined
+        else -> "${parts.first()} +${parts.size - 1}"
     }
 }

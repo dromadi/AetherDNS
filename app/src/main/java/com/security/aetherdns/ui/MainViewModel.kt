@@ -39,6 +39,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import java.text.DateFormat
@@ -309,7 +310,16 @@ class MainViewModel(
     fun runAudit() {
         viewModelScope.launch {
             _isAuditing.value = true
-            _auditSummary.value = auditor.runAudit()
+            val state = dnsState.value
+            // Saat proteksi aktif, tanya resolver langsung (DoT) untuk membedakan kebocoran dari cache DNS HP
+            val direct = if (state.isProtectionActive && state.specifier.isNotBlank()) {
+                async { inspector.inspect(state.specifier) }
+            } else {
+                null
+            }
+            val summary = auditor.runAudit()
+            val blockedByResolver = (direct?.await() as? InspectionResult.Success)?.filter?.blocked?.toSet().orEmpty()
+            _auditSummary.value = summary.reconcileWith(blockedByResolver)
             _isAuditing.value = false
         }
     }

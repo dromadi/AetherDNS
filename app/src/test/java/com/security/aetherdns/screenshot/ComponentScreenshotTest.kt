@@ -10,7 +10,11 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.security.aetherdns.data.NextDnsSummary
+import com.security.aetherdns.ui.AuditCard
 import com.security.aetherdns.ui.BlockStatsCard
+import com.security.aetherdns.util.AuditItem
+import com.security.aetherdns.util.AuditOutcome
+import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.ui.CustomHostnameCard
 import com.security.aetherdns.ui.DotBlockedDialog
 import com.security.aetherdns.ui.NetworkCheckCard
@@ -127,5 +131,31 @@ class ComponentScreenshotTest {
             }
         }
         compose.onRoot().captureRoboImage("build/screenshots/12_custom_hostname.png")
+    }
+
+    @Test
+    fun auditWithLongAddresses() {
+        val summary = AuditSummary(
+            isNetworkReachable = true,
+            isOverallProtected = true,
+            blockedCount = 4,
+            totalCount = 4,
+            items = listOf(
+                AuditItem("pagead2.googlesyndication.com", "Google AdMob", AuditOutcome.CACHED, "172.253.158.157, 172.253.158.155, 172.253.158.156, 172.253.158.154"),
+                AuditItem("adservice.google.com", "Google Ad Services", AuditOutcome.SINKHOLE, "0.0.0.0"),
+                AuditItem("ads.doubleclick.net", "DoubleClick", AuditOutcome.NXDOMAIN),
+                AuditItem("applovin.com", "AppLovin", AuditOutcome.RESOLVED, "34.54.99.24, 34.54.99.25, 34.54.99.26")
+            )
+        )
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp)) {
+                        AuditCard(summary = summary, isAuditing = false, onRunAudit = {})
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/13_audit.png")
     }
 }

@@ -64,4 +64,37 @@ class DnsAuditorTest {
         assertEquals(0, summary.blockedCount)
         assertTrue(summary.items.all { it.outcome == AuditOutcome.ERROR && it.detail == "SecurityException" })
     }
+
+    @Test
+    fun `domain resolved by the phone but blocked by the resolver is cache, not a leak`() = runTest {
+        val summary = DnsAuditor { domain ->
+            when (domain) {
+                DnsAuditor.CONTROL_DOMAIN -> listOf("142.250.1.1")
+                "ads.doubleclick.net" -> throw java.net.UnknownHostException()
+                "adservice.google.com" -> listOf("0.0.0.0")
+                else -> listOf("172.253.158.157", "172.253.158.155") // AdMob & AppLovin masih dari cache HP
+            }
+        }.runAudit()
+        assertEquals(2, summary.blockedCount)
+
+        val reconciled = summary.reconcileWith(setOf("pagead2.googlesyndication.com", "applovin.com", "ads.doubleclick.net"))
+
+        assertEquals(4, reconciled.blockedCount)
+        assertEquals(2, reconciled.cachedCount)
+        assertEquals(AuditOutcome.CACHED, reconciled.items.first { it.domain == "applovin.com" }.outcome)
+        assertTrue(reconciled.isOverallProtected)
+    }
+
+    @Test
+    fun `domain allowed by the resolver stays a leak`() = runTest {
+        val summary = DnsAuditor { domain ->
+            if (domain == DnsAuditor.CONTROL_DOMAIN) listOf("142.250.1.1") else listOf("34.54.99.24")
+        }.runAudit()
+
+        val reconciled = summary.reconcileWith(setOf("unrelated.example"))
+
+        assertEquals(0, reconciled.blockedCount)
+        assertEquals(0, reconciled.cachedCount)
+        assertFalse(reconciled.isOverallProtected)
+    }
 }

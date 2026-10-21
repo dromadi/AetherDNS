@@ -13,9 +13,14 @@ enum class AuditOutcome {
     /** Di-resolve ke IP publik: tidak diblokir. */
     RESOLVED,
     /** Kegagalan lain; tidak dihitung sebagai terblokir. */
-    ERROR;
+    ERROR,
+    /**
+     * HP masih memberi IP publik, tetapi resolver aktif (ditanya langsung lewat DoT) memblokirnya: jawaban lama
+     * dari cache DNS HP sejak sebelum proteksi aktif. Akan terblokir setelah cache kedaluwarsa.
+     */
+    CACHED;
 
-    val isBlocked: Boolean get() = this == SINKHOLE || this == NXDOMAIN
+    val isBlocked: Boolean get() = this == SINKHOLE || this == NXDOMAIN || this == CACHED
 }
 
 data class AuditItem(
@@ -36,7 +41,26 @@ data class AuditSummary(
     val totalCount: Int,
     val items: List<AuditItem>,
     val timestamp: Long = System.currentTimeMillis()
-)
+) {
+    val cachedCount: Int get() = items.count { it.outcome == AuditOutcome.CACHED }
+
+    /**
+     * Mencocokkan hasil DNS sistem dengan jawaban resolver aktif yang ditanya langsung: domain yang masih
+     * di-resolve HP tetapi diblokir resolver ditandai [AuditOutcome.CACHED], bukan bocor.
+     */
+    fun reconcileWith(blockedByResolver: Set<String>): AuditSummary {
+        if (!isNetworkReachable || blockedByResolver.isEmpty()) return this
+        val reconciled = items.map { item ->
+            if (item.outcome == AuditOutcome.RESOLVED && item.domain in blockedByResolver) {
+                item.copy(outcome = AuditOutcome.CACHED)
+            } else {
+                item
+            }
+        }
+        val blocked = reconciled.count { it.isBlocked }
+        return copy(items = reconciled, blockedCount = blocked, isOverallProtected = blocked >= DnsAuditor.PROTECTED_THRESHOLD)
+    }
+}
 
 /** Resolver sistem (melalui Private DNS yang aktif); diabstraksi agar audit dapat diuji di JVM. */
 fun interface SystemResolver {
@@ -92,7 +116,7 @@ class DnsAuditor(
 
     companion object {
         const val CONTROL_DOMAIN = "connectivitycheck.gstatic.com"
-        private const val PROTECTED_THRESHOLD = 2
+        internal const val PROTECTED_THRESHOLD = 2
         private val SINKHOLE_ADDRESSES = setOf("0.0.0.0", "127.0.0.1", "::", "::1")
     }
 }

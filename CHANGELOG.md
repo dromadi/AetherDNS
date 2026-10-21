@@ -3,6 +3,12 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.14.1] - 2026-10-21
+
+### Diperbaiki
+- Kartu audit menjadi sangat tinggi dan kosong bila sebuah domain di-resolve ke banyak IP (kolom nama terjepit). Chip kini dibatasi lebarnya dan menampilkan "IP pertama +N".
+- Audit tidak lagi melaporkan "bocor" untuk domain yang masih berasal dari cache DNS HP sejak sebelum proteksi aktif: saat proteksi aktif, resolver ditanya langsung lewat DoT, dan domain yang ia blokir ditandai "Cache HP (segera terblokir)".
+
 ## [1.14.0] - 2026-10-21
 
 ### Ditambahkan

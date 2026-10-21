@@ -311,4 +311,6 @@
     <string name="stats_error_profile">Profil NextDNS ini tidak ada di akun pemilik API key tersebut.</string>
     <string name="stats_error_network">Tidak bisa menghubungi NextDNS. Periksa koneksi Anda.</string>
     <string name="stats_error_server">NextDNS memberi respons tak terduga. Coba lagi nanti.</string>
+    <string name="audit_outcome_cached">Cache HP (segera terblokir)</string>
+    <string name="audit_cached_note">%1$d domain masih berasal dari cache DNS HP sejak sebelum proteksi aktif. Resolver Anda sudah memblokirnya; domain itu akan terblokir setelah cache kedaluwarsa (biasanya dalam hitungan menit).</string>
 </resources>

@@ -312,4 +312,6 @@
     <string name="stats_error_profile">This NextDNS profile is not in the account of that API key.</string>
     <string name="stats_error_network">Could not reach NextDNS. Check your connection.</string>
     <string name="stats_error_server">NextDNS returned an unexpected response. Try again later.</string>
+    <string name="audit_outcome_cached">Phone cache (blocked soon)</string>
+    <string name="audit_cached_note">%1$d domain(s) still come from the phone\'s DNS cache from before protection was on. Your resolver already blocks them; they will be blocked once the cache expires (usually within minutes).</string>
 </resources>

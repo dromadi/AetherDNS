@@ -108,7 +108,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AdTestDomains.kt`: Daftar domain iklan uji bersama (audit & pratinjau filter) dan `FilterVerdict`.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
   - `NetworkInspector.kt`: Cek jaringan (penyadapan port 53, NXDOMAIN hijack, keterjangkauan DoT) dengan `PlainDnsTransport` / `DotAddressProber` yang dapat dipalsukan.
-  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
+  - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`. `AuditSummary.reconcileWith()` menandai domain yang masih di-resolve HP tetapi diblokir resolver aktif (ditanya langsung via `DotProbe.inspect`) sebagai `AuditOutcome.CACHED` — cache DNS HP dari sebelum proteksi aktif, bukan kebocoran.
 - `widget/`:
   - `StatusWidget.kt`: widget layar utama (`res/layout/widget_status.xml`, `res/xml/widget_status_info.xml`).
 - `service/`:
