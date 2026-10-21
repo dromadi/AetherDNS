@@ -11,6 +11,11 @@ import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.data.NextDnsClient
+import com.security.aetherdns.data.NextDnsStatsSettings
+import com.security.aetherdns.data.NextDnsSummary
+import com.security.aetherdns.data.StatsError
+import com.security.aetherdns.data.StatsResult
 import com.security.aetherdns.data.PauseResult
 import com.security.aetherdns.data.ProfileRepository
 import com.security.aetherdns.data.ProfileSaveResult
@@ -23,10 +28,15 @@ import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DotProbe
 import com.security.aetherdns.util.InspectionResult
+import com.security.aetherdns.util.CheckResult
+import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.NetworkCheck
 import com.security.aetherdns.util.NetworkInspector
+import com.security.aetherdns.util.NextDnsHostname
 import com.security.aetherdns.util.NetworkReport
 import com.security.aetherdns.util.ResolverInspector
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,6 +46,17 @@ import java.util.Date
 
 sealed class UiEvent {
     data class ShowSnackbar(val message: UiText) : UiEvent()
+
+    /** Cek otomatis menemukan DNS terenkripsi diblokir saat proteksi aktif: tawarkan jeda. */
+    data object DotBlockedOnNetwork : UiEvent()
+}
+
+/** State kartu statistik blokir NextDNS. */
+sealed class StatsUiState {
+    data object Idle : StatsUiState()
+    data object Loading : StatsUiState()
+    data class Loaded(val summary: NextDnsSummary) : StatsUiState()
+    data class Error(val error: StatsError) : StatsUiState()
 }
 
 /** Hasil "Uji Kecepatan & Filter" per ID profil. */
@@ -57,6 +78,8 @@ class MainViewModel(
     private val automationSettings: AutomationSettings,
     private val onboardingStore: OnboardingStore,
     private val activator: WirelessAdbActivator,
+    private val statsSettings: NextDnsStatsSettings,
+    private val statsClient: NextDnsClient = NextDnsClient(),
     private val inspector: ResolverInspector = DotProbe,
     private val networkInspector: NetworkInspector = NetworkInspector(),
     private val auditor: DnsAuditor = DnsAuditor()
@@ -100,6 +123,45 @@ class MainViewModel(
     private val _isCheckingNetwork = MutableStateFlow(false)
     val isCheckingNetwork: StateFlow<Boolean> = _isCheckingNetwork.asStateFlow()
 
+    /** Statistik blokir NextDNS; hanya relevan bila resolver aktif adalah profil NextDNS pribadi. */
+    val statsApiKey: StateFlow<String?> = statsSettings.apiKey
+
+    private val _stats = MutableStateFlow<StatsUiState>(StatsUiState.Idle)
+    val stats: StateFlow<StatsUiState> = _stats.asStateFlow()
+    private var lastStatsAt = 0L
+
+    /** Config ID NextDNS dari resolver yang sedang aktif, atau null bila bukan profil NextDNS pribadi. */
+    private fun activeNextDnsProfile(): String? =
+        dnsState.value.takeIf { it.isProtectionActive }?.specifier?.let { NextDnsHostname.extractConfigId(it) }
+
+    fun refreshStats() {
+        val profile = activeNextDnsProfile() ?: return
+        val key = statsSettings.apiKey.value ?: return
+        if (_stats.value is StatsUiState.Loading) return
+        viewModelScope.launch {
+            _stats.value = StatsUiState.Loading
+            _stats.value = when (val result = statsClient.summary(profile, key)) {
+                is StatsResult.Success -> StatsUiState.Loaded(result.summary)
+                is StatsResult.Failure -> StatsUiState.Error(result.error)
+            }
+            lastStatsAt = System.currentTimeMillis()
+        }
+    }
+
+    fun saveStatsApiKey(key: String) {
+        statsSettings.setApiKey(key)
+        refreshStats()
+    }
+
+    fun clearStatsApiKey() {
+        statsSettings.setApiKey(null)
+        _stats.value = StatsUiState.Idle
+    }
+
+    /** Aplikasi sedang tampil (onResume..onPause); cek otomatis hanya berjalan saat itu. */
+    private var isVisible = false
+    private var lastAutoCheckAt = 0L
+
     private val _eventChannel = Channel<UiEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
@@ -112,6 +174,13 @@ class MainViewModel(
     }
 
     init {
+        // Jaringan berganti saat aplikasi tampil: cek ulang setelah jaringan stabil
+        viewModelScope.launch {
+            @OptIn(FlowPreview::class)
+            repository.networkChanges.debounce(NETWORK_SETTLE_MS).collect {
+                if (isVisible) autoNetworkCheck(force = true)
+            }
+        }
         try {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
@@ -199,15 +268,42 @@ class MainViewModel(
     }
 
     /** Cek jaringan; DoT diuji ke resolver aktif, atau [fallbackHostname] bila proteksi mati. */
-    fun runNetworkCheck(fallbackHostname: String) {
+    fun runNetworkCheck(fallbackHostname: String) = runNetworkCheck(fallbackHostname, automatic = false)
+
+    private fun runNetworkCheck(fallbackHostname: String, automatic: Boolean) {
         if (_isCheckingNetwork.value) return
         viewModelScope.launch {
             _isCheckingNetwork.value = true
             val state = dnsState.value
             val hostname = state.specifier.takeIf { state.isProtectionActive && it.isNotBlank() } ?: fallbackHostname
-            _networkReport.value = networkInspector.inspect(hostname)
+            val report = networkInspector.inspect(hostname)
+            _networkReport.value = report
             _isCheckingNetwork.value = false
+            lastAutoCheckAt = System.currentTimeMillis()
+            // Pemeriksaan manual sudah menampilkan peringatan di kartu; otomatis perlu menarik perhatian
+            if (automatic && dnsState.value.isProtectionActive &&
+                report[NetworkCheck.DOT_REACHABLE] == CheckResult.PROBLEM
+            ) {
+                _eventChannel.send(UiEvent.DotBlockedOnNetwork)
+            }
         }
+    }
+
+    /** Dipanggil saat layar tampil: cek otomatis paling sering tiap [AUTO_CHECK_INTERVAL_MS], tanpa kerja latar. */
+    fun onVisible() {
+        isVisible = true
+        autoNetworkCheck(force = false)
+        if (System.currentTimeMillis() - lastStatsAt > STATS_REFRESH_MS) refreshStats()
+    }
+
+    fun onHidden() {
+        isVisible = false
+    }
+
+    private fun autoNetworkCheck(force: Boolean) {
+        if (_showOnboarding.value) return
+        if (!force && System.currentTimeMillis() - lastAutoCheckAt < AUTO_CHECK_INTERVAL_MS) return
+        runNetworkCheck(DnsManager.DEFAULT_FALLBACK_HOSTNAME, automatic = true)
     }
 
     fun runAudit() {
@@ -289,18 +385,25 @@ class MainViewModel(
     private fun formatTime(epochMs: Long): String =
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(epochMs))
 
+    private companion object {
+        const val AUTO_CHECK_INTERVAL_MS = 10 * 60_000L
+        const val NETWORK_SETTLE_MS = 3_000L
+        const val STATS_REFRESH_MS = 5 * 60_000L
+    }
+
     class Factory(
         private val repository: DnsRepository,
         private val granter: PermissionGranter,
         private val profileRepository: ProfileRepository,
         private val automationSettings: AutomationSettings,
         private val onboardingStore: OnboardingStore,
-        private val activator: WirelessAdbActivator
+        private val activator: WirelessAdbActivator,
+        private val statsSettings: NextDnsStatsSettings
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

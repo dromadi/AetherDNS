@@ -4,7 +4,6 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 val Typography = Typography(
@@ -26,18 +25,19 @@ val Typography = Typography(
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
-    // Tinggi baris relatif (em) agar tetap rapat saat komponen memakai fontSize sendiri
+    // PENTING: lineHeight wajib `sp`, jangan `em`. TextField Material menganimasikan label dengan lerp antara
+    // bodyLarge dan bodySmall; mencampur em dan sp melempar IllegalArgumentException (crash saat kolom berlabel tampil).
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
-        lineHeight = 1.4.em
+        lineHeight = 21.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
-        lineHeight = 1.4.em
+        lineHeight = 18.sp
     ),
     labelMedium = TextStyle(
         fontFamily = FontFamily.Default,

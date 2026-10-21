@@ -3,6 +3,15 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.14.0] - 2026-10-21
+
+### Ditambahkan
+- **Statistik blokir NextDNS** di Beranda (24 jam terakhir: jumlah diblokir, persentase, domain paling sering diblokir) bila resolver aktif adalah profil NextDNS pribadi. Butuh API key NextDNS; key hanya disimpan di HP (tidak ikut backup) dan hanya dikirim ke api.nextdns.io.
+- **Cek jaringan otomatis** saat aplikasi dibuka (paling sering tiap 10 menit) dan saat jaringan berganti selama aplikasi tampil. Bila DNS terenkripsi diblokir saat proteksi aktif, muncul dialog dengan tombol jeda 15 menit. Tidak ada kerja latar.
+
+### Diperbaiki
+- Crash saat membuka kolom isian berlabel (Hostname kustom, helper NextDNS, simpan profil) sejak v1.10.0, akibat tinggi baris tipografi berunit `em`.
+
 ## [1.13.0] - 2026-10-21
 
 ### Ditambahkan

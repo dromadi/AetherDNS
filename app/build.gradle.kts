@@ -12,8 +12,8 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.13.0"
+        versionCode = 17
+        versionName = "1.14.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -110,6 +110,8 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(libs.kotlinx.coroutines.test)
+    // org.json di android.jar hanya stub; implementasi asli untuk unit test parser NextDNS
+    testImplementation("org.json:json:20240303")
     // Screenshot UI opsional (AETHERDNS_SCREENSHOTS=1), lihat ScreenshotTest
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")

@@ -154,3 +154,20 @@ private fun CheckRow(result: CheckResult, ok: Int, problem: Int, unknown: Int) {
         Text(stringResource(text), style = MaterialTheme.typography.bodyMedium)
     }
 }
+
+/** Dialog dari cek otomatis: jaringan baru memblokir DoT saat proteksi aktif, sehingga internet bisa putus. */
+@Composable
+fun DotBlockedDialog(onPause: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Error, contentDescription = null, tint = ErrorRed) },
+        title = { Text(stringResource(R.string.netcheck_dialog_title)) },
+        text = { Text(stringResource(R.string.netcheck_summary_dot_blocked)) },
+        confirmButton = {
+            Button(onClick = onPause) { Text(stringResource(R.string.action_pause_15)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.netcheck_dialog_keep)) }
+        }
+    )
+}

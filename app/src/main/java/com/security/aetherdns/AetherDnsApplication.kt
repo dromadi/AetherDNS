@@ -5,6 +5,7 @@ import com.security.aetherdns.adb.PairingNotifier
 import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
 import com.security.aetherdns.data.DnsRepository
+import com.security.aetherdns.data.NextDnsStatsSettings
 import com.security.aetherdns.data.ProfileRepository
 import com.security.aetherdns.data.SharedPrefsProfileStore
 import com.security.aetherdns.onboarding.OnboardingStore
@@ -36,6 +37,9 @@ class AetherDnsApplication : Application() {
     lateinit var wirelessActivator: WirelessAdbActivator
         private set
 
+    lateinit var nextDnsStatsSettings: NextDnsStatsSettings
+        private set
+
     /** Hanya untuk merender notifikasi aktivasi dan widget mengikuti state; tidak ada kerja latar lain. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -49,6 +53,7 @@ class AetherDnsApplication : Application() {
         automationSettings = AutomationSettings(this)
         onboardingStore = OnboardingStore(this)
         wirelessActivator = WirelessAdbActivator(this)
+        nextDnsStatsSettings = NextDnsStatsSettings(this)
         PairingNotifier(this).bind(appScope, wirelessActivator)
         // Widget layar utama mengikuti state DNS selama proses hidup (perubahan dari aplikasi, tile, Settings)
         appScope.launch { dnsRepository.state.collect { StatusWidget.updateAll(this@AetherDnsApplication, it) } }

@@ -20,7 +20,8 @@ class MainActivity : ComponentActivity() {
             app.profileRepository,
             app.automationSettings,
             app.onboardingStore,
-            app.wirelessActivator
+            app.wirelessActivator,
+            app.nextDnsStatsSettings
         )
     }
 
@@ -39,5 +40,11 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Izin bisa diberikan dari luar layar ini (notifikasi aktivasi, Shizuku, ADB PC)
         viewModel.refresh()
+        viewModel.onVisible()
+    }
+
+    override fun onPause() {
+        viewModel.onHidden()
+        super.onPause()
     }
 }

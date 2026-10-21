@@ -293,4 +293,23 @@
     <string name="netcheck_summary_exposed">Your provider tampers with regular DNS. Turn protection on to avoid it.</string>
     <string name="netcheck_summary_clean">No DNS tampering detected on this network.</string>
     <string name="netcheck_summary_dot_blocked">Encrypted DNS is blocked here, so the internet may stop working while protection is on. Pause it while you use this network.</string>
+    <string name="netcheck_dialog_title">This network blocks encrypted DNS</string>
+    <string name="netcheck_dialog_keep">Keep protection on</string>
+
+    <!-- Statistik blokir NextDNS -->
+    <string name="stats_title">Blocked by NextDNS</string>
+    <string name="stats_period">Last 24 hours</string>
+    <string name="stats_blocked_count">%1$s blocked</string>
+    <string name="stats_blocked_detail">%1$d%% of %2$s DNS queries</string>
+    <string name="stats_top_blocked">Most blocked</string>
+    <string name="stats_setup_desc">Your resolver is a NextDNS profile. Add a NextDNS API key to see how many ads and trackers were blocked. The key is stored only on this phone and sent only to api.nextdns.io.</string>
+    <string name="stats_get_key">Get API key (my.nextdns.io → Account)</string>
+    <string name="stats_key_label">NextDNS API key</string>
+    <string name="stats_save">Save</string>
+    <string name="stats_remove_key">Remove API key</string>
+    <string name="stats_refresh">Refresh</string>
+    <string name="stats_error_key">The API key was rejected. Check it at my.nextdns.io → Account.</string>
+    <string name="stats_error_profile">This NextDNS profile is not in the account of that API key.</string>
+    <string name="stats_error_network">Could not reach NextDNS. Check your connection.</string>
+    <string name="stats_error_server">NextDNS returned an unexpected response. Try again later.</string>
 </resources>

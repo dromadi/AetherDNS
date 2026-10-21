@@ -39,6 +39,7 @@ import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.util.NextDnsHostname
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -62,6 +63,14 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val showOnboarding by viewModel.showOnboarding.collectAsState()
     val networkReport by viewModel.networkReport.collectAsState()
     val isCheckingNetwork by viewModel.isCheckingNetwork.collectAsState()
+    val statsApiKey by viewModel.statsApiKey.collectAsState()
+    val stats by viewModel.stats.collectAsState()
+    // Statistik hanya bermakna untuk profil NextDNS pribadi yang sedang aktif
+    val activeNextDnsProfile = dnsState.specifier.takeIf { dnsState.isProtectionActive }
+        ?.let { NextDnsHostname.extractConfigId(it) }
+    LaunchedEffect(activeNextDnsProfile, statsApiKey) {
+        if (activeNextDnsProfile != null && statsApiKey != null) viewModel.refreshStats()
+    }
     val activationState by viewModel.activationState.collectAsState()
     val nativeActivation = if (viewModel.isNativeActivationSupported) {
         NativeActivationUi(activationState, viewModel::startNotificationActivation, viewModel::activateWithCode)
@@ -70,13 +79,26 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     }
     val allProfiles = DefaultProfiles.list + savedProfiles
 
+    var showDotBlockedDialog by rememberSaveable { mutableStateOf(false) }
+
     // Handle snackbar events from ViewModel
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
             when (event) {
                 is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message.resolve(context))
+                UiEvent.DotBlockedOnNetwork -> showDotBlockedDialog = true
             }
         }
+    }
+
+    if (showDotBlockedDialog) {
+        DotBlockedDialog(
+            onPause = {
+                showDotBlockedDialog = false
+                viewModel.pauseDns(15)
+            },
+            onDismiss = { showDotBlockedDialog = false }
+        )
     }
 
     var selectedProfileId by remember(dnsState.specifier, savedProfiles) {
@@ -199,6 +221,18 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             benchmarkResult = selectedProfile?.let { benchmark.results[it.id] },
                             onChange = { tab = AppTab.RESOLVERS }
                         )
+                    }
+
+                    if (activeNextDnsProfile != null) {
+                        item {
+                            BlockStatsCard(
+                                hasApiKey = statsApiKey != null,
+                                state = stats,
+                                onSaveKey = viewModel::saveStatsApiKey,
+                                onRemoveKey = viewModel::clearStatsApiKey,
+                                onRefresh = viewModel::refreshStats
+                            )
+                        }
                     }
 
                     item {

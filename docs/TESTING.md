@@ -49,6 +49,18 @@ Shizuku:
 - [ ] Jaringan yang memblokir port 853 (mis. Wi-Fi kantor/kampus) dengan proteksi aktif → ringkasan merah + tombol jeda berfungsi.
 - [ ] Mode pesawat → baris DoT "Tidak bisa diperiksa", aplikasi tidak macet.
 
+- [ ] Buka aplikasi → Cek jaringan berjalan sendiri (sekali per 10 menit); pindah Wi-Fi ↔ data seluler saat aplikasi terbuka → cek ulang sendiri.
+- [ ] Proteksi aktif lalu sambung ke Wi-Fi yang memblokir port 853 dengan aplikasi terbuka → dialog "Jaringan ini memblokir DNS terenkripsi" → Jeda berfungsi.
+
+## 2c. Statistik NextDNS
+
+- [ ] Resolver aktif bukan NextDNS → kartu statistik tidak tampil.
+- [ ] Resolver `xxxxxx.dns.nextdns.io` → kartu penyiapan; tombol membuka my.nextdns.io/account.
+- [ ] API key benar → angka diblokir/persentase/domain teratas cocok dengan dasbor NextDNS (24 jam).
+- [ ] API key salah → "API key ditolak"; profil milik akun lain → pesan profil tidak ditemukan.
+- [ ] Hapus API key (menu ⋮) → kembali ke penyiapan; key tidak muncul setelah restore backup.
+- [ ] Buka **Hostname kustom**, helper NextDNS, dan form simpan profil → tidak crash (regresi v1.10–v1.13).
+
 ## 3. Jeda 15 menit
 
 - [ ] Jeda → status "Dijeda — aktif kembali sekitar pukul HH:MM"; Private DNS di Settings HP = Off.

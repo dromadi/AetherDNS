@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.13.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.14.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
@@ -55,7 +55,10 @@ AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose +
 ---
 
 ## Cek Jaringan
-Di Beranda, **Cek jaringan → Periksa** menunjukkan apakah penyedia internet Anda menyadap atau memalsukan jawaban DNS biasa (mis. menyisipkan iklan atau halaman pengalihan), dan apakah jaringan saat ini mengizinkan DNS terenkripsi. Bila DNS terenkripsi diblokir saat proteksi aktif, aplikasi menawarkan jeda satu ketuk agar internet tidak putus.
+Di Beranda, **Cek jaringan → Periksa** menunjukkan apakah penyedia internet Anda menyadap atau memalsukan jawaban DNS biasa (mis. menyisipkan iklan atau halaman pengalihan), dan apakah jaringan saat ini mengizinkan DNS terenkripsi. Pemeriksaan juga berjalan otomatis saat aplikasi dibuka dan saat jaringan berganti; bila DNS terenkripsi diblokir saat proteksi aktif, aplikasi menawarkan jeda satu ketuk agar internet tidak putus.
+
+## Statistik Blokir NextDNS
+Bila memakai profil NextDNS pribadi (`xxxxxx.dns.nextdns.io`), tambahkan API key NextDNS (my.nextdns.io → Account) di kartu **Diblokir NextDNS** pada Beranda untuk melihat jumlah iklan/pelacak yang diblokir dalam 24 jam terakhir. Key hanya disimpan di HP dan hanya dikirim ke api.nextdns.io. Resolver publik (AdGuard, Cloudflare, Mullvad, Quad9) tidak menyediakan statistik.
 
 ## Widget Layar Utama
 Tekan lama layar utama → **Widget → Status AetherDNS** untuk melihat status proteksi dan mengaktifkan, mematikan, atau menjeda 15 menit tanpa membuka aplikasi.

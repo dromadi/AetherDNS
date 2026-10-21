@@ -12,7 +12,11 @@ import android.provider.Settings
 import com.security.aetherdns.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -29,6 +33,11 @@ class DnsRepository(
 
     private val _state = MutableStateFlow(loadCurrentState())
     val state: StateFlow<DnsState> = _state.asStateFlow()
+
+    private val _networkChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Berbunyi setiap jaringan default berganti (mis. pindah Wi-Fi / ke data seluler), selama proses hidup. */
+    val networkChanges: SharedFlow<Unit> = _networkChanges.asSharedFlow()
 
     private var contentObserver: ContentObserver? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -89,6 +98,11 @@ class DnsRepository(
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
 
         networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+                _networkChanges.tryEmit(Unit)
+            }
+
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
                 super.onLinkPropertiesChanged(network, linkProperties)
                 refresh()

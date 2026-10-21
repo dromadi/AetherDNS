@@ -10,6 +10,7 @@ import com.security.aetherdns.adb.ActivationStep
 import com.security.aetherdns.data.ApplyError
 import com.security.aetherdns.data.PauseError
 import com.security.aetherdns.data.ProfileError
+import com.security.aetherdns.data.StatsError
 import com.security.aetherdns.model.DnsProfile
 import com.security.aetherdns.shizuku.GrantError
 import com.security.aetherdns.shizuku.GrantException
@@ -135,6 +136,15 @@ fun ActivationError.toUiText(): UiText {
         is ActivationError.Unexpected -> withDetail(R.string.native_error_unexpected, detail)
     }
 }
+
+fun StatsError.toUiText(): UiText = UiText.of(
+    when (this) {
+        StatsError.INVALID_KEY -> R.string.stats_error_key
+        StatsError.PROFILE_NOT_FOUND -> R.string.stats_error_profile
+        StatsError.NETWORK -> R.string.stats_error_network
+        StatsError.SERVER -> R.string.stats_error_server
+    }
+)
 
 /** Nama profil: resource terlokalisasi untuk preset, nama ketikan pengguna untuk profil tersimpan. */
 fun DnsProfile.displayName(context: Context): String =
