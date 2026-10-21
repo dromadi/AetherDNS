@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.security.aetherdns.BuildConfig
 import com.security.aetherdns.R
 import com.security.aetherdns.model.DefaultProfiles
+import com.security.aetherdns.model.PresetGroup
 import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.util.DnsManager
@@ -198,7 +199,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                     else -> viewModel.applyDns(selectedHostname, probe = true)
                                 }
                             },
-                            onPause = { viewModel.pauseDns(15) }
+                            onPause = { viewModel.pauseDns(15) },
+                            onChangeResolver = { tab = AppTab.RESOLVERS }
                         )
                     }
 
@@ -215,15 +217,6 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         }
                     }
 
-                    item {
-                        SelectedResolverCard(
-                            name = resolverName,
-                            hostname = selectedHostname,
-                            benchmarkResult = selectedProfile?.let { benchmark.results[it.id] },
-                            onChange = { tab = AppTab.RESOLVERS }
-                        )
-                    }
-
                     if (activeNextDnsProfile != null) {
                         item {
                             BlockStatsCard(
@@ -237,17 +230,16 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                     }
 
                     item {
-                        NetworkCheckCard(
+                        val activePreset = DefaultProfiles.list.firstOrNull { it.hostname.equals(dnsState.specifier, ignoreCase = true) }
+                        val blocksAds = activePreset?.let { it.group == PresetGroup.ADS || it.group == PresetGroup.FAMILY }
+                        HealthCard(
+                            summary = HealthModel.summarize(dnsState, blocksAds, networkReport, auditSummary),
+                            isChecking = isCheckingNetwork || isAuditing,
                             report = networkReport,
-                            isChecking = isCheckingNetwork,
-                            isProtectionActive = dnsState.isProtectionActive,
-                            onRun = { viewModel.runNetworkCheck(selectedHostname.ifBlank { DnsManager.DEFAULT_FALLBACK_HOSTNAME }) },
+                            audit = auditSummary,
+                            onRefresh = { viewModel.runHealthCheck(selectedHostname.ifBlank { DnsManager.DEFAULT_FALLBACK_HOSTNAME }) },
                             onPause = { viewModel.pauseDns(15) }
                         )
-                    }
-
-                    item {
-                        AuditCard(summary = auditSummary, isAuditing = isAuditing, onRunAudit = viewModel::runAudit)
                     }
                 }
             }

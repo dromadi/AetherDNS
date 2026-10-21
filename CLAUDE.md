@@ -37,7 +37,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 4b. **Cek Jaringan (`util/NetworkInspector`)**:
    - Soket UDP milik aplikasi tidak melewati Private DNS, jadi hasilnya mencerminkan perilaku ISP/jaringan. Tiga pemeriksaan (`NetworkCheck`): `INTERCEPTION` (kueri ke 192.0.2.1/TEST-NET-1 yang tak pernah menjalankan DNS tetap dijawab ⇒ port 53 disadap), `NXDOMAIN_HIJACK` (subdomain acak `example.com` dijawab dengan IP lewat 8.8.8.8/1.1.1.1 ⇒ jawaban dipalsukan), `DOT_REACHABLE` (probe DoT; bila DNS sistem mati karena strict, hostname di-resolve sendiri lewat DNS biasa lalu `DotProbeClient.probeAt(host, ip)`).
    - Hanya domain netral (RFC 2606) dan alamat dokumentasi (RFC 5737); tidak ada data pengguna. Logika murni diuji `NetworkInspectorTest` (transport palsu); `LiveDotProbeTest` menguji end-to-end di runner CI.
-   - UI `NetworkCheckCard`: bila DoT diblokir saat proteksi aktif, tawarkan jeda 15 menit.
+   - UI: kartu `HealthCard` di Beranda; bila DoT diblokir saat proteksi aktif, tawarkan jeda 15 menit.
    - Otomatis: `MainViewModel.onVisible()` (dari `MainActivity.onResume`) menjalankan cek bila terakhir > 10 menit; `DnsRepository.networkChanges` (onAvailable jaringan default, debounce 3 s) memicu cek ulang selama layar tampil. Hasil DoT diblokir + proteksi aktif ⇒ `UiEvent.DotBlockedOnNetwork` ⇒ `DotBlockedDialog`. Tidak ada kerja latar saat aplikasi tertutup.
 4c. **Statistik Blokir NextDNS (`data/NextDnsStats.kt`)**:
    - Hanya untuk resolver aktif `*.dns.nextdns.io` (Config ID via `NextDnsHostname.extractConfigId`). `NextDnsClient` memanggil `api.nextdns.io/profiles/{id}/analytics/status` dan `/domains?status=blocked` (24 jam) dengan header `X-Api-Key`; parsing murni `NextDnsApiParser`, HTTP diabstraksi `HttpGet`, diuji `NextDnsStatsTest` (org.json asli sebagai testImplementation).
@@ -131,14 +131,16 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, navigasi bawah 3 tab (Beranda / Resolver / Lainnya), state pilihan profil. Beranda punya pull-to-refresh; tombol utama tanpa izin menggulir ke asisten izin.
-  - `NetworkCheckCard.kt`: kartu Cek jaringan di Beranda + `DotBlockedDialog`.
+  - **Prinsip UX Beranda**: hanya kartu status (+ asisten izin bila perlu), kartu `HealthCard`, dan statistik NextDNS bila relevan. Fitur baru **tidak** menambah kartu di Beranda; hasil teknis masuk ke "Detail teknis" kartu Kesehatan atau ke menu Lainnya. Bahasa di Beranda tanpa istilah teknis (DoT, NXDOMAIN, port).
+  - `HealthModel.kt` / `HealthCard.kt`: ringkasan berbahasa awam dari `DnsState` + `NetworkReport` + `AuditSummary` (logika murni, diuji `HealthModelTest`); detail teknis memakai `NetworkCheckRows` dan `AuditDetailRows`.
+  - `NetworkCheckCard.kt`: `NetworkCheckRows` (detail teknis) + `DotBlockedDialog`. `AuditCard.kt`: `AuditDetailRows`.
   - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
-  - `SelectedResolverCard.kt`, `MoreScreen.kt`: ringkasan resolver di Beranda dan tab Lainnya (izin, otomasi, tautan, tentang).
+  - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
   - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
   - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif (termasuk Material You) — jangan menulis `Color(0x...)` langsung di komponen. Semua ukuran/tinggi baris tipografi wajib `sp` — `em` membuat TextField berlabel crash (lerp em↔sp), dijaga `TextFieldThemeTest`.
   - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
-  - `StatusCard.kt` (hero beranimasi + haptic), `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
+  - `StatusCard.kt` (hero beranimasi + haptic, nama resolver + tombol Ganti resolver), `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
   - `OnboardingScreen.kt`: Onboarding 3 langkah (memakai ulang `PermissionAssistantCard`, `PresetCard`, `AddTileButton`).
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
@@ -147,7 +149,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

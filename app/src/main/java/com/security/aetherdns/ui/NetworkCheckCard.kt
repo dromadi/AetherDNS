@@ -31,114 +31,27 @@ import com.security.aetherdns.util.CheckResult
 import com.security.aetherdns.util.NetworkCheck
 import com.security.aetherdns.util.NetworkReport
 
-/**
- * "Cek jaringan": apakah ISP membelokkan DNS biasa dan apakah DoT bisa dipakai. Bila DoT diblokir saat proteksi
- * aktif, menawarkan jeda satu ketuk agar internet tidak putus.
- */
+/** Baris teknis hasil Cek jaringan, ditampilkan di bagian "Detail teknis" kartu Kesehatan proteksi. */
 @Composable
-fun NetworkCheckCard(
-    report: NetworkReport?,
-    isChecking: Boolean,
-    isProtectionActive: Boolean,
-    onRun: () -> Unit,
-    onPause: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Router, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.netcheck_title),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                FilledTonalButton(
-                    onClick = onRun,
-                    enabled = !isChecking,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    if (isChecking) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.common_testing), fontSize = 12.sp)
-                    } else {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.netcheck_run), fontSize = 12.sp)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.netcheck_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            AnimatedVisibility(visible = report != null) {
-                report?.let { NetworkReportContent(it, isProtectionActive, onPause) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NetworkReportContent(report: NetworkReport, isProtectionActive: Boolean, onPause: () -> Unit) {
-    val dotBlocked = report[NetworkCheck.DOT_REACHABLE] == CheckResult.PROBLEM
-    val (summary, color, container) = when {
-        dotBlocked && isProtectionActive -> Triple(R.string.netcheck_summary_dot_blocked, ErrorRed, ErrorContainer)
-        report.isPlainDnsTampered && isProtectionActive ->
-            Triple(R.string.netcheck_summary_protected, SuccessGreen, SuccessContainer)
-        report.isPlainDnsTampered -> Triple(R.string.netcheck_summary_exposed, WarningOrange, WarningOrangeLight)
-        else -> Triple(R.string.netcheck_summary_clean, SuccessGreen, SuccessContainer)
-    }
-
-    Column {
-        Spacer(modifier = Modifier.height(12.dp))
-        Surface(shape = MaterialTheme.shapes.small, color = container, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(summary), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = color)
-                if (dotBlocked && isProtectionActive) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = onPause,
-                        colors = ButtonDefaults.buttonColors(containerColor = ErrorRed, contentColor = MaterialTheme.colorScheme.surface),
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Icon(Icons.Default.PauseCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.action_pause_15), fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        CheckRow(
-            report[NetworkCheck.INTERCEPTION],
-            ok = R.string.netcheck_interception_ok,
-            problem = R.string.netcheck_interception_problem,
-            unknown = R.string.netcheck_hijack_unknown
-        )
-        CheckRow(
-            report[NetworkCheck.NXDOMAIN_HIJACK],
-            ok = R.string.netcheck_hijack_ok,
-            problem = R.string.netcheck_hijack_problem,
-            unknown = R.string.netcheck_hijack_unknown
-        )
-        CheckRow(
-            report[NetworkCheck.DOT_REACHABLE],
-            ok = R.string.netcheck_dot_ok,
-            problem = R.string.netcheck_dot_problem,
-            unknown = R.string.netcheck_dot_unknown
-        )
-    }
+internal fun NetworkCheckRows(report: NetworkReport) {
+    CheckRow(
+        report[NetworkCheck.INTERCEPTION],
+        ok = R.string.netcheck_interception_ok,
+        problem = R.string.netcheck_interception_problem,
+        unknown = R.string.netcheck_hijack_unknown
+    )
+    CheckRow(
+        report[NetworkCheck.NXDOMAIN_HIJACK],
+        ok = R.string.netcheck_hijack_ok,
+        problem = R.string.netcheck_hijack_problem,
+        unknown = R.string.netcheck_hijack_unknown
+    )
+    CheckRow(
+        report[NetworkCheck.DOT_REACHABLE],
+        ok = R.string.netcheck_dot_ok,
+        problem = R.string.netcheck_dot_problem,
+        unknown = R.string.netcheck_dot_unknown
+    )
 }
 
 @Composable

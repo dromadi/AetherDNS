@@ -1,0 +1,3 @@
+• Beranda lebih ringkas: satu kartu "Kesehatan proteksi" berbahasa awam menggantikan kartu cek jaringan dan audit; detail teknis cukup satu ketukan
+• Ganti resolver langsung dari kartu status
+• Tab Lainnya kini berupa menu rapi

@@ -60,6 +60,7 @@ fun StatusCard(
     state: DnsState,
     resolverName: String?,
     isProbing: Boolean,
+    onChangeResolver: () -> Unit,
     onToggle: () -> Unit,
     onPause: () -> Unit
 ) {
@@ -140,6 +141,22 @@ fun StatusCard(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+                if (resolverName != null) {
+                    Text(
+                        text = stringResource(R.string.status_selected_resolver, resolverName),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onChangeResolver,
+                colors = ButtonDefaults.textButtonColors(contentColor = if (active) Color.White else MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_change_resolver))
             }
 
             // Indikator jeda sementara (captive portal)
@@ -151,20 +168,7 @@ fun StatusCard(
                 )
             }
 
-            // Indikator validasi DoT oleh OS (LinkProperties API 28+)
-            if (active) {
-                if (state.isSystemDoTValidated) {
-                    StatusPill(
-                        icon = Icons.Default.CheckCircle,
-                        color = Color.White,
-                        text = stringResource(R.string.status_os_validated, state.validatedServerName ?: state.specifier)
-                    )
-                } else {
-                    StatusPill(icon = Icons.Default.Sync, color = Color.White, text = stringResource(R.string.status_os_validating))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Tombol utama dengan pre-flight DoT probe
             val buttonColors = if (active) {

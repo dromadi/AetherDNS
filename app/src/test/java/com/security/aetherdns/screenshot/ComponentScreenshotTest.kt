@@ -10,7 +10,10 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.security.aetherdns.data.NextDnsSummary
-import com.security.aetherdns.ui.AuditCard
+import com.security.aetherdns.ui.AuditDetailRows
+import com.security.aetherdns.ui.HealthCard
+import com.security.aetherdns.ui.HealthModel
+import com.security.aetherdns.data.DnsState
 import com.security.aetherdns.ui.BlockStatsCard
 import com.security.aetherdns.ui.DiagnosticsCard
 import com.security.aetherdns.ui.ReportUiState
@@ -19,7 +22,6 @@ import com.security.aetherdns.util.AuditOutcome
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.ui.CustomHostnameCard
 import com.security.aetherdns.ui.DotBlockedDialog
-import com.security.aetherdns.ui.NetworkCheckCard
 import com.security.aetherdns.ui.StatsUiState
 import com.security.aetherdns.ui.theme.AetherDnsTheme
 import com.security.aetherdns.util.CheckResult
@@ -52,33 +54,38 @@ class ComponentScreenshotTest {
     }
 
     @Test
-    fun networkCheckStates() {
+    fun healthStates() {
+        val active = DnsState(hasPermission = true, mode = "hostname", specifier = "dns.adguard-dns.com", isProtectionActive = true, isSystemDoTValidated = true)
         val tampered = NetworkReport(
             mapOf(
                 NetworkCheck.INTERCEPTION to CheckResult.PROBLEM,
-                NetworkCheck.NXDOMAIN_HIJACK to CheckResult.PROBLEM,
+                NetworkCheck.NXDOMAIN_HIJACK to CheckResult.OK,
                 NetworkCheck.DOT_REACHABLE to CheckResult.OK
             )
         )
-        val dotBlocked = NetworkReport(
+        val blocked = NetworkReport(
             mapOf(
                 NetworkCheck.INTERCEPTION to CheckResult.OK,
-                NetworkCheck.NXDOMAIN_HIJACK to CheckResult.INCONCLUSIVE,
+                NetworkCheck.NXDOMAIN_HIJACK to CheckResult.OK,
                 NetworkCheck.DOT_REACHABLE to CheckResult.PROBLEM
             )
         )
+        val audit = AuditSummary(true, true, 4, 4, emptyList())
         compose.setContent {
             AetherDnsTheme(dynamicColor = false) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column(Modifier.padding(16.dp)) {
-                        NetworkCheckCard(tampered, isChecking = false, isProtectionActive = true, onRun = {}, onPause = {})
+                        HealthCard(HealthModel.summarize(active, true, tampered, audit), false, tampered, audit, {}, {})
                         androidx.compose.foundation.layout.Spacer(Modifier.padding(8.dp))
-                        NetworkCheckCard(dotBlocked, isChecking = false, isProtectionActive = true, onRun = {}, onPause = {})
+                        HealthCard(
+                            HealthModel.summarize(active.copy(isSystemDoTValidated = false), true, blocked, null),
+                            false, blocked, null, {}, {}
+                        )
                     }
                 }
             }
         }
-        compose.onRoot().captureRoboImage("build/screenshots/9_network_check.png")
+        compose.onRoot().captureRoboImage("build/screenshots/9_health.png")
     }
 
     @Test
@@ -153,7 +160,7 @@ class ComponentScreenshotTest {
             AetherDnsTheme(dynamicColor = false) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column(Modifier.padding(16.dp)) {
-                        AuditCard(summary = summary, isAuditing = false, onRunAudit = {})
+                        Column { AuditDetailRows(summary) }
                     }
                 }
             }

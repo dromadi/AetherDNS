@@ -9,8 +9,6 @@
     <string name="status_inactive_title">Protection off</string>
     <string name="status_inactive_subtitle">The system is using your ISP\'s default DNS</string>
     <string name="status_paused">Paused — turns back on automatically around %1$s</string>
-    <string name="status_os_validated">OS: DoT encrypted (%1$s)</string>
-    <string name="status_os_validating">OS: validating the TLS handshake…</string>
     <string name="action_testing_dot">Testing DoT handshake…</string>
     <string name="action_disable">Turn off protection</string>
     <string name="action_resume">Resume protection now</string>
@@ -18,15 +16,7 @@
     <string name="action_pause_15">Pause 15 minutes (public Wi-Fi login)</string>
     <string name="action_add_tile">Add a button to Quick Settings</string>
     <string name="toast_tile_manual">You can add the tile manually from the Quick Settings panel</string>
-    <string name="audit_title">Real-time ad sinkhole audit</string>
-    <string name="audit_run">Test DNS</string>
-    <string name="audit_description">Resolves a connectivity control domain plus AdMob, DoubleClick, and AppLovin through your current system DNS.</string>
-    <string name="audit_offline_title">Offline / resolver not responding</string>
     <string name="audit_offline_desc">Even the control domain could not be resolved. Check your internet connection or the active DoT resolver.</string>
-    <string name="audit_result_safe">Result: %1$d/%2$d domains filtered (protected)</string>
-    <string name="audit_result_leak">Result: %1$d/%2$d domains filtered (leaking)</string>
-    <string name="audit_desc_safe">%1$d of %2$d ad &amp; telemetry domains were sinkholed (NXDOMAIN / 0.0.0.0).</string>
-    <string name="audit_desc_leak">Only %1$d of %2$d ad domains were filtered. The rest still resolve to public IPs.</string>
     <string name="audit_outcome_sinkhole">Sinkhole (%1$s)</string>
     <string name="audit_outcome_nxdomain">NXDOMAIN (blocked)</string>
     <string name="audit_outcome_error">Error (%1$s)</string>
@@ -252,8 +242,6 @@
     <string name="tab_home">Home</string>
     <string name="tab_resolvers">Resolvers</string>
     <string name="tab_more">More</string>
-    <string name="home_resolver_label">Selected resolver</string>
-    <string name="home_change_resolver">Change</string>
     <string name="home_custom_resolver">Custom hostname</string>
     <string name="action_grant_first">Grant the permission first</string>
     <string name="more_permission_title">Permission</string>
@@ -278,9 +266,6 @@
     <string name="widget_subtitle_paused">Back on around %1$s</string>
 
     <!-- Cek jaringan -->
-    <string name="netcheck_title">Network check</string>
-    <string name="netcheck_desc">See whether this Wi-Fi or mobile network tampers with regular DNS, and whether encrypted DNS works here.</string>
-    <string name="netcheck_run">Check</string>
     <string name="netcheck_interception_ok">Regular DNS is not intercepted</string>
     <string name="netcheck_interception_problem">The network intercepts regular DNS (port 53)</string>
     <string name="netcheck_hijack_ok">DNS answers are not forged</string>
@@ -289,9 +274,6 @@
     <string name="netcheck_dot_ok">Encrypted DNS works on this network</string>
     <string name="netcheck_dot_problem">This network blocks encrypted DNS (port 853)</string>
     <string name="netcheck_dot_unknown">Could not check (offline?)</string>
-    <string name="netcheck_summary_protected">Your provider tampers with regular DNS — AetherDNS keeps your lookups encrypted and untouched.</string>
-    <string name="netcheck_summary_exposed">Your provider tampers with regular DNS. Turn protection on to avoid it.</string>
-    <string name="netcheck_summary_clean">No DNS tampering detected on this network.</string>
     <string name="netcheck_summary_dot_blocked">Encrypted DNS is blocked here, so the internet may stop working while protection is on. Pause it while you use this network.</string>
     <string name="netcheck_dialog_title">This network blocks encrypted DNS</string>
     <string name="netcheck_dialog_keep">Keep protection on</string>
@@ -325,4 +307,39 @@
     <string name="report_share">Share</string>
     <string name="report_copied">Report copied</string>
     <string name="report_clear_crash">Clear recorded crash</string>
+
+    <!-- Kesehatan proteksi & menu Lainnya (v1.16) -->
+    <string name="health_title">Protection health</string>
+    <string name="health_headline_good">All good</string>
+    <string name="health_headline_info">Protected</string>
+    <string name="health_headline_pending">Checking…</string>
+    <string name="health_headline_warning">Needs attention</string>
+    <string name="health_headline_bad">Problem found</string>
+    <string name="health_refresh">Check again</string>
+    <string name="health_details">Technical details</string>
+    <string name="health_hide_details">Hide details</string>
+    <string name="health_encryption_on">Your DNS is encrypted</string>
+    <string name="health_encryption_pending">Android is connecting to encrypted DNS…</string>
+    <string name="health_encryption_off">Protection is off: your DNS is not encrypted</string>
+    <string name="health_ads_blocked">Ads are blocked (%1$d/%2$d test domains)</string>
+    <string name="health_ads_partial">Some ads get through (%1$d/%2$d blocked)</string>
+    <string name="health_ads_none">Ads are not being blocked</string>
+    <string name="health_ads_pending">Checking ad blocking…</string>
+    <string name="health_ads_not_filtering">This resolver does not block ads</string>
+    <string name="health_isp_clean">Your provider does not tamper with DNS</string>
+    <string name="health_isp_tampers_protected">Your provider tampers with regular DNS — you are protected</string>
+    <string name="health_isp_tampers_exposed">Your provider tampers with regular DNS — turn protection on</string>
+    <string name="health_dot_ok">This network supports encrypted DNS</string>
+    <string name="health_dot_blocked">This network blocks encrypted DNS — the internet may not work</string>
+    <string name="health_dot_blocked_inactive">This network blocks encrypted DNS</string>
+    <string name="health_network_pending">Checking this network…</string>
+    <string name="action_change_resolver">Change resolver</string>
+    <string name="more_permission_subtitle_granted">Granted</string>
+    <string name="more_permission_subtitle_missing">Not granted yet</string>
+    <string name="more_automation_subtitle_on">On</string>
+    <string name="more_automation_subtitle_off">Off</string>
+    <string name="more_report_subtitle">Copy everything for a bug report</string>
+    <string name="more_about_subtitle">Version %1$s</string>
+    <string name="more_back">Back</string>
+    <string name="status_selected_resolver">Will use: %1$s</string>
 </resources>

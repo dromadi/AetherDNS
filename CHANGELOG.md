@@ -3,6 +3,13 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.16.0] - 2026-10-21
+
+### Diubah
+- **Beranda dirapikan**: kartu Cek jaringan dan Audit digabung menjadi satu kartu **Kesehatan proteksi** berisi beberapa baris berbahasa awam (terenkripsi? iklan diblokir? ISP membelokkan DNS? jaringan mendukung DNS terenkripsi?). Detail teknis (port 53, NXDOMAIN, IP) disembunyikan di "Detail teknis". Pemeriksaan berjalan otomatis.
+- Kartu resolver dihapus dari Beranda; nama resolver dan tombol **Ganti resolver** ada di kartu status. Pil validasi OS dipindah ke kartu Kesehatan.
+- **Tab Lainnya** menjadi daftar menu (Izin, Otomasi, Laporan diagnostik, Pengaturan DNS HP, Kode sumber, Tentang); setiap item membuka halamannya sendiri, tombol Back kembali ke menu.
+
 ## [1.15.0] - 2026-10-21
 
 ### Ditambahkan

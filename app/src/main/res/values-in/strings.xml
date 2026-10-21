@@ -8,8 +8,6 @@
     <string name="status_inactive_title">Proteksi Nonaktif</string>
     <string name="status_inactive_subtitle">Sistem menggunakan DNS default bawaan ISP</string>
     <string name="status_paused">Dijeda — aktif kembali otomatis sekitar pukul %1$s</string>
-    <string name="status_os_validated">OS: DoT terenkripsi (%1$s)</string>
-    <string name="status_os_validating">OS: sedang memvalidasi handshake TLS…</string>
     <string name="action_testing_dot">Menguji handshake DoT…</string>
     <string name="action_disable">Matikan Proteksi</string>
     <string name="action_resume">Lanjutkan Proteksi Sekarang</string>
@@ -17,15 +15,7 @@
     <string name="action_pause_15">Jeda 15 Menit (Login Wi-Fi Publik)</string>
     <string name="action_add_tile">Pasang Tombol di Quick Settings (Status Bar)</string>
     <string name="toast_tile_manual">Tile dapat ditambahkan manual dari panel atas HP</string>
-    <string name="audit_title">Audit Real-Time Sinkhole Iklan</string>
-    <string name="audit_run">Uji DNS</string>
-    <string name="audit_description">Menguji resolusi domain kontrol konektivitas, AdMob, DoubleClick, dan AppLovin melalui DNS sistem yang sedang aktif.</string>
-    <string name="audit_offline_title">Koneksi Offline / Resolver Gagal Merespons</string>
     <string name="audit_offline_desc">Domain kontrol pun gagal di-resolve. Periksa koneksi internet atau resolver DoT yang aktif.</string>
-    <string name="audit_result_safe">Hasil: %1$d/%2$d domain terfilter (aman)</string>
-    <string name="audit_result_leak">Hasil: %1$d/%2$d domain terfilter (bocor)</string>
-    <string name="audit_desc_safe">%1$d dari %2$d domain iklan &amp; telemetri berhasil disinkhole (NXDOMAIN / 0.0.0.0).</string>
-    <string name="audit_desc_leak">Hanya %1$d dari %2$d domain iklan terfilter. Sisanya masih tembus ke IP publik.</string>
     <string name="audit_outcome_sinkhole">Sinkhole (%1$s)</string>
     <string name="audit_outcome_nxdomain">NXDOMAIN (terfilter)</string>
     <string name="audit_outcome_error">Error (%1$s)</string>
@@ -251,8 +241,6 @@
     <string name="tab_home">Beranda</string>
     <string name="tab_resolvers">Resolver</string>
     <string name="tab_more">Lainnya</string>
-    <string name="home_resolver_label">Resolver terpilih</string>
-    <string name="home_change_resolver">Ganti</string>
     <string name="home_custom_resolver">Hostname kustom</string>
     <string name="action_grant_first">Berikan izin terlebih dahulu</string>
     <string name="more_permission_title">Izin</string>
@@ -277,9 +265,6 @@
     <string name="widget_subtitle_paused">Aktif lagi sekitar pukul %1$s</string>
 
     <!-- Cek jaringan -->
-    <string name="netcheck_title">Cek jaringan</string>
-    <string name="netcheck_desc">Lihat apakah Wi-Fi atau jaringan seluler ini membelokkan DNS biasa, dan apakah DNS terenkripsi bisa dipakai di sini.</string>
-    <string name="netcheck_run">Periksa</string>
     <string name="netcheck_interception_ok">DNS biasa tidak disadap</string>
     <string name="netcheck_interception_problem">Jaringan menyadap DNS biasa (port 53)</string>
     <string name="netcheck_hijack_ok">Jawaban DNS tidak dipalsukan</string>
@@ -288,9 +273,6 @@
     <string name="netcheck_dot_ok">DNS terenkripsi bisa dipakai di jaringan ini</string>
     <string name="netcheck_dot_problem">Jaringan ini memblokir DNS terenkripsi (port 853)</string>
     <string name="netcheck_dot_unknown">Tidak bisa diperiksa (sedang offline?)</string>
-    <string name="netcheck_summary_protected">Penyedia internet Anda membelokkan DNS biasa — AetherDNS menjaga DNS Anda tetap terenkripsi dan utuh.</string>
-    <string name="netcheck_summary_exposed">Penyedia internet Anda membelokkan DNS biasa. Aktifkan proteksi untuk menghindarinya.</string>
-    <string name="netcheck_summary_clean">Tidak terdeteksi pembelokan DNS di jaringan ini.</string>
     <string name="netcheck_summary_dot_blocked">DNS terenkripsi diblokir di sini, jadi internet bisa putus selama proteksi aktif. Jeda dulu selama memakai jaringan ini.</string>
     <string name="netcheck_dialog_title">Jaringan ini memblokir DNS terenkripsi</string>
     <string name="netcheck_dialog_keep">Biarkan proteksi aktif</string>
@@ -324,4 +306,39 @@
     <string name="report_share">Bagikan</string>
     <string name="report_copied">Laporan disalin</string>
     <string name="report_clear_crash">Hapus catatan crash</string>
+
+    <!-- Kesehatan proteksi & menu Lainnya (v1.16) -->
+    <string name="health_title">Kesehatan proteksi</string>
+    <string name="health_headline_good">Semua aman</string>
+    <string name="health_headline_info">Terlindungi</string>
+    <string name="health_headline_pending">Memeriksa…</string>
+    <string name="health_headline_warning">Perlu perhatian</string>
+    <string name="health_headline_bad">Ada masalah</string>
+    <string name="health_refresh">Periksa ulang</string>
+    <string name="health_details">Detail teknis</string>
+    <string name="health_hide_details">Sembunyikan detail</string>
+    <string name="health_encryption_on">DNS Anda terenkripsi</string>
+    <string name="health_encryption_pending">Android sedang menyambungkan DNS terenkripsi…</string>
+    <string name="health_encryption_off">Proteksi mati: DNS Anda tidak terenkripsi</string>
+    <string name="health_ads_blocked">Iklan diblokir (%1$d/%2$d domain uji)</string>
+    <string name="health_ads_partial">Sebagian iklan lolos (%1$d/%2$d diblokir)</string>
+    <string name="health_ads_none">Iklan tidak diblokir</string>
+    <string name="health_ads_pending">Memeriksa pemblokiran iklan…</string>
+    <string name="health_ads_not_filtering">Resolver ini tidak memblokir iklan</string>
+    <string name="health_isp_clean">Penyedia internet tidak membelokkan DNS</string>
+    <string name="health_isp_tampers_protected">Penyedia internet membelokkan DNS biasa — Anda terlindungi</string>
+    <string name="health_isp_tampers_exposed">Penyedia internet membelokkan DNS biasa — aktifkan proteksi</string>
+    <string name="health_dot_ok">Jaringan ini mendukung DNS terenkripsi</string>
+    <string name="health_dot_blocked">Jaringan ini memblokir DNS terenkripsi — internet bisa tidak jalan</string>
+    <string name="health_dot_blocked_inactive">Jaringan ini memblokir DNS terenkripsi</string>
+    <string name="health_network_pending">Memeriksa jaringan ini…</string>
+    <string name="action_change_resolver">Ganti resolver</string>
+    <string name="more_permission_subtitle_granted">Sudah diberikan</string>
+    <string name="more_permission_subtitle_missing">Belum diberikan</string>
+    <string name="more_automation_subtitle_on">Aktif</string>
+    <string name="more_automation_subtitle_off">Nonaktif</string>
+    <string name="more_report_subtitle">Salin semua status untuk melaporkan masalah</string>
+    <string name="more_about_subtitle">Versi %1$s</string>
+    <string name="more_back">Kembali</string>
+    <string name="status_selected_resolver">Akan memakai: %1$s</string>
 </resources>

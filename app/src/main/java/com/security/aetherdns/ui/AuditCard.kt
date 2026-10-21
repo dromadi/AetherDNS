@@ -24,96 +24,25 @@ import com.security.aetherdns.util.AuditItem
 import com.security.aetherdns.util.AuditOutcome
 import com.security.aetherdns.util.AuditSummary
 
-/** Audit sinkhole real-time melalui DNS sistem yang sedang aktif. */
+/** Hasil audit per domain, ditampilkan di bagian "Detail teknis" kartu Kesehatan proteksi. */
 @Composable
-fun AuditCard(summary: AuditSummary?, isAuditing: Boolean, onRunAudit: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.NetworkCheck, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.audit_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-
-                FilledTonalButton(
-                    onClick = onRunAudit,
-                    enabled = !isAuditing,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    if (isAuditing) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.common_testing), fontSize = 12.sp)
-                    } else {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.audit_run), fontSize = 12.sp)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.audit_description),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            summary?.let { AuditResult(it) }
-        }
+internal fun AuditDetailRows(summary: AuditSummary) {
+    if (!summary.isNetworkReachable) {
+        Text(
+            stringResource(R.string.audit_offline_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
     }
-}
-
-@Composable
-private fun AuditResult(summary: AuditSummary) {
-    val ok = summary.isNetworkReachable && summary.isOverallProtected
-    val color = if (ok) SuccessGreen else ErrorRed
-
-    Spacer(modifier = Modifier.height(12.dp))
-    Surface(shape = RoundedCornerShape(10.dp), color = color.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (ok) Icons.Default.CheckCircle else Icons.Default.Warning,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                val (title, description) = when {
-                    !summary.isNetworkReachable ->
-                        stringResource(R.string.audit_offline_title) to stringResource(R.string.audit_offline_desc)
-                    summary.isOverallProtected ->
-                        stringResource(R.string.audit_result_safe, summary.blockedCount, summary.totalCount) to
-                            stringResource(R.string.audit_desc_safe, summary.blockedCount, summary.totalCount)
-                    else ->
-                        stringResource(R.string.audit_result_leak, summary.blockedCount, summary.totalCount) to
-                            stringResource(R.string.audit_desc_leak, summary.blockedCount, summary.totalCount)
-                }
-                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = color)
-                Text(text = description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (summary.cachedCount > 0) {
-                    Text(
-                        text = stringResource(R.string.audit_cached_note, summary.cachedCount),
-                        fontSize = 12.sp,
-                        color = WarningOrange,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-        }
+    if (summary.cachedCount > 0) {
+        Text(
+            text = stringResource(R.string.audit_cached_note, summary.cachedCount),
+            fontSize = 12.sp,
+            color = WarningOrange,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
     }
-
-    Spacer(modifier = Modifier.height(10.dp))
     summary.items.forEach { AuditRow(it) }
 }
 

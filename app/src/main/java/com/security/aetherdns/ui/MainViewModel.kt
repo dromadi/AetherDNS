@@ -378,9 +378,18 @@ class MainViewModel(
         if (_showOnboarding.value) return
         if (!force && System.currentTimeMillis() - lastAutoCheckAt < AUTO_CHECK_INTERVAL_MS) return
         runNetworkCheck(DnsManager.DEFAULT_FALLBACK_HOSTNAME, automatic = true)
+        // Kartu Kesehatan juga menilai pemblokiran iklan; hanya bermakna saat proteksi aktif
+        if (dnsState.value.isProtectionActive) runAudit()
+    }
+
+    /** Tombol "Periksa ulang" di kartu Kesehatan: cek jaringan + audit sekaligus. */
+    fun runHealthCheck(fallbackHostname: String) {
+        runNetworkCheck(fallbackHostname)
+        if (dnsState.value.isProtectionActive) runAudit()
     }
 
     fun runAudit() {
+        if (_isAuditing.value) return
         viewModelScope.launch {
             _isAuditing.value = true
             val state = dnsState.value

@@ -1,0 +1,3 @@
+• Simpler Home: one "Protection health" card in plain language replaces the network check and audit cards; technical details are one tap away
+• Change resolver right from the status card
+• More tab is now a clean menu
