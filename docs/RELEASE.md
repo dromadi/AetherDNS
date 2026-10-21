@@ -40,4 +40,23 @@ GitHub → repositori → **Settings → Secrets and variables → Actions → N
 4. Tunggu workflow **Release** selesai. APK `AetherDNS-vX.Y.Z.apk` + checksum SHA-256 muncul di GitHub Releases,
    dengan catatan rilis dari `CHANGELOG.md`.
 
+5. Tambahkan catatan singkat (maks. 500 karakter) di `fastlane/metadata/android/{en-US,id}/changelogs/<versionCode>.txt`;
+   dipakai IzzyOnDroid / F-Droid.
+
 Workflow gagal dengan pesan jelas bila secrets belum diisi atau tag tidak sama dengan `versionName`.
+
+## 4. Distribusi lewat IzzyOnDroid (sekali saja)
+
+IzzyOnDroid adalah repo F-Droid yang mengambil APK langsung dari GitHub Releases.
+
+Syarat yang sudah dipenuhi repositori ini:
+- Metadata toko (judul, deskripsi EN/ID, ikon, screenshot, changelog) di `fastlane/metadata/android/`.
+- Blok metadata dependensi Google dimatikan (`dependenciesInfo` di `app/build.gradle.kts`).
+- APK rilis bertanda tangan otomatis di GitHub Releases.
+
+Syarat yang harus dipenuhi pemilik repositori:
+- **File `LICENSE`** dengan lisensi open source (mis. GPL-3.0 atau Apache-2.0).
+- Minimal satu rilis di GitHub Releases.
+
+Lalu ajukan permintaan di <https://gitlab.com/IzzyOnDroid/repo/-/issues> (template "Request for inclusion"),
+sertakan URL repositori GitHub dan paket `com.security.aetherdns`.

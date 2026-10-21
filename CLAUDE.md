@@ -163,7 +163,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 >
 > **Uji perangkat**: ikuti `docs/TESTING.md` sebelum membuat tag rilis.
 >
-> **Rilis**: panduan lengkap di `docs/RELEASE.md`. Setiap versi wajib punya bagian `## [X.Y.Z]` di `CHANGELOG.md` (dipakai sebagai catatan rilis). Push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
+> **Rilis**: panduan lengkap di `docs/RELEASE.md`. Setiap versi wajib punya bagian `## [X.Y.Z]` di `CHANGELOG.md` (dipakai sebagai catatan rilis) dan `fastlane/metadata/android/{en-US,id}/changelogs/<versionCode>.txt` (≤ 500 karakter, untuk IzzyOnDroid/F-Droid). Screenshot toko di `fastlane/.../phoneScreenshots/` bisa diperbarui dari hasil `ScreenshotTest` (`store_icon.png` = `images/icon.png`). Push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
 >
 > **Catatan JDK**: Jangan menulis `org.gradle.java.home` di `gradle.properties` proyek (path mesin lokal merusak build di CI/mesin lain). Simpan di `~/.gradle/gradle.properties` milik pengguna.
 

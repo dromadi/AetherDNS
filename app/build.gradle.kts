@@ -59,6 +59,12 @@ android {
         jvmTarget = "17"
     }
 
+    // Blok metadata dependensi terenkripsi Google tidak bisa diaudit; IzzyOnDroid/F-Droid memintanya dimatikan
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     packaging {
         resources {
             // Data BouncyCastle yang tidak dipakai (post-quantum, pesan CertPath) — menghemat ±1,5 MB

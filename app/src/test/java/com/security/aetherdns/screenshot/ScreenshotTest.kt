@@ -86,6 +86,14 @@ class ScreenshotTest {
     }
 
     @Test
+    fun storeIcon() {
+        // Ikon 512x512 untuk metadata toko (fastlane): adaptive icon dengan mask sistem
+        val bitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        context.getDrawable(R.mipmap.ic_launcher)!!.apply { setBounds(0, 0, 512, 512) }.draw(Canvas(bitmap))
+        bitmap.captureRoboImage("build/screenshots/store_icon.png")
+    }
+
+    @Test
     fun widget() {
         // Merender RemoteViews widget untuk tiga state di atas latar "wallpaper"
         val states = listOf(
