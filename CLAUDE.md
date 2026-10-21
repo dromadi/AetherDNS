@@ -107,9 +107,11 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 - `ui/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
-  - `AetherDnsApp.kt`: Scaffold, top bar, state pilihan profil, dan susunan section.
+  - `AetherDnsApp.kt`: Scaffold, top bar, navigasi bawah 3 tab (Beranda / Resolver / Lainnya), state pilihan profil. Beranda punya pull-to-refresh; tombol utama tanpa izin menggulir ke asisten izin.
+  - `SelectedResolverCard.kt`, `MoreScreen.kt`: ringkasan resolver di Beranda dan tab Lainnya (izin, otomasi, tautan, tentang).
+  - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif (termasuk Material You) — jangan menulis `Color(0x...)` langsung di komponen. Tinggi baris body memakai `em` agar tetap rapat saat `fontSize` di-override.
   - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
-  - `StatusCard.kt`, `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
+  - `StatusCard.kt` (hero beranimasi + haptic), `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.
   - `OnboardingScreen.kt`: Onboarding 3 langkah (memakai ulang `PermissionAssistantCard`, `PresetCard`, `AddTileButton`).
 - `MainActivity.kt`: Entrypoint aktivitas dengan `enableEdgeToEdge()` dan injeksi `MainViewModel`.
 
@@ -136,6 +138,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 > **Live DoT**: `.github/workflows/live-dot.yml` menjalankan `app/src/test/.../live/LiveDotProbeTest.kt` terhadap resolver DoT sungguhan (env `AETHERDNS_LIVE_DOT=1`; tanpa env itu test di-skip) dan menulis tabel latensi + filter per resolver ke ringkasan job (env `AETHERDNS_LIVE_REPORT`). Tidak memblokir di PR/push; berjalan mingguan (Senin 03:17 UTC) dan manual, dan gagal secara terlihat di sana agar perubahan hostname/blocklist preset cepat ketahuan.
 >
 > **Actions**: gunakan versi mayor berbasis Node 24 (`checkout@v7`, `setup-java@v6`, `upload-artifact@v7`, `setup-gradle@v6` dengan `cache-provider: basic`, `action-gh-release@v3`).
+>
+> **Screenshot UI (opsional)**: `AETHERDNS_SCREENSHOTS=1 ./gradlew testDebugUnitTest --tests '*ScreenshotTest*'` merender layar utama (terang/gelap, onboarding) via Robolectric + Roborazzi ke `app/build/screenshots/`. Tanpa env itu test di-skip (CI tidak terpengaruh). Bila Maven Central membatasi unduhan android-all, set `ROBOLECTRIC_REPO_URL` ke mirror. Robolectric memakai `@ConscryptMode(OFF)` karena `conscrypt-android` tidak punya library native JVM.
 >
 > **Uji perangkat**: ikuti `docs/TESTING.md` sebelum membuat tag rilis.
 >

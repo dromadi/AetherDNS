@@ -44,7 +44,7 @@ fun PermissionAssistantCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = WarningOrangeLight)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -77,7 +77,7 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
             fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
     }
     Spacer(modifier = Modifier.height(6.dp))
-    Text(stringResource(R.string.perm_shizuku_desc), fontSize = 12.sp, color = Color(0xFF424242))
+    Text(stringResource(R.string.perm_shizuku_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(modifier = Modifier.height(10.dp))
 
     val (statusLabel, statusHint) = when (status) {
@@ -104,7 +104,7 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
                 Surface(shape = RoundedCornerShape(6.dp), color = statusBackground) {
                     Text(
                         text = stringResource(statusLabel),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = statusColor,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -113,7 +113,7 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
             }
 
             Spacer(modifier = Modifier.height(6.dp))
-            Text(stringResource(statusHint), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(statusHint), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             if (status == GranterStatus.NOT_RUNNING || status == GranterStatus.NOT_INSTALLED) {
                 ShizukuSetupShortcuts(isInstalled = status == GranterStatus.NOT_RUNNING)
@@ -129,7 +129,7 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isGranting) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(color = LocalContentColor.current, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.perm_granting), fontSize = 12.sp)
                     } else {
@@ -147,7 +147,7 @@ private fun ShizukuSection(status: GranterStatus, isGranting: Boolean, onGrant: 
     }
 
     Spacer(modifier = Modifier.height(6.dp))
-    Text(stringResource(R.string.perm_oem_hint), fontSize = 10.sp, color = Color(0xFF616161))
+    Text(stringResource(R.string.perm_oem_hint), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -170,7 +170,7 @@ private fun AdbSection(selectedHostname: String, onRefresh: () -> Unit) {
             Text(
                 text = adbCommand,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 color = Color(0xFF81C784),
                 modifier = Modifier.weight(1f)
             )
@@ -196,7 +196,7 @@ private fun AdbSection(selectedHostname: String, onRefresh: () -> Unit) {
         OutlinedButton(onClick = onRefresh, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.perm_recheck), fontSize = 11.sp)
+            Text(stringResource(R.string.perm_recheck), fontSize = 12.sp)
         }
 
         Button(
@@ -212,7 +212,7 @@ private fun AdbSection(selectedHostname: String, onRefresh: () -> Unit) {
         ) {
             Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.perm_open_dns_settings), fontSize = 11.sp)
+            Text(stringResource(R.string.perm_open_dns_settings), fontSize = 12.sp)
         }
     }
 }
@@ -240,7 +240,7 @@ private fun ShizukuSetupShortcuts(isInstalled: Boolean) {
         ) {
             Icon(Icons.Default.Wifi, contentDescription = null, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.shizuku_open_wireless_debugging), fontSize = 11.sp)
+            Text(stringResource(R.string.shizuku_open_wireless_debugging), fontSize = 12.sp)
         }
         OutlinedButton(
             onClick = { SystemShortcuts.openShizuku(context) },
@@ -252,10 +252,10 @@ private fun ShizukuSetupShortcuts(isInstalled: Boolean) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 stringResource(if (isInstalled) R.string.shizuku_open_app else R.string.shizuku_download),
-                fontSize = 11.sp
+                fontSize = 12.sp
             )
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-    Text(stringResource(R.string.shizuku_setup_steps), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.shizuku_setup_steps), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

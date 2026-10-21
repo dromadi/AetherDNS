@@ -32,8 +32,8 @@ fun AutomationCard(state: AutomationState, onToggle: (Boolean) -> Unit, onRegene
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -67,7 +67,7 @@ fun AutomationCard(state: AutomationState, onToggle: (Boolean) -> Unit, onRegene
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.automation_regenerate), modifier = Modifier.size(18.dp))
                     }
                 }
-                Text(stringResource(R.string.automation_token_warning), fontSize = 11.sp, color = WarningOrange)
+                Text(stringResource(R.string.automation_token_warning), fontSize = 12.sp, color = WarningOrange)
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(stringResource(R.string.automation_howto_title), fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -84,7 +84,7 @@ fun AutomationCard(state: AutomationState, onToggle: (Boolean) -> Unit, onRegene
                             state.token
                         ),
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         modifier = Modifier.padding(10.dp)
                     )
                 }

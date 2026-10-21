@@ -63,12 +63,12 @@ internal fun NativeActivationSection(ui: NativeActivationUi) {
         Text(stringResource(R.string.native_title), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
     }
     Spacer(modifier = Modifier.height(6.dp))
-    Text(stringResource(R.string.native_desc), fontSize = 12.sp, color = Color(0xFF424242))
+    Text(stringResource(R.string.native_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(modifier = Modifier.height(10.dp))
 
     Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(stringResource(R.string.native_steps), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.native_steps), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(10.dp))
 
             Button(
@@ -97,7 +97,7 @@ internal fun NativeActivationSection(ui: NativeActivationUi) {
             ManualCodeEntry(enabled = !working, onSubmit = ui.onSubmitCode)
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(stringResource(R.string.native_forget_hint), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.native_forget_hint), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -117,14 +117,14 @@ private fun ActivationStatus(state: ActivationState) {
             CircularProgressIndicator(color = color, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
             Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color)
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = color)
     }
 }
 
 @Composable
 private fun ManualCodeEntry(enabled: Boolean, onSubmit: (String) -> Unit) {
     var code by rememberSaveable { mutableStateOf("") }
-    Text(stringResource(R.string.native_manual_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.native_manual_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(modifier = Modifier.height(6.dp))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(

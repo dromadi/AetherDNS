@@ -12,8 +12,8 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.9.0"
+        versionCode = 12
+        versionName = "1.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,6 +66,15 @@ android {
         }
     }
 
+    testOptions {
+        // Robolectric (screenshot UI opsional) butuh resource Android
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { test ->
+            // Opsional: mirror untuk unduhan android-all Robolectric bila Maven Central membatasi (429)
+            System.getenv("ROBOLECTRIC_REPO_URL")?.let { test.systemProperty("robolectric.dependency.repo.url", it) }
+        }
+    }
+
     buildFeatures {
         compose = true
         aidl = true
@@ -101,5 +110,12 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(libs.kotlinx.coroutines.test)
+    // Screenshot UI opsional (AETHERDNS_SCREENSHOTS=1), lihat ScreenshotTest
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.1")
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

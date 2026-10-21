@@ -72,21 +72,29 @@ Shizuku:
 - [ ] Helper NextDNS: `abc123` + "Pixel 8" → `pixel--8-abc123.dns.nextdns.io`; tempel URL `https://dns.nextdns.io/abc123` → ID terbaca.
 - [ ] Profil tersimpan ikut diukur oleh Uji Kecepatan & Filter.
 
-## 7. Bahasa
+## 7. Tampilan & navigasi
+
+- [ ] Tab Beranda / Resolver / Lainnya berpindah tanpa kehilangan pilihan resolver; titik merah di Beranda selama izin belum ada.
+- [ ] Tanpa izin, tombol utama "Berikan izin terlebih dahulu" menggulir ke kartu aktivasi.
+- [ ] Mode gelap: semua kartu (status, aktivasi, audit, resolver) terbaca, tidak ada blok putih/terang yang menyilaukan.
+- [ ] Tarik ke bawah di Beranda memperbarui status; tombol aktif/nonaktif memberi getaran singkat.
+- [ ] Hapus profil tersimpan meminta konfirmasi.
+
+## 8. Bahasa
 
 - [ ] Bahasa HP English → seluruh UI, tile, shortcut, Toast, dan snackbar berbahasa Inggris.
 - [ ] Bahasa HP Indonesia → seluruhnya berbahasa Indonesia.
 - [ ] (Android 13+) Settings → Apps → AetherDNS → Language: ganti bahasa tanpa mengubah bahasa HP.
 - [ ] Tidak ada teks terpotong pada layar kecil (cek kartu preset dan chip hasil uji).
 
-## 8. Onboarding
+## 9. Onboarding
 
 - [ ] Instal bersih → onboarding 3 langkah muncul; "Lewati" di langkah 1 langsung ke layar utama dan tidak muncul lagi.
 - [ ] Beri izin via Shizuku di langkah 2 → langkah 3 tombolnya "Aktifkan & Selesai" → resolver terpilih langsung aktif.
 - [ ] Tanpa izin → langkah 3 "Selesai" → layar utama dengan asisten izin.
 - [ ] Update dari versi sebelumnya yang sudah punya izin → onboarding **tidak** muncul.
 
-## 9. Otomasi (Tasker / MacroDroid)
+## 10. Otomasi (Tasker / MacroDroid)
 
 - [ ] Sakelar Otomasi mati → Send Intent dari Tasker tidak berpengaruh apa pun.
 - [ ] Sakelar nyala, token benar: `.DISABLE`, `.ENABLE`, `.PAUSE` (minutes:5), `.APPLY` (profile:AdGuard DNS) semuanya bekerja.
@@ -95,6 +103,6 @@ Shizuku:
 - [ ] Buat token baru → perintah dengan token lama ditolak.
 - [ ] Reboot → status sakelar otomasi tetap sama.
 
-## 10. Backup
+## 11. Backup
 
 - [ ] (Opsional) `adb shell bmgr backupnow <paket>` lalu restore di perangkat lain → profil tersimpan kembali, status jeda dan token otomasi **tidak** ikut.

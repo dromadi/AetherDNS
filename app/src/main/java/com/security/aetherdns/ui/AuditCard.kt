@@ -28,8 +28,8 @@ import com.security.aetherdns.util.AuditSummary
 fun AuditCard(summary: AuditSummary?, isAuditing: Boolean, onRunAudit: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -99,7 +99,7 @@ private fun AuditResult(summary: AuditSummary) {
                             stringResource(R.string.audit_desc_leak, summary.blockedCount, summary.totalCount)
                 }
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = color)
-                Text(text = description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -120,7 +120,7 @@ private fun AuditRow(item: AuditItem) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(item.label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            Text(item.domain, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(item.domain, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
             Text(
@@ -130,7 +130,7 @@ private fun AuditRow(item: AuditItem) {
                     AuditOutcome.RESOLVED -> item.detail
                     AuditOutcome.ERROR -> stringResource(R.string.audit_outcome_error, item.detail)
                 },
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = color,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

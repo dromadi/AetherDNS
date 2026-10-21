@@ -1,6 +1,7 @@
 package com.security.aetherdns.ui
 
 import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,9 +11,11 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -36,8 +39,8 @@ fun PresetHeader(isBenchmarkRunning: Boolean, onRunBenchmark: () -> Unit) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(R.string.presets_title),
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
             modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onRunBenchmark, enabled = !isBenchmarkRunning) {
@@ -80,7 +83,7 @@ fun PresetCard(
                         Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                             Text(
                                 text = stringResource(profile.categoryRes),
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                             )
@@ -90,7 +93,7 @@ fun PresetCard(
                 if (profile.descriptionRes != 0) {
                     Text(
                         text = stringResource(profile.descriptionRes),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
                     )
@@ -105,15 +108,19 @@ fun PresetCard(
 /** Kartu dengan sorotan border saat terpilih; dipakai preset, profil tersimpan, dan hostname kustom. */
 @Composable
 fun SelectableCard(isSelected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val container by animateColorAsState(
+        if (isSelected) PrimaryBlue.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+        label = "selectableContainer"
+    )
+    val border by animateColorAsState(if (isSelected) PrimaryBlue else Color.Transparent, label = "selectableBorder")
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) PrimaryBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
-        ),
-        border = if (isSelected) BorderStroke(1.5.dp, PrimaryBlue) else null
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = container),
+        border = BorderStroke(1.5.dp, border)
     ) {
         content()
     }
@@ -124,7 +131,7 @@ fun HostnameText(hostname: String) {
     Text(
         text = hostname,
         fontFamily = FontFamily.Monospace,
-        fontSize = 11.sp,
+        fontSize = 12.sp,
         color = PrimaryBlue,
         modifier = Modifier.padding(top = 4.dp)
     )
@@ -154,7 +161,7 @@ fun BenchmarkChip(result: InspectionResult, isFastest: Boolean) {
     ) {
         Text(
             text = text,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = color,
             maxLines = 2,
@@ -192,7 +199,7 @@ fun CustomHostnameCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(stringResource(R.string.custom_title), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    Text(stringResource(R.string.custom_desc), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.custom_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -206,8 +213,8 @@ fun CustomHostnameCard(
                     singleLine = true,
                     isError = error != null,
                     supportingText = {
-                        if (error != null) Text(error, color = ErrorRed, fontSize = 11.sp)
-                        else Text(stringResource(R.string.custom_field_hint), fontSize = 11.sp)
+                        if (error != null) Text(error, color = ErrorRed, fontSize = 12.sp)
+                        else Text(stringResource(R.string.custom_field_hint), fontSize = 12.sp)
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -234,7 +241,7 @@ fun CustomHostnameCard(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         if (isProbing) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(color = LocalContentColor.current, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(stringResource(R.string.common_testing), fontSize = 12.sp)
                         } else {

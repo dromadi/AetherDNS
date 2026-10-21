@@ -34,6 +34,25 @@ fun SavedProfileCard(
     onSelect: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            title = { Text(stringResource(R.string.profile_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_delete_confirm_body, profile.displayName())) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onDelete()
+                }) { Text(stringResource(R.string.common_delete), color = ErrorRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
+            }
+        )
+    }
+
     SelectableCard(isSelected = isSelected, onClick = onSelect) {
         Row(
             modifier = Modifier
@@ -52,7 +71,7 @@ fun SavedProfileCard(
                 HostnameText(profile.hostname)
                 benchmarkResult?.let { BenchmarkChip(result = it, isFastest = isFastest) }
             }
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = { confirmDelete = true }) {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = stringResource(R.string.profile_delete, profile.displayName()),
@@ -91,8 +110,8 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
                 isError = result is NextDnsHostname.Result.Invalid,
                 supportingText = {
                     when (result) {
-                        is NextDnsHostname.Result.Invalid -> Text(result.error.toUiText().resolve(), color = ErrorRed, fontSize = 11.sp)
-                        else -> Text(stringResource(R.string.nextdns_config_hint), fontSize = 11.sp)
+                        is NextDnsHostname.Result.Invalid -> Text(result.error.toUiText().resolve(), color = ErrorRed, fontSize = 12.sp)
+                        else -> Text(stringResource(R.string.nextdns_config_hint), fontSize = 12.sp)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -103,7 +122,7 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
                 label = { Text(stringResource(R.string.nextdns_device_label), fontSize = 12.sp) },
                 placeholder = { Text(stringResource(R.string.nextdns_device_placeholder), fontSize = 12.sp) },
                 singleLine = true,
-                supportingText = { Text(stringResource(R.string.nextdns_device_hint), fontSize = 11.sp) },
+                supportingText = { Text(stringResource(R.string.nextdns_device_hint), fontSize = 12.sp) },
                 modifier = Modifier.fillMaxWidth()
             )
             if (result is NextDnsHostname.Result.Valid) {
@@ -111,7 +130,7 @@ fun NextDnsHelper(onUseHostname: (String) -> Unit) {
                     Text(
                         text = result.hostname,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = PrimaryBlue,
                         modifier = Modifier.weight(1f)
                     )

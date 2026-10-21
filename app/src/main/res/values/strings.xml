@@ -2,7 +2,6 @@
 <!-- Default (English). Indonesian translations live in values-in/strings.xml. -->
 <resources>
     <string name="app_name" translatable="false">AetherDNS</string>
-    <string name="app_subtitle">Native DoT &amp; ad-sinkhole controller (v%1$s)</string>
     <string name="badge_native_active">Native mode active</string>
     <string name="badge_needs_permission">ADB permission needed</string>
     <string name="common_testing">Testing…</string>
@@ -19,7 +18,6 @@
     <string name="action_pause_15">Pause 15 minutes (public Wi-Fi login)</string>
     <string name="action_add_tile">Add a button to Quick Settings</string>
     <string name="toast_tile_manual">You can add the tile manually from the Quick Settings panel</string>
-    <string name="toast_permission_needed">The WRITE_SECURE_SETTINGS permission is required</string>
     <string name="audit_title">Real-time ad sinkhole audit</string>
     <string name="audit_run">Test DNS</string>
     <string name="audit_description">Resolves a connectivity control domain plus AdMob, DoubleClick, and AppLovin through your current system DNS.</string>
@@ -217,4 +215,23 @@
     <string name="native_notif_action">Enter code</string>
     <string name="native_notif_action_retry">Try again</string>
     <string name="native_grant_success">WRITE_SECURE_SETTINGS granted via built-in activation!</string>
+
+    <!-- Navigasi & UI v1.10 -->
+    <string name="tab_home">Home</string>
+    <string name="tab_resolvers">Resolvers</string>
+    <string name="tab_more">More</string>
+    <string name="home_resolver_label">Selected resolver</string>
+    <string name="home_change_resolver">Change</string>
+    <string name="home_custom_resolver">Custom hostname</string>
+    <string name="action_grant_first">Grant the permission first</string>
+    <string name="more_permission_title">Permission</string>
+    <string name="more_permission_granted">WRITE_SECURE_SETTINGS is granted. AetherDNS can switch Private DNS directly, and Wireless debugging can stay off.</string>
+    <string name="more_system_dns">Open phone Private DNS settings</string>
+    <string name="more_about_title">About</string>
+    <string name="more_about_body">Version %1$s. No account and no analytics: the app only contacts the DoT resolvers you test or choose.</string>
+    <string name="more_source">Source code on GitHub</string>
+    <string name="profile_delete_confirm_title">Delete profile?</string>
+    <string name="profile_delete_confirm_body">\"%1$s\" will be removed from your saved profiles.</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
 </resources>

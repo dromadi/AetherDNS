@@ -1,17 +1,28 @@
 package com.security.aetherdns.ui
 
-import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,9 +35,11 @@ import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.util.DnsManager
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 private const val CUSTOM_ID = "custom"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AetherDnsApp(viewModel: MainViewModel) {
     val context = LocalContext.current
@@ -93,40 +106,146 @@ fun AetherDnsApp(viewModel: MainViewModel) {
         return
     }
 
+    var tab by rememberSaveable { mutableStateOf(AppTab.HOME) }
+    val homeListState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val selectedProfile = allProfiles.find { it.id == selectedProfileId }
+    val resolverName = selectedProfile?.displayName() ?: stringResource(R.string.home_custom_resolver)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { AppTopBar(hasPermission = dnsState.hasPermission) }
+        topBar = { AppTopBar(hasPermission = dnsState.hasPermission) },
+        bottomBar = {
+            NavigationBar {
+                AppTab.entries.forEach { item ->
+                    NavigationBarItem(
+                        selected = tab == item,
+                        onClick = { tab = item },
+                        icon = {
+                            BadgedBox(badge = {
+                                if (item == AppTab.HOME && !dnsState.hasPermission) Badge()
+                            }) {
+                                Icon(if (tab == item) item.selectedIcon else item.icon, contentDescription = null)
+                            }
+                        },
+                        label = { Text(stringResource(item.label)) }
+                    )
+                }
+            }
+        }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                StatusCard(
-                    state = dnsState,
-                    isProbing = isProbing,
-                    onToggle = {
-                        when {
-                            !dnsState.hasPermission ->
-                                Toast.makeText(context, R.string.toast_permission_needed, Toast.LENGTH_SHORT).show()
-                            dnsState.isProtectionActive -> viewModel.disableDns()
-                            dnsState.pausedUntil != null -> viewModel.resumeDns()
-                            else -> viewModel.applyDns(selectedHostname, probe = true)
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+        when (tab) {
+            AppTab.HOME -> PullToRefreshBox(
+                isRefreshing = false,
+                onRefresh = viewModel::refresh,
+                modifier = contentModifier
+            ) {
+                LazyColumn(
+                    state = homeListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        StatusCard(
+                            state = dnsState,
+                            resolverName = resolverName,
+                            isProbing = isProbing,
+                            onToggle = {
+                                when {
+                                    // Arahkan ke asisten izin tepat di bawah kartu ini
+                                    !dnsState.hasPermission -> scope.launch { homeListState.animateScrollToItem(1) }
+                                    dnsState.isProtectionActive -> viewModel.disableDns()
+                                    dnsState.pausedUntil != null -> viewModel.resumeDns()
+                                    else -> viewModel.applyDns(selectedHostname, probe = true)
+                                }
+                            },
+                            onPause = { viewModel.pauseDns(15) }
+                        )
+                    }
+
+                    if (!dnsState.hasPermission) {
+                        item {
+                            PermissionAssistantCard(
+                                shizukuStatus = shizukuStatus,
+                                isGranting = isGranting,
+                                selectedHostname = selectedHostname,
+                                onGrant = viewModel::grantViaShizuku,
+                                onRefresh = viewModel::refresh,
+                                nativeActivation = nativeActivation
+                            )
                         }
-                    },
-                    onPause = { viewModel.pauseDns(15) }
-                )
+                    }
+
+                    item {
+                        SelectedResolverCard(
+                            name = resolverName,
+                            hostname = selectedHostname,
+                            benchmarkResult = selectedProfile?.let { benchmark.results[it.id] },
+                            onChange = { tab = AppTab.RESOLVERS }
+                        )
+                    }
+
+                    item {
+                        AuditCard(summary = auditSummary, isAuditing = isAuditing, onRunAudit = viewModel::runAudit)
+                    }
+                }
             }
 
-            item {
-                AuditCard(summary = auditSummary, isAuditing = isAuditing, onRunAudit = viewModel::runAudit)
-            }
-
-            if (!dnsState.hasPermission) {
+            AppTab.RESOLVERS -> LazyColumn(
+                modifier = contentModifier,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 item {
+                    PresetHeader(isBenchmarkRunning = benchmark.isRunning, onRunBenchmark = viewModel::runBenchmark)
+                }
+
+                items(DefaultProfiles.list, key = { it.id }) { profile ->
+                    PresetCard(
+                        profile = profile,
+                        isSelected = selectedProfileId == profile.id,
+                        benchmarkResult = benchmark.results[profile.id],
+                        isFastest = benchmark.fastestId == profile.id,
+                        onSelect = { selectProfile(profile.id, profile.hostname) }
+                    )
+                }
+
+                items(savedProfiles, key = { it.id }) { profile ->
+                    SavedProfileCard(
+                        profile = profile,
+                        isSelected = selectedProfileId == profile.id,
+                        benchmarkResult = benchmark.results[profile.id],
+                        isFastest = benchmark.fastestId == profile.id,
+                        onSelect = { selectProfile(profile.id, profile.hostname) },
+                        onDelete = { viewModel.deleteProfile(profile.id) }
+                    )
+                }
+
+                item {
+                    CustomHostnameCard(
+                        isSelected = selectedProfileId == CUSTOM_ID,
+                        hostname = customHostname,
+                        onHostnameChange = { customHostname = it },
+                        onSelect = { selectedProfileId = CUSTOM_ID },
+                        canApply = dnsState.hasPermission && dnsState.isProtectionActive,
+                        isProbing = isProbing,
+                        onApply = { viewModel.applyDns(customHostname.trim(), probe = true) },
+                        onSaveProfile = { name -> viewModel.saveProfile(name, customHostname) }
+                    )
+                }
+            }
+
+            AppTab.MORE -> MoreScreen(
+                modifier = contentModifier,
+                hasPermission = dnsState.hasPermission,
+                automation = automation,
+                onToggleAutomation = viewModel::setAutomationEnabled,
+                onRegenerateToken = viewModel::regenerateAutomationToken,
+                permissionContent = {
                     PermissionAssistantCard(
                         shizukuStatus = shizukuStatus,
                         isGranting = isGranting,
@@ -136,59 +255,15 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         nativeActivation = nativeActivation
                     )
                 }
-            }
-
-            item {
-                PresetHeader(isBenchmarkRunning = benchmark.isRunning, onRunBenchmark = viewModel::runBenchmark)
-            }
-
-            items(DefaultProfiles.list, key = { it.id }) { profile ->
-                PresetCard(
-                    profile = profile,
-                    isSelected = selectedProfileId == profile.id,
-                    benchmarkResult = benchmark.results[profile.id],
-                    isFastest = benchmark.fastestId == profile.id,
-                    onSelect = { selectProfile(profile.id, profile.hostname) }
-                )
-            }
-
-            items(savedProfiles, key = { it.id }) { profile ->
-                SavedProfileCard(
-                    profile = profile,
-                    isSelected = selectedProfileId == profile.id,
-                    benchmarkResult = benchmark.results[profile.id],
-                    isFastest = benchmark.fastestId == profile.id,
-                    onSelect = { selectProfile(profile.id, profile.hostname) },
-                    onDelete = { viewModel.deleteProfile(profile.id) }
-                )
-            }
-
-            item {
-                CustomHostnameCard(
-                    isSelected = selectedProfileId == CUSTOM_ID,
-                    hostname = customHostname,
-                    onHostnameChange = { customHostname = it },
-                    onSelect = { selectedProfileId = CUSTOM_ID },
-                    canApply = dnsState.hasPermission && dnsState.isProtectionActive,
-                    isProbing = isProbing,
-                    onApply = { viewModel.applyDns(customHostname.trim(), probe = true) },
-                    onSaveProfile = { name -> viewModel.saveProfile(name, customHostname) }
-                )
-            }
-
-            item {
-                AutomationCard(
-                    state = automation,
-                    onToggle = viewModel::setAutomationEnabled,
-                    onRegenerateToken = viewModel::regenerateAutomationToken
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            )
         }
     }
+}
+
+private enum class AppTab(@StringRes val label: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
+    HOME(R.string.tab_home, Icons.Outlined.Shield, Icons.Filled.Shield),
+    RESOLVERS(R.string.tab_resolvers, Icons.Outlined.Dns, Icons.Filled.Dns),
+    MORE(R.string.tab_more, Icons.Outlined.Settings, Icons.Filled.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -199,8 +274,9 @@ private fun AppTopBar(hasPermission: Boolean) {
             Column {
                 Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text(
-                    text = stringResource(R.string.app_subtitle, BuildConfig.VERSION_NAME),
+                    text = "v${BuildConfig.VERSION_NAME}",
                     fontSize = 12.sp,
+                    lineHeight = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -225,7 +301,7 @@ private fun AppTopBar(hasPermission: Boolean) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(if (hasPermission) R.string.badge_native_active else R.string.badge_needs_permission),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = color
                     )

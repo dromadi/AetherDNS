@@ -1,4 +1,4 @@
-# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.9.0)
+# AetherDNS - Native Android Private DNS & Ad-Sinkhole Controller (v1.10.0)
 
 AetherDNS adalah aplikasi Android modern (Clean Architecture + Jetpack Compose + Material 3) yang berfungsi sebagai pengendali DNS-over-TLS (DoT) bawaan sistem operasi Android untuk mitigasi dan penyaringan (*sinkholing*) iklan dan telemetri tanpa membebani baterai dan RAM perangkat.
 
