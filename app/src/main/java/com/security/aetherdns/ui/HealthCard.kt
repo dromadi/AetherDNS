@@ -50,7 +50,8 @@ fun HealthCard(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        // Bawah lebih rapat: baris tombol teks sudah punya ruang sentuh sendiri
+        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

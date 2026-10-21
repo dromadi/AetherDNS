@@ -3,6 +3,13 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.19.0] - 2026-10-21
+
+### Diubah
+- **Tampilan diseragamkan dengan warna brand**: tombol, tautan, navigasi, dan chip kini memakai biru yang sama dengan logo dan kartu status (sebelumnya mengikuti warna wallpaper / Material You sehingga tidak serasi). Skema terang & gelap lengkap; kartu putih bersih di atas latar kebiruan.
+- **Tab Resolver**: judul dan penjelasan singkat, tombol "Uji Kecepatan & Filter" selebar layar, kartu preset lebih ringkas dengan penanda pilihan di kanan, hostname tidak lagi mencolok.
+- Kartu izin tidak lagi berlatar oranye; bilah atas lebih bersih (versi ada di Tentang).
+
 ## [1.18.0] - 2026-10-21
 
 ### Ditambahkan

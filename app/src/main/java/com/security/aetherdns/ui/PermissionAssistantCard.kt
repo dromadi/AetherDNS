@@ -30,7 +30,6 @@ import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.ui.theme.PrimaryBlue
 import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
-import com.security.aetherdns.ui.theme.WarningOrangeLight
 import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.SystemShortcuts
 
@@ -50,7 +49,7 @@ fun PermissionAssistantCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = WarningOrangeLight)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Android 11+: aktivasi bawaan jadi jalur utama; Shizuku & ADB PC dilipat agar kartu tidak panjang
@@ -229,7 +228,7 @@ private fun AdbSection(selectedHostname: String, onRefresh: () -> Unit) {
             },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = WarningOrange)
+            colors = ButtonDefaults.filledTonalButtonColors()
         ) {
             Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))

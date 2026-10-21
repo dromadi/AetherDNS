@@ -57,20 +57,20 @@ fun SavedProfileCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RadioButton(selected = isSelected, onClick = onSelect)
-            Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Bookmark, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(profile.displayName(), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(profile.displayName(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
                 HostnameText(profile.hostname)
                 benchmarkResult?.let { BenchmarkChip(result = it, isFastest = isFastest) }
             }
+            SelectionIndicator(isSelected)
+            Spacer(modifier = Modifier.width(4.dp))
             IconButton(onClick = { confirmDelete = true }) {
                 Icon(
                     Icons.Default.Delete,

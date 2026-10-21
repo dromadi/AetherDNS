@@ -42,7 +42,8 @@
     <string name="perm_recheck">Cek Ulang</string>
     <string name="perm_open_dns_settings">Buka DNS HP</string>
     <string name="toast_hostname_copied">Hostname %1$s disalin ke clipboard</string>
-    <string name="presets_title">Pilih Preset DNS Filtering</string>
+    <string name="presets_title">Pilih resolver</string>
+    <string name="presets_subtitle">Resolver menentukan apa yang diblokir. Ketuk untuk memakainya; uji di bawah menunjukkan mana yang tercepat di jaringanmu.</string>
     <string name="benchmark_run">Uji Kecepatan &amp; Filter</string>
     <string name="benchmark_running">Mengukur…</string>
     <string name="benchmark_chip_success">%1$d ms · blokir %2$d/%3$d domain iklan</string>

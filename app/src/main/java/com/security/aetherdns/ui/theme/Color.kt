@@ -13,12 +13,12 @@ internal val Blue200 = Color(0xFFADC6FF)
 internal val Teal600 = Color(0xFF00897B)
 internal val Teal200 = Color(0xFF80CBC4)
 
-internal val DarkBackground = Color(0xFF0F1115)
-internal val DarkSurface = Color(0xFF171A20)
-internal val DarkSurfaceVariant = Color(0xFF242833)
-internal val LightBackground = Color(0xFFF6F8FC)
+internal val DarkBackground = Color(0xFF0D1117)
+internal val DarkSurface = Color(0xFF161B23)
+internal val DarkSurfaceVariant = Color(0xFF1D2430)
+internal val LightBackground = Color(0xFFF1F4FA)
 internal val LightSurface = Color(0xFFFFFFFF)
-internal val LightSurfaceVariant = Color(0xFFE9EDF5)
+internal val LightSurfaceVariant = Color(0xFFE4EAF4)
 
 /** Warna semantik status (aman / peringatan / bahaya) yang menyesuaikan tema terang dan gelap. */
 @Immutable

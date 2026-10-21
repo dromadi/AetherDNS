@@ -33,7 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.security.aetherdns.BuildConfig
 import com.security.aetherdns.R
 import com.security.aetherdns.data.InsightAnalyzer
 import com.security.aetherdns.model.DefaultProfiles
@@ -367,17 +366,7 @@ private enum class AppTab(@StringRes val label: Int, val icon: ImageVector, val 
 private fun AppTopBar(hasPermission: Boolean) {
     TopAppBar(
         navigationIcon = { AetherLogo(size = 36.dp, modifier = Modifier.padding(start = 12.dp, end = 4.dp)) },
-        title = {
-            Column {
-                Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text(
-                    text = "v${BuildConfig.VERSION_NAME}",
-                    fontSize = 12.sp,
-                    lineHeight = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
+        title = { Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold, fontSize = 21.sp) },
         actions = {
             val color = if (hasPermission) SuccessGreen else WarningOrange
             Surface(

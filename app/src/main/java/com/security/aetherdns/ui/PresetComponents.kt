@@ -3,12 +3,15 @@ package com.security.aetherdns.ui
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,29 +35,33 @@ import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.util.HostnameValidator
 import com.security.aetherdns.util.InspectionResult
 
-/** Judul daftar preset + tombol "Uji Kecepatan & Filter". */
+/** Judul tab Resolver + tombol "Uji Kecepatan & Filter" selebar layar. */
 @Composable
 fun PresetHeader(isBenchmarkRunning: Boolean, onRunBenchmark: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Tune, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.presets_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
+            style = MaterialTheme.typography.headlineMedium
         )
-        TextButton(onClick = onRunBenchmark, enabled = !isBenchmarkRunning) {
+        Text(
+            text = stringResource(R.string.presets_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        FilledTonalButton(
+            onClick = onRunBenchmark,
+            enabled = !isBenchmarkRunning,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             if (isBenchmarkRunning) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
             } else {
-                Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                stringResource(if (isBenchmarkRunning) R.string.benchmark_running else R.string.benchmark_run),
-                fontSize = 12.sp
-            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(if (isBenchmarkRunning) R.string.benchmark_running else R.string.benchmark_run))
         }
     }
 }
@@ -81,37 +89,58 @@ fun PresetCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            RadioButton(selected = isSelected, onClick = onSelect)
-            Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = profile.displayName(), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f, fill = false))
-                    if (profile.categoryRes != 0) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                            Text(
-                                text = stringResource(profile.categoryRes),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
-                        }
+                Text(text = profile.displayName(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (profile.categoryRes != 0) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(profile.categoryRes),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
                 }
                 if (profile.descriptionRes != 0) {
                     Text(
                         text = stringResource(profile.descriptionRes),
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                 }
                 HostnameText(profile.hostname)
                 benchmarkResult?.let { BenchmarkChip(result = it, isFastest = isFastest) }
             }
+            Spacer(modifier = Modifier.width(12.dp))
+            SelectionIndicator(isSelected)
+        }
+    }
+}
+
+/** Penanda pilihan bulat (pengganti RadioButton 48dp agar kartu lebih ringkas). */
+@Composable
+fun SelectionIndicator(isSelected: Boolean) {
+    val color by animateColorAsState(
+        if (isSelected) PrimaryBlue else MaterialTheme.colorScheme.outline,
+        label = "selectionIndicator"
+    )
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .then(if (isSelected) Modifier.background(color) else Modifier.border(2.dp, color, CircleShape)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isSelected) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -120,18 +149,21 @@ fun PresetCard(
 @Composable
 fun SelectableCard(isSelected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
     val container by animateColorAsState(
-        if (isSelected) PrimaryBlue.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+        if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceContainerHigh,
         label = "selectableContainer"
     )
-    val border by animateColorAsState(if (isSelected) PrimaryBlue else Color.Transparent, label = "selectableBorder")
+    val border by animateColorAsState(
+        if (isSelected) PrimaryBlue else MaterialTheme.colorScheme.outlineVariant,
+        label = "selectableBorder"
+    )
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = container),
-        border = BorderStroke(1.5.dp, border)
+        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, border)
     ) {
         content()
     }
@@ -143,8 +175,8 @@ fun HostnameText(hostname: String) {
         text = hostname,
         fontFamily = FontFamily.Monospace,
         fontSize = 12.sp,
-        color = PrimaryBlue,
-        modifier = Modifier.padding(top = 4.dp)
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+        modifier = Modifier.padding(top = 6.dp)
     )
 }
 
@@ -205,13 +237,18 @@ fun CustomHostnameCard(
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = isSelected, onClick = onSelect)
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(stringResource(R.string.custom_title), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    Text(stringResource(R.string.custom_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.custom_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.custom_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
+                Spacer(modifier = Modifier.width(12.dp))
+                SelectionIndicator(isSelected)
             }
 
             if (isSelected) {

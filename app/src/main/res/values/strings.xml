@@ -43,7 +43,8 @@
     <string name="perm_recheck">Check again</string>
     <string name="perm_open_dns_settings">Open phone DNS settings</string>
     <string name="toast_hostname_copied">Hostname %1$s copied to the clipboard</string>
-    <string name="presets_title">Choose a DNS filtering preset</string>
+    <string name="presets_title">Choose a resolver</string>
+    <string name="presets_subtitle">The resolver decides what gets blocked. Tap one to use it; the test shows which is fastest on your network.</string>
     <string name="benchmark_run">Speed &amp; filter test</string>
     <string name="benchmark_running">Measuring…</string>
     <string name="benchmark_chip_success">%1$d ms · blocks %2$d/%3$d ad domains</string>
