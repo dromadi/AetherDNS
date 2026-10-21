@@ -52,6 +52,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 9. **App Shortcuts (Dinamis)**:
    - `AppShortcuts.publish()` (dipanggil di `MainActivity.onCreate`) mendaftarkan shortcut Aktifkan / Jeda 15 menit / Matikan via `ShortcutManager`. Dinamis, bukan `shortcuts.xml`, karena `targetPackage` statis tidak bisa mengikuti sufiks `.debug`.
    - Target-nya `ShortcutActivity` (transparan, `exported=false`, tanpa UI) yang memanggil `DnsRepository` lalu menampilkan Toast.
+9b. **Ikon**: adaptive icon `mipmap-anydpi-v26/ic_launcher(_round).xml` = `drawable/ic_launcher_background` (gradien `BrandGradientColors`) + `ic_launcher_foreground` (perisai + gelombang, di zona aman 66dp) + `ic_launcher_monochrome` (themed icon Android 13+). `ic_tile_shield` (tile, notifikasi, hero status) memakai lambang yang sama. Ubah ketiganya bersamaan agar konsisten.
 10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state` dan `automation` (token rahasia) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
 11. **Otomasi (Tasker / MacroDroid)**:
    - `AutomationReceiver` (exported, tetapi `android:enabled="false"` di manifest) hanya diaktifkan lewat sakelar di aplikasi (`AutomationSettings` → `setComponentEnabledSetting`). Setiap perintah wajib membawa extra `token` yang dibandingkan waktu-konstan dengan token acak 128-bit.
@@ -109,6 +110,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, navigasi bawah 3 tab (Beranda / Resolver / Lainnya), state pilihan profil. Beranda punya pull-to-refresh; tombol utama tanpa izin menggulir ke asisten izin.
   - `SelectedResolverCard.kt`, `MoreScreen.kt`: ringkasan resolver di Beranda dan tab Lainnya (izin, otomasi, tautan, tentang).
+  - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
   - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif (termasuk Material You) — jangan menulis `Color(0x...)` langsung di komponen. Tinggi baris body memakai `em` agar tetap rapat saat `fontSize` di-override.
   - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
   - `StatusCard.kt` (hero beranimasi + haptic), `AuditCard.kt`, `PermissionAssistantCard.kt`, `PresetComponents.kt`, `ProfileComponents.kt`, `AutomationCard.kt`: Komponen per section.

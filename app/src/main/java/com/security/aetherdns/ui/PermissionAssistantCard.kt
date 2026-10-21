@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,6 +12,10 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,21 +53,37 @@ fun PermissionAssistantCard(
         colors = CardDefaults.cardColors(containerColor = WarningOrangeLight)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Android 11+: aktivasi bawaan jadi jalur utama; Shizuku & ADB PC dilipat agar kartu tidak panjang
+            var showAlternatives by rememberSaveable { mutableStateOf(nativeActivation == null) }
             if (nativeActivation != null) {
                 NativeActivationSection(nativeActivation)
 
-                Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = { showAlternatives = !showAlternatives }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.perm_other_methods), modifier = Modifier.weight(1f))
+                    Icon(
+                        if (showAlternatives) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null
+                    )
+                }
             }
 
-            ShizukuSection(shizukuStatus, isGranting, onGrant, isAlternative = nativeActivation != null)
+            AnimatedVisibility(visible = showAlternatives) {
+                Column {
+                    if (nativeActivation != null) {
+                        HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
-            Spacer(modifier = Modifier.height(12.dp))
+                    ShizukuSection(shizukuStatus, isGranting, onGrant, isAlternative = nativeActivation != null)
 
-            AdbSection(selectedHostname, onRefresh)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = WarningOrange.copy(alpha = 0.3f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    AdbSection(selectedHostname, onRefresh)
+                }
+            }
         }
     }
 }

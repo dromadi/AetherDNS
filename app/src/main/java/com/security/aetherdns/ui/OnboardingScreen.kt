@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
@@ -115,16 +114,7 @@ fun OnboardingScreen(
 @Composable
 private fun WelcomeStep() {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .padding(top = 24.dp)
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(PrimaryBlue.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.Shield, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(44.dp))
-        }
+        AetherLogo(size = 96.dp, modifier = Modifier.padding(top = 24.dp))
         Spacer(modifier = Modifier.height(16.dp))
         StepTitle(stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_desc), center = true)
         Spacer(modifier = Modifier.height(20.dp))

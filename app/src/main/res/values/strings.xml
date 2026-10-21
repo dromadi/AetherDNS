@@ -2,8 +2,8 @@
 <!-- Default (English). Indonesian translations live in values-in/strings.xml. -->
 <resources>
     <string name="app_name" translatable="false">AetherDNS</string>
-    <string name="badge_native_active">Native mode active</string>
-    <string name="badge_needs_permission">ADB permission needed</string>
+    <string name="badge_native_active">Ready</string>
+    <string name="badge_needs_permission">Permission needed</string>
     <string name="common_testing">Testing…</string>
     <string name="status_active_title">DNS protection on</string>
     <string name="status_inactive_title">Protection off</string>
@@ -234,4 +234,5 @@
     <string name="profile_delete_confirm_body">\"%1$s\" will be removed from your saved profiles.</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_delete">Delete</string>
+    <string name="perm_other_methods">Other ways: Shizuku or a PC</string>
 </resources>

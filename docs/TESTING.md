@@ -79,6 +79,8 @@ Shizuku:
 - [ ] Mode gelap: semua kartu (status, aktivasi, audit, resolver) terbaca, tidak ada blok putih/terang yang menyilaukan.
 - [ ] Tarik ke bawah di Beranda memperbarui status; tombol aktif/nonaktif memberi getaran singkat.
 - [ ] Hapus profil tersimpan meminta konfirmasi.
+- [ ] Ikon launcher tampil penuh (bukan kecil di lingkaran putih); themed icon Android 13+ mengikuti warna wallpaper; ikon tile/notifikasi berupa perisai + gelombang.
+- [ ] Kartu status aktif bergradien biru dengan teks putih (terang & gelap); "Cara lain: Shizuku atau PC" terlipat secara default.
 
 ## 8. Bahasa
 

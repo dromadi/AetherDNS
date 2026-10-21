@@ -1,9 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikon monokrom tile / notifikasi: perisai + gelombang (selaras dengan ikon aplikasi) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,11L88,24V52C88,74 72,92 54,98C36,92 20,74 20,52V24Z"
+        android:strokeWidth="9"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:pathData="M37.03,46.03A24,24 0,0 1,70.97 46.03"
+        android:strokeWidth="9"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF" />
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,1L3,5v6c0,5.55 3.84,10.74 9,12c5.16,-1.26 9,-6.45 9,-12V5L12,1zM10,15.5l-3.5,-3.5l1.41,-1.41L10,12.67l6.09,-6.09L17.5,8L10,15.5z" />
+        android:pathData="M54,64m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0" />
 </vector>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Logo AetherDNS: perisai dengan gelombang sinyal terenkripsi. Semua elemen berada di zona aman
+    adaptive icon (lingkaran diameter 66dp di tengah kanvas 108dp).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bayangan lembut perisai -->
+    <path
+        android:fillColor="#33061A40"
+        android:pathData="M54,26.5L78,35.5V54.5C78,69.5 67.5,82 54,86.5C40.5,82 30,69.5 30,54.5V35.5Z" />
+    <!-- Perisai -->
+    <path android:pathData="M54,24L78,33V52C78,67 67.5,79.5 54,84C40.5,79.5 30,67 30,52V33Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="24"
+                android:endX="54"
+                android:endY="84">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="1" android:color="#FFDCE8FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Gelombang luar -->
+    <path
+        android:pathData="M41.98,49.98A17,17 0,0 1,66.02 49.98"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#FF1FA7C9" />
+    <!-- Gelombang dalam -->
+    <path
+        android:pathData="M46.93,54.93A10,10 0,0 1,61.07 54.93"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#FF1E5BD8" />
+    <!-- Titik pusat (perangkat) -->
+    <path
+        android:fillColor="#FF0B2E6F"
+        android:pathData="M54,62m-4.5,0a4.5,4.5 0,1 1,9 0a4.5,4.5 0,1 1,-9 0" />
+</vector>

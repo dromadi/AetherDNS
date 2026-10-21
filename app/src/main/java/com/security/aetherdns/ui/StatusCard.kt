@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -17,6 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -28,13 +30,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -44,9 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.security.aetherdns.R
 import com.security.aetherdns.data.DnsState
 import com.security.aetherdns.service.AetherDnsTileService
-import com.security.aetherdns.ui.theme.ErrorRed
-import com.security.aetherdns.ui.theme.SuccessContainer
-import com.security.aetherdns.ui.theme.SuccessGreen
+import com.security.aetherdns.ui.theme.OnBrandDanger
 import com.security.aetherdns.ui.theme.WarningOrange
 import java.text.DateFormat
 import java.util.Date
@@ -62,19 +65,18 @@ fun StatusCard(
 ) {
     val active = state.isProtectionActive
     val haptics = LocalHapticFeedback.current
+    // Saat aktif kartu memakai gradien brand (seperti ikon aplikasi) dengan konten putih
+    val gradientAlpha by animateFloatAsState(if (active) 1f else 0f, animationSpec = tween(500), label = "statusGradient")
+    val onCard = if (active) Color.White else MaterialTheme.colorScheme.onSurface
+    val onCardMuted = if (active) Color.White.copy(alpha = 0.82f) else MaterialTheme.colorScheme.onSurfaceVariant
     val accent by animateColorAsState(
         targetValue = when {
-            active -> SuccessGreen
+            active -> Color.White
             state.pausedUntil != null -> WarningOrange
             else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = tween(400),
         label = "statusAccent"
-    )
-    val container by animateColorAsState(
-        targetValue = if (active) SuccessContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        animationSpec = tween(400),
-        label = "statusContainer"
     )
     // Denyut halus selama OS memvalidasi TLS atau probe berjalan, agar jelas ada proses
     val pulsing = isProbing || (active && !state.isSystemDoTValidated)
@@ -82,8 +84,15 @@ fun StatusCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = container)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
+      Box {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .alpha(gradientAlpha)
+                .brandGradient()
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -102,7 +111,7 @@ fun StatusCard(
                 Text(
                     text = stringResource(if (isActive) R.string.status_active_title else R.string.status_inactive_title),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = if (isActive) SuccessGreen else MaterialTheme.colorScheme.onSurface,
+                    color = onCard,
                     textAlign = TextAlign.Center
                 )
             }
@@ -112,6 +121,7 @@ fun StatusCard(
                     Text(
                         text = resolverName,
                         style = MaterialTheme.typography.titleMedium,
+                        color = onCard,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
@@ -119,7 +129,7 @@ fun StatusCard(
                     text = state.specifier,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = onCardMuted,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             } else {
@@ -146,11 +156,11 @@ fun StatusCard(
                 if (state.isSystemDoTValidated) {
                     StatusPill(
                         icon = Icons.Default.CheckCircle,
-                        color = SuccessGreen,
+                        color = Color.White,
                         text = stringResource(R.string.status_os_validated, state.validatedServerName ?: state.specifier)
                     )
                 } else {
-                    StatusPill(icon = Icons.Default.Sync, color = WarningOrange, text = stringResource(R.string.status_os_validating))
+                    StatusPill(icon = Icons.Default.Sync, color = Color.White, text = stringResource(R.string.status_os_validating))
                 }
             }
 
@@ -158,10 +168,7 @@ fun StatusCard(
 
             // Tombol utama dengan pre-flight DoT probe
             val buttonColors = if (active) {
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = ErrorRed
-                )
+                ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = OnBrandDanger)
             } else {
                 ButtonDefaults.buttonColors()
             }
@@ -213,6 +220,8 @@ fun StatusCard(
                     onClick = onPause,
                     enabled = !isProbing,
                     shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = onCard),
+                    border = BorderStroke(1.dp, onCard.copy(alpha = 0.6f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
@@ -225,9 +234,10 @@ fun StatusCard(
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Spacer(modifier = Modifier.height(4.dp))
-                AddTileButton()
+                AddTileButton(contentColor = if (active) Color.White else MaterialTheme.colorScheme.primary)
             }
         }
+      }
     }
 }
 
@@ -256,8 +266,9 @@ private fun ShieldBadge(active: Boolean, accent: Color, pulsing: Boolean) {
                 .background(accent.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
+            // Saat aktif memakai lambang aplikasi (perisai + gelombang), sama seperti ikon launcher & tile
             Icon(
-                imageVector = if (active) Icons.Default.Shield else Icons.Default.GppBad,
+                painter = if (active) painterResource(R.drawable.ic_tile_shield) else rememberVectorPainter(Icons.Default.GppBad),
                 contentDescription = null,
                 tint = accent,
                 modifier = Modifier.size(44.dp)
@@ -286,9 +297,10 @@ private fun StatusPill(icon: ImageVector, color: Color, text: String) {
 
 /** Pintasan menambahkan Quick Settings Tile (Android 13+). */
 @Composable
-internal fun AddTileButton() {
+internal fun AddTileButton(contentColor: Color = MaterialTheme.colorScheme.primary) {
     val context = LocalContext.current
     TextButton(
+        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
         onClick = {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@TextButton
             try {

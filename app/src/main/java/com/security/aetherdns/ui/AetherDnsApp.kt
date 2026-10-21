@@ -1,6 +1,11 @@
 package com.security.aetherdns.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -137,7 +142,12 @@ fun AetherDnsApp(viewModel: MainViewModel) {
         val contentModifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-        when (tab) {
+        AnimatedContent(
+            targetState = tab,
+            transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+            label = "tabContent"
+        ) { currentTab ->
+        when (currentTab) {
             AppTab.HOME -> PullToRefreshBox(
                 isRefreshing = false,
                 onRefresh = viewModel::refresh,
@@ -257,6 +267,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 }
             )
         }
+        }
     }
 }
 
@@ -270,6 +281,7 @@ private enum class AppTab(@StringRes val label: Int, val icon: ImageVector, val 
 @Composable
 private fun AppTopBar(hasPermission: Boolean) {
     TopAppBar(
+        navigationIcon = { AetherLogo(size = 36.dp, modifier = Modifier.padding(start = 12.dp, end = 4.dp)) },
         title = {
             Column {
                 Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold, fontSize = 20.sp)

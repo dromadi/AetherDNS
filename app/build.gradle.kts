@@ -12,8 +12,8 @@ android {
         applicationId = "com.security.aetherdns"
         minSdk = 28 // Android 9 (Pie) introduces native Private DNS (DoT)
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.10.0"
+        versionCode = 13
+        versionName = "1.11.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

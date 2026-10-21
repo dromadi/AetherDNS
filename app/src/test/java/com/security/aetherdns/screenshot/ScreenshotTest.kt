@@ -3,6 +3,9 @@ package com.security.aetherdns.screenshot
 import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.provider.Settings
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onRoot
@@ -61,6 +64,21 @@ class ScreenshotTest {
 
     private fun launch(block: () -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).use { block() }
+    }
+
+    @Test
+    fun appIcon() {
+        // Adaptive icon dengan mask bawaan sistem, ditambah versi themed (monokrom) Android 13
+        val size = 432
+        val bitmap = Bitmap.createBitmap(size * 2 + 48, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        context.getDrawable(R.mipmap.ic_launcher)!!.apply { setBounds(0, 0, size, size) }.draw(canvas)
+        canvas.drawCircle(size * 1.5f + 48, size / 2f, size / 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF2B3A55.toInt() })
+        context.getDrawable(R.drawable.ic_launcher_monochrome)!!.apply {
+            setTint(0xFFD6E3FF.toInt())
+            setBounds(size + 48 - size / 4, -size / 4, size * 2 + 48 + size / 4, size + size / 4)
+        }.draw(canvas)
+        bitmap.captureRoboImage("build/screenshots/0_app_icon.png")
     }
 
     @Test

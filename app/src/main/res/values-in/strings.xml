@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Bahasa Indonesia -->
 <resources>
-    <string name="badge_native_active">Mode Native Aktif</string>
-    <string name="badge_needs_permission">Perlu Izin ADB</string>
+    <string name="badge_native_active">Siap</string>
+    <string name="badge_needs_permission">Perlu izin</string>
     <string name="common_testing">Menguji…</string>
     <string name="status_active_title">Proteksi DNS Aktif</string>
     <string name="status_inactive_title">Proteksi Nonaktif</string>
@@ -233,4 +233,5 @@
     <string name="profile_delete_confirm_body">\"%1$s\" akan dihapus dari profil tersimpan.</string>
     <string name="common_cancel">Batal</string>
     <string name="common_delete">Hapus</string>
+    <string name="perm_other_methods">Cara lain: Shizuku atau PC</string>
 </resources>

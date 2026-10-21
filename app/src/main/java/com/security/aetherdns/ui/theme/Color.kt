@@ -66,3 +66,9 @@ val ErrorRed: Color
     @Composable @ReadOnlyComposable get() = LocalStatusColors.current.error
 val ErrorContainer: Color
     @Composable @ReadOnlyComposable get() = LocalStatusColors.current.errorContainer
+
+/** Gradien brand (sama dengan latar ikon aplikasi), dipakai kartu status saat proteksi aktif dan logo. */
+val BrandGradientColors = listOf(Color(0xFF0B2E6F), Color(0xFF1E5BD8), Color(0xFF1FA7C9))
+
+/** Warna aksi berbahaya di atas permukaan putih pada gradien brand (sama di tema terang & gelap). */
+val OnBrandDanger: Color = LightStatusColors.error

@@ -6,7 +6,9 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -16,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,8 +71,11 @@ internal fun NativeActivationSection(ui: NativeActivationUi) {
 
     Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(stringResource(R.string.native_steps), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(10.dp))
+            // Langkah bernomor; teks tetap satu string terlokalisasi ("1. …\n2. …") agar mudah diterjemahkan
+            stringResource(R.string.native_steps).lines().filter { it.isNotBlank() }.forEachIndexed { index, line ->
+                NumberedStep(number = index + 1, text = line.substringAfter(". ", line))
+            }
+            Spacer(modifier = Modifier.height(6.dp))
 
             Button(
                 onClick = {
@@ -144,5 +150,27 @@ private fun ManualCodeEntry(enabled: Boolean, onSubmit: (String) -> Unit) {
         ) {
             Text(stringResource(R.string.native_connect), fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun NumberedStep(number: Int, text: String) {
+    Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(PrimaryBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                number.toString(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 1.dp))
     }
 }
