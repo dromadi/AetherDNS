@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.security.aetherdns.BuildConfig
 import com.security.aetherdns.R
+import com.security.aetherdns.data.InsightAnalyzer
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.model.PresetGroup
 import com.security.aetherdns.ui.theme.SuccessGreen
@@ -67,6 +68,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val statsApiKey by viewModel.statsApiKey.collectAsState()
     val stats by viewModel.stats.collectAsState()
     val report by viewModel.report.collectAsState()
+    val insights by viewModel.insights.collectAsState()
+    val currentNetwork by viewModel.currentNetwork.collectAsState()
     // Statistik hanya bermakna untuk profil NextDNS pribadi yang sedang aktif
     val activeNextDnsProfile = dnsState.specifier.takeIf { dnsState.isProtectionActive }
         ?.let { NextDnsHostname.extractConfigId(it) }
@@ -138,6 +141,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     }
 
     var tab by rememberSaveable { mutableStateOf(AppTab.HOME) }
+    var morePage by rememberSaveable { mutableStateOf<MorePage?>(null) }
     val homeListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val selectedProfile = allProfiles.find { it.id == selectedProfileId }
@@ -232,13 +236,20 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                     item {
                         val activePreset = DefaultProfiles.list.firstOrNull { it.hostname.equals(dnsState.specifier, ignoreCase = true) }
                         val blocksAds = activePreset?.let { it.group == PresetGroup.ADS || it.group == PresetGroup.FAMILY }
+                        val speed = remember(insights, dnsState.specifier, currentNetwork) {
+                            InsightAnalyzer.current(insights, dnsState.specifier, currentNetwork, System.currentTimeMillis())
+                        }
                         HealthCard(
-                            summary = HealthModel.summarize(dnsState, blocksAds, networkReport, auditSummary),
+                            summary = HealthModel.summarize(dnsState, blocksAds, networkReport, auditSummary, speed),
                             isChecking = isCheckingNetwork || isAuditing,
                             report = networkReport,
                             audit = auditSummary,
                             onRefresh = { viewModel.runHealthCheck(selectedHostname.ifBlank { DnsManager.DEFAULT_FALLBACK_HOSTNAME }) },
-                            onPause = { viewModel.pauseDns(15) }
+                            onPause = { viewModel.pauseDns(15) },
+                            onOpenInsights = {
+                                morePage = MorePage.INSIGHTS
+                                tab = AppTab.MORE
+                            }
                         )
                     }
                 }
@@ -300,6 +311,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
 
             AppTab.MORE -> MoreScreen(
                 modifier = contentModifier,
+                page = morePage,
+                onPageChange = { morePage = it },
                 hasPermission = dnsState.hasPermission,
                 automation = automation,
                 onToggleAutomation = viewModel::setAutomationEnabled,
@@ -307,6 +320,18 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 report = report,
                 onGenerateReport = viewModel::generateReport,
                 onClearCrash = viewModel::clearCrashLog,
+                insightContent = {
+                    val now = remember(insights) { System.currentTimeMillis() }
+                    InsightContent(
+                        latency = remember(insights) { InsightAnalyzer.latency(insights, now) },
+                        networks = remember(insights) { InsightAnalyzer.networks(insights, now) },
+                        onCompare = {
+                            tab = AppTab.RESOLVERS
+                            viewModel.runBenchmark()
+                        },
+                        onClear = viewModel::clearInsights
+                    )
+                },
                 permissionContent = {
                     PermissionAssistantCard(
                         shizukuStatus = shizukuStatus,

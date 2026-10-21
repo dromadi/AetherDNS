@@ -22,7 +22,8 @@ class MainActivity : ComponentActivity() {
             app.onboardingStore,
             app.wirelessActivator,
             app.nextDnsStatsSettings,
-            app.diagnostics
+            app.diagnostics,
+            app.insightStore
         )
     }
 

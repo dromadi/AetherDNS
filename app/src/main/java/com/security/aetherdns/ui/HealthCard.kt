@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
@@ -40,7 +41,8 @@ fun HealthCard(
     report: NetworkReport?,
     audit: AuditSummary?,
     onRefresh: () -> Unit,
-    onPause: () -> Unit
+    onPause: () -> Unit,
+    onOpenInsights: () -> Unit
 ) {
     var showDetails by rememberSaveable { mutableStateOf(false) }
     Card(
@@ -88,11 +90,21 @@ fun HealthCard(
                 }
             }
 
-            if (report != null || audit != null) {
-                TextButton(onClick = { showDetails = !showDetails }, contentPadding = PaddingValues(0.dp)) {
-                    Text(stringResource(if (showDetails) R.string.health_hide_details else R.string.health_details))
-                    Icon(if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (report != null || audit != null) {
+                    TextButton(onClick = { showDetails = !showDetails }, contentPadding = PaddingValues(0.dp)) {
+                        Text(stringResource(if (showDetails) R.string.health_hide_details else R.string.health_details))
+                        Icon(if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+                    }
                 }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onOpenInsights, contentPadding = PaddingValues(0.dp)) {
+                    Icon(Icons.Default.Insights, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.health_open_insights))
+                }
+            }
+            if (report != null || audit != null) {
                 AnimatedVisibility(visible = showDetails) {
                     Column {
                         report?.let { NetworkCheckRows(it) }

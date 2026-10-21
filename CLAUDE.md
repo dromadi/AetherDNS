@@ -42,6 +42,11 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 4c. **Statistik Blokir NextDNS (`data/NextDnsStats.kt`)**:
    - Hanya untuk resolver aktif `*.dns.nextdns.io` (Config ID via `NextDnsHostname.extractConfigId`). `NextDnsClient` memanggil `api.nextdns.io/profiles/{id}/analytics/status` dan `/domains?status=blocked` (24 jam) dengan header `X-Api-Key`; parsing murni `NextDnsApiParser`, HTTP diabstraksi `HttpGet`, diuji `NextDnsStatsTest` (org.json asli sebagai testImplementation).
    - API key (akses penuh akun NextDNS) disimpan di prefs `nextdns_stats`, dikecualikan dari backup, tidak pernah dikirim ke host lain. Kegagalan bertipe `StatsError`.
+4e. **Insight Lokal (`data/Insights.kt`)**:
+   - `MainViewModel.sampleLatency()` (saat cek otomatis / periksa ulang) mencatat latensi probe resolver aktif; `runNetworkCheck` mencatat hasil cek jaringan. Sampel (`InsightSample`) diberi kunci `NetworkKey` (transport + nama operator seluler saja).
+   - `FileInsightStore` menyimpan TSV di `noBackupFilesDir/insights.tsv` (≤ 30 hari, ≤ 1000 sampel). Agregasi murni `InsightAnalyzer` (median 7 hari per resolver × jaringan, rapor jaringan 30 hari; FAST < 150 ms, SLOW ≥ 400 ms, minimal 3 sampel), diuji `InsightsTest`.
+   - UI: halaman Insight di tab Lainnya (`InsightScreen.kt`, `MorePage.INSIGHTS`; state `MorePage` diangkat ke `AetherDnsApp`), tombol "Lihat insight" di `HealthCard`, dan baris peringatan lambat di `HealthModel` — bukan kartu baru di Beranda.
+   - **Privasi**: tidak pernah mencatat SSID Wi-Fi, IP, atau domain yang dikunjungi; data tidak pernah dikirim ke mana pun.
 4d. **Laporan Diagnostik (`diagnostics/`)**:
    - `MainViewModel.generateReport()` menjalankan probe resolver aktif, cek jaringan, dan audit (dengan `reconcileWith`) lalu menyusun `DiagnosticSnapshot` → `DiagnosticReportFormatter.format()` (teks polos berbahasa Inggris teknis, diuji `DiagnosticReportTest`). UI `DiagnosticsCard` di tab Lainnya: salin / bagikan.
    - **Privasi**: snapshot hanya memuat boolean/ringkasan; jangan pernah menambahkan token otomasi, API key NextDNS, SSID Wi-Fi, atau IP perangkat ke `FeatureStatus` / `NetworkInfo`.
@@ -101,6 +106,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `PauseController.kt`: Logika jeda murni (interface `PauseStore`, `ResumeAlarm`). Diuji di `PauseControllerTest`.
   - `AndroidPause.kt`: Implementasi `SharedPrefsPauseStore` dan `AlarmManagerResumeAlarm`.
   - `NextDnsStats.kt`: klien analitik NextDNS, parser, dan `NextDnsStatsSettings` (API key).
+  - `Insights.kt`: riwayat lokal latensi & cek jaringan (`InsightStore`, `InsightAnalyzer`). Diuji di `InsightsTest`.
   - `ProfileRepository.kt`: Profil kustom tersimpan (`ProfileStore`, `ProfileCodec`). Diuji di `ProfileRepositoryTest`.
 - `model/`:
   - `DnsProfile.kt`: Data class profil DoT resolver, `PresetGroup` (ADS / FAMILY / SECURITY / PLAIN), dan koleksi `DefaultProfiles` (`list`, `grouped`; nama/kategori/deskripsi via `@StringRes`). Preset baru wajib punya uji di `LiveDotProbeTest` (ad-blocker: blokir ≥ 2 domain uji; non-filter: lolos ≥ 3).
@@ -134,6 +140,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - **Prinsip UX Beranda**: hanya kartu status (+ asisten izin bila perlu), kartu `HealthCard`, dan statistik NextDNS bila relevan. Fitur baru **tidak** menambah kartu di Beranda; hasil teknis masuk ke "Detail teknis" kartu Kesehatan atau ke menu Lainnya. Bahasa di Beranda tanpa istilah teknis (DoT, NXDOMAIN, port).
   - `HealthModel.kt` / `HealthCard.kt`: ringkasan berbahasa awam dari `DnsState` + `NetworkReport` + `AuditSummary` (logika murni, diuji `HealthModelTest`); detail teknis memakai `NetworkCheckRows` dan `AuditDetailRows`.
   - `NetworkCheckCard.kt`: `NetworkCheckRows` (detail teknis) + `DotBlockedDialog`. `AuditCard.kt`: `AuditDetailRows`.
+  - `InsightScreen.kt`: `InsightContent` (kecepatan resolver per jaringan + grafik harian, rapor jaringan, hapus riwayat).
   - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
   - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
@@ -149,7 +156,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

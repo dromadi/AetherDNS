@@ -3,6 +3,8 @@ package com.security.aetherdns.ui
 import androidx.annotation.StringRes
 import com.security.aetherdns.R
 import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.data.LatencySummary
+import com.security.aetherdns.data.SpeedLevel
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.CheckResult
 import com.security.aetherdns.util.NetworkCheck
@@ -30,7 +32,13 @@ object HealthModel {
      * @param blocksAds true bila resolver aktif adalah preset pemblokir iklan, false bila preset yang memang tidak
      *   memblokir iklan (keamanan / enkripsi saja), null bila tidak diketahui (hostname kustom).
      */
-    fun summarize(state: DnsState, blocksAds: Boolean?, report: NetworkReport?, audit: AuditSummary?): HealthSummary {
+    fun summarize(
+        state: DnsState,
+        blocksAds: Boolean?,
+        report: NetworkReport?,
+        audit: AuditSummary?,
+        speed: LatencySummary? = null
+    ): HealthSummary {
         val rows = mutableListOf<HealthRow>()
         val active = state.isProtectionActive
 
@@ -53,6 +61,11 @@ object HealthModel {
                     rows += HealthRow(HealthLevel.WARNING, R.string.health_ads_partial, listOf(audit.blockedCount, audit.totalCount))
                 else -> rows += HealthRow(HealthLevel.BAD, R.string.health_ads_none)
             }
+        }
+
+        // Kecepatan: hanya disebut bila lambat secara konsisten (cukup sampel), bukan dari satu pengukuran
+        if (active && speed?.level == SpeedLevel.SLOW) {
+            rows += HealthRow(HealthLevel.WARNING, R.string.health_speed_slow, listOf(speed.medianMs))
         }
 
         // 3. Perilaku ISP & jaringan

@@ -11,6 +11,9 @@ import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.data.InsightSample
+import com.security.aetherdns.data.InsightStore
+import com.security.aetherdns.data.NetworkKey
 import com.security.aetherdns.diagnostics.DiagnosticReportFormatter
 import com.security.aetherdns.diagnostics.DiagnosticSnapshot
 import com.security.aetherdns.diagnostics.DiagnosticsCollector
@@ -31,6 +34,7 @@ import com.security.aetherdns.shizuku.PermissionGranter
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DotProbe
+import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.InspectionResult
 import com.security.aetherdns.util.CheckResult
 import com.security.aetherdns.util.DnsManager
@@ -43,7 +47,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import java.text.DateFormat
@@ -92,6 +98,7 @@ class MainViewModel(
     private val activator: WirelessAdbActivator,
     private val statsSettings: NextDnsStatsSettings,
     private val diagnostics: DiagnosticsCollector,
+    private val insightStore: InsightStore,
     private val statsClient: NextDnsClient = NextDnsClient(),
     private val inspector: ResolverInspector = DotProbe,
     private val networkInspector: NetworkInspector = NetworkInspector(),
@@ -171,6 +178,47 @@ class MainViewModel(
         _stats.value = StatsUiState.Idle
     }
 
+    /** Riwayat lokal untuk halaman Insight (kecepatan resolver & rapor jaringan); tidak pernah dikirim ke mana pun. */
+    private val _insights = MutableStateFlow<List<InsightSample>>(emptyList())
+    val insights: StateFlow<List<InsightSample>> = _insights.asStateFlow()
+
+    private val _currentNetwork = MutableStateFlow(NetworkKey("none", ""))
+    val currentNetwork: StateFlow<NetworkKey> = _currentNetwork.asStateFlow()
+
+    private fun networkKey(): NetworkKey = diagnostics.network().let { NetworkKey(it.transport, it.carrier) }.also {
+        _currentNetwork.value = it
+    }
+
+    private suspend fun recordInsight(sample: InsightSample) {
+        _insights.value = withContext(Dispatchers.IO) {
+            insightStore.append(sample)
+            insightStore.all()
+        }
+    }
+
+    /** Mengukur kecepatan resolver aktif sekali dan mencatatnya (dipanggil saat aplikasi tampil / periksa ulang). */
+    private fun sampleLatency() {
+        val state = dnsState.value
+        if (!state.isProtectionActive || state.specifier.isBlank()) return
+        viewModelScope.launch {
+            val network = networkKey()
+            val result = DotProbe.probe(state.specifier)
+            recordInsight(
+                InsightSample.Latency(
+                    System.currentTimeMillis(), network, state.specifier,
+                    (result as? DotProbeResult.Success)?.totalMs
+                )
+            )
+        }
+    }
+
+    fun clearInsights() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { insightStore.clear() }
+            _insights.value = emptyList()
+        }
+    }
+
     private val _report = MutableStateFlow<ReportUiState>(ReportUiState.Idle)
     val report: StateFlow<ReportUiState> = _report.asStateFlow()
 
@@ -248,6 +296,7 @@ class MainViewModel(
     }
 
     init {
+        viewModelScope.launch { _insights.value = withContext(Dispatchers.IO) { insightStore.all() } }
         // Jaringan berganti saat aplikasi tampil: cek ulang setelah jaringan stabil
         viewModelScope.launch {
             @OptIn(FlowPreview::class)
@@ -350,9 +399,16 @@ class MainViewModel(
             _isCheckingNetwork.value = true
             val state = dnsState.value
             val hostname = state.specifier.takeIf { state.isProtectionActive && it.isNotBlank() } ?: fallbackHostname
+            val network = networkKey()
             val report = networkInspector.inspect(hostname)
             _networkReport.value = report
             _isCheckingNetwork.value = false
+            recordInsight(
+                InsightSample.NetworkCheck(
+                    System.currentTimeMillis(), network,
+                    report[NetworkCheck.INTERCEPTION], report[NetworkCheck.NXDOMAIN_HIJACK], report[NetworkCheck.DOT_REACHABLE]
+                )
+            )
             lastAutoCheckAt = System.currentTimeMillis()
             // Pemeriksaan manual sudah menampilkan peringatan di kartu; otomatis perlu menarik perhatian
             if (automatic && dnsState.value.isProtectionActive &&
@@ -380,12 +436,14 @@ class MainViewModel(
         runNetworkCheck(DnsManager.DEFAULT_FALLBACK_HOSTNAME, automatic = true)
         // Kartu Kesehatan juga menilai pemblokiran iklan; hanya bermakna saat proteksi aktif
         if (dnsState.value.isProtectionActive) runAudit()
+        sampleLatency()
     }
 
     /** Tombol "Periksa ulang" di kartu Kesehatan: cek jaringan + audit sekaligus. */
     fun runHealthCheck(fallbackHostname: String) {
         runNetworkCheck(fallbackHostname)
         if (dnsState.value.isProtectionActive) runAudit()
+        sampleLatency()
     }
 
     fun runAudit() {
@@ -491,12 +549,13 @@ class MainViewModel(
         private val onboardingStore: OnboardingStore,
         private val activator: WirelessAdbActivator,
         private val statsSettings: NextDnsStatsSettings,
-        private val diagnostics: DiagnosticsCollector
+        private val diagnostics: DiagnosticsCollector,
+        private val insightStore: InsightStore
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics, insightStore) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

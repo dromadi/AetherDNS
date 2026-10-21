@@ -120,6 +120,15 @@ Shizuku:
 - [ ] Ikon launcher tampil penuh (bukan kecil di lingkaran putih); themed icon Android 13+ mengikuti warna wallpaper; ikon tile/notifikasi berupa perisai + gelombang.
 - [ ] Kartu status aktif bergradien biru dengan teks putih (terang & gelap); "Cara lain: Shizuku atau PC" terlipat secara default.
 
+## 7b. Insight
+
+- [ ] Buka aplikasi beberapa kali (selang > 10 menit atau tekan "Periksa ulang") → Lainnya → Insight menampilkan resolver aktif + jaringan saat ini dengan median ms.
+- [ ] Pindah Wi-Fi ↔ data seluler → muncul baris terpisah ("Data seluler · <operator>"), nama Wi-Fi tidak pernah tampil.
+- [ ] Rapor jaringan menghitung jumlah pemeriksaan per jaringan.
+- [ ] "Lihat insight" di kartu Kesehatan membuka halaman Insight; Back kembali ke menu Lainnya.
+- [ ] "Bandingkan resolver" pindah ke tab Resolver dan menjalankan uji kecepatan.
+- [ ] "Hapus riwayat" mengosongkan halaman.
+
 ## 8. Bahasa
 
 - [ ] Bahasa HP English → seluruh UI, tile, shortcut, Toast, dan snackbar berbahasa Inggris.

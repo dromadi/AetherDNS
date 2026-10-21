@@ -1,5 +1,6 @@
 package com.security.aetherdns.screenshot
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -9,7 +10,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.security.aetherdns.data.InsightAnalyzer
+import com.security.aetherdns.data.InsightSample
+import com.security.aetherdns.data.NetworkKey
 import com.security.aetherdns.data.NextDnsSummary
+import com.security.aetherdns.ui.InsightContent
 import com.security.aetherdns.ui.AuditDetailRows
 import com.security.aetherdns.ui.HealthCard
 import com.security.aetherdns.ui.HealthModel
@@ -75,11 +80,11 @@ class ComponentScreenshotTest {
             AetherDnsTheme(dynamicColor = false) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column(Modifier.padding(16.dp)) {
-                        HealthCard(HealthModel.summarize(active, true, tampered, audit), false, tampered, audit, {}, {})
+                        HealthCard(HealthModel.summarize(active, true, tampered, audit), false, tampered, audit, {}, {}, {})
                         androidx.compose.foundation.layout.Spacer(Modifier.padding(8.dp))
                         HealthCard(
                             HealthModel.summarize(active.copy(isSystemDoTValidated = false), true, blocked, null),
-                            false, blocked, null, {}, {}
+                            false, blocked, null, {}, {}, {}
                         )
                     }
                 }
@@ -194,5 +199,41 @@ class ComponentScreenshotTest {
             }
         }
         compose.onRoot().captureRoboImage("build/screenshots/14_report.png")
+    }
+
+    @Test
+    fun insights() {
+        val now = System.currentTimeMillis()
+        val day = 24L * 60 * 60 * 1000
+        val wifi = NetworkKey("wifi", "")
+        val cell = NetworkKey("cellular", "Telkomsel")
+        val samples = buildList {
+            listOf(120L, 140L, 110L, 160L, 130L).forEachIndexed { i, ms ->
+                add(InsightSample.Latency(now - (4 - i) * day, wifi, "dns.adguard-dns.com", ms))
+            }
+            listOf(480L, 520L, 450L, 610L).forEachIndexed { i, ms ->
+                add(InsightSample.Latency(now - (3 - i) * day, cell, "dns.adguard-dns.com", ms))
+            }
+            add(InsightSample.Latency(now - day, cell, "dns.adguard-dns.com", null))
+            repeat(6) { add(InsightSample.NetworkCheck(now - it * day, wifi, CheckResult.OK, CheckResult.OK, CheckResult.OK)) }
+            repeat(4) {
+                add(InsightSample.NetworkCheck(now - it * day, cell, CheckResult.PROBLEM, CheckResult.OK, CheckResult.OK))
+            }
+        }
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        InsightContent(
+                            latency = InsightAnalyzer.latency(samples, now),
+                            networks = InsightAnalyzer.networks(samples, now),
+                            onCompare = {},
+                            onClear = {}
+                        )
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/15_insights.png")
     }
 }

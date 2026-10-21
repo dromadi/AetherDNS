@@ -5,6 +5,8 @@ import com.security.aetherdns.adb.PairingNotifier
 import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
 import com.security.aetherdns.data.DnsRepository
+import com.security.aetherdns.data.FileInsightStore
+import com.security.aetherdns.data.InsightStore
 import com.security.aetherdns.diagnostics.CrashRecorder
 import com.security.aetherdns.diagnostics.DiagnosticsCollector
 import com.security.aetherdns.data.NextDnsStatsSettings
@@ -45,6 +47,9 @@ class AetherDnsApplication : Application() {
     lateinit var diagnostics: DiagnosticsCollector
         private set
 
+    lateinit var insightStore: InsightStore
+        private set
+
     /** Hanya untuk merender notifikasi aktivasi dan widget mengikuti state; tidak ada kerja latar lain. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -53,6 +58,7 @@ class AetherDnsApplication : Application() {
         // Paling awal agar crash saat inisialisasi pun tercatat untuk laporan diagnostik
         val crashRecorder = CrashRecorder(this).also { it.install() }
         diagnostics = DiagnosticsCollector(this, crashRecorder)
+        insightStore = FileInsightStore(noBackupFilesDir)
         // Sui (Shizuku via Magisk/KernelSU) hanya mengirim binder bila diinisialisasi; no-op tanpa Sui
         Sui.init(BuildConfig.APPLICATION_ID)
         dnsRepository = DnsRepository(this)

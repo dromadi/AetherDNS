@@ -1,0 +1,3 @@
+• Insight baru (Lainnya → Insight): kecepatan DNS per jaringan selama 7 hari dan rapor jaringan 30 hari (DNS dibelokkan / DNS terenkripsi diblokir)
+• Kartu Kesehatan memberi tahu bila DNS konsisten lambat, dengan tombol untuk membandingkan resolver
+• Data hanya disimpan di HP, tanpa nama Wi-Fi atau IP, dan bisa dihapus kapan saja

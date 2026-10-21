@@ -19,12 +19,12 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,8 +43,9 @@ import com.security.aetherdns.util.DnsManager
 
 private const val SOURCE_URL = "https://github.com/dromadi/AetherDNS"
 
-/** Halaman di dalam tab Lainnya; null = daftar menu. */
-private enum class MorePage(val titleRes: Int) {
+/** Halaman di dalam tab Lainnya; null = daftar menu. State-nya di [AetherDnsApp] agar Beranda bisa membuka Insight. */
+enum class MorePage(val titleRes: Int) {
+    INSIGHTS(R.string.insight_title),
     PERMISSION(R.string.more_permission_title),
     AUTOMATION(R.string.automation_title),
     REPORT(R.string.report_title),
@@ -55,6 +56,8 @@ private enum class MorePage(val titleRes: Int) {
 @Composable
 fun MoreScreen(
     modifier: Modifier,
+    page: MorePage?,
+    onPageChange: (MorePage?) -> Unit,
     hasPermission: Boolean,
     automation: AutomationState,
     onToggleAutomation: (Boolean) -> Unit,
@@ -62,10 +65,10 @@ fun MoreScreen(
     report: ReportUiState,
     onGenerateReport: () -> Unit,
     onClearCrash: () -> Unit,
+    insightContent: @Composable () -> Unit,
     permissionContent: @Composable () -> Unit
 ) {
-    var page by rememberSaveable { mutableStateOf<MorePage?>(null) }
-    BackHandler(enabled = page != null) { page = null }
+    BackHandler(enabled = page != null) { onPageChange(null) }
 
     AnimatedContent(
         targetState = page,
@@ -81,10 +84,11 @@ fun MoreScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (current == null) {
-                MenuList(hasPermission, automation.enabled) { page = it }
+                MenuList(hasPermission, automation.enabled, onPageChange)
             } else {
-                PageHeader(stringResource(current.titleRes)) { page = null }
+                PageHeader(stringResource(current.titleRes)) { onPageChange(null) }
                 when (current) {
+                    MorePage.INSIGHTS -> insightContent()
                     MorePage.PERMISSION -> if (hasPermission) PermissionGranted() else permissionContent()
                     MorePage.AUTOMATION ->
                         AutomationCard(state = automation, onToggle = onToggleAutomation, onRegenerateToken = onRegenerateToken)
@@ -105,6 +109,11 @@ private fun MenuList(hasPermission: Boolean, automationEnabled: Boolean, open: (
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            MenuItem(
+                icon = Icons.Default.Insights,
+                title = stringResource(R.string.insight_title),
+                subtitle = stringResource(R.string.insight_subtitle)
+            ) { open(MorePage.INSIGHTS) }
             MenuItem(
                 icon = Icons.Default.Key,
                 title = stringResource(R.string.more_permission_title),

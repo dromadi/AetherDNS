@@ -76,4 +76,14 @@ class HealthModelTest {
             texts(pending)
         )
     }
+
+    @Test
+    fun `consistently slow resolver adds a warning, fast one stays quiet`() {
+        val slow = com.security.aetherdns.data.LatencySummary("dns.adguard-dns.com", com.security.aetherdns.data.NetworkKey("wifi", ""), 980, 5, 0, emptyList())
+        val summary = HealthModel.summarize(active, true, report(), audit(4), slow)
+        assertTrue(R.string.health_speed_slow in texts(summary))
+        assertEquals(HealthLevel.WARNING, summary.level)
+        val fast = slow.copy(medianMs = 40)
+        assertFalse(R.string.health_speed_slow in texts(HealthModel.summarize(active, true, report(), audit(4), fast)))
+    }
 }

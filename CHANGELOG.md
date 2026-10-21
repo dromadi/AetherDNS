@@ -3,6 +3,13 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.17.0] - 2026-10-21
+
+### Ditambahkan
+- **Insight** (tab Lainnya, atau tombol "Lihat insight" di kartu Kesehatan): kecepatan resolver aktif per jaringan selama 7 hari (median, jumlah pengukuran, grafik harian, label Cepat/Normal/Lambat) dan **rapor jaringan** 30 hari (berapa kali DNS dibelokkan atau DNS terenkripsi diblokir per Wi-Fi / data seluler per operator).
+- Kartu Kesehatan menampilkan peringatan "DNS lambat di jaringan ini" bila resolver konsisten lambat (minimal 3 pengukuran, median ≥ 400 ms); tombol "Bandingkan resolver" menjalankan uji kecepatan.
+- Data terkumpul otomatis setiap kali aplikasi dibuka, hanya disimpan di HP (tidak ikut backup, maksimal 30 hari), tanpa nama Wi-Fi atau IP, dan bisa dihapus kapan saja.
+
 ## [1.16.1] - 2026-10-21
 
 ### Diperbaiki
