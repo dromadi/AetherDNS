@@ -42,6 +42,10 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 4c. **Statistik Blokir NextDNS (`data/NextDnsStats.kt`)**:
    - Hanya untuk resolver aktif `*.dns.nextdns.io` (Config ID via `NextDnsHostname.extractConfigId`). `NextDnsClient` memanggil `api.nextdns.io/profiles/{id}/analytics/status` dan `/domains?status=blocked` (24 jam) dengan header `X-Api-Key`; parsing murni `NextDnsApiParser`, HTTP diabstraksi `HttpGet`, diuji `NextDnsStatsTest` (org.json asli sebagai testImplementation).
    - API key (akses penuh akun NextDNS) disimpan di prefs `nextdns_stats`, dikecualikan dari backup, tidak pernah dikirim ke host lain. Kegagalan bertipe `StatsError`.
+4d. **Laporan Diagnostik (`diagnostics/`)**:
+   - `MainViewModel.generateReport()` menjalankan probe resolver aktif, cek jaringan, dan audit (dengan `reconcileWith`) lalu menyusun `DiagnosticSnapshot` → `DiagnosticReportFormatter.format()` (teks polos berbahasa Inggris teknis, diuji `DiagnosticReportTest`). UI `DiagnosticsCard` di tab Lainnya: salin / bagikan.
+   - **Privasi**: snapshot hanya memuat boolean/ringkasan; jangan pernah menambahkan token otomasi, API key NextDNS, SSID Wi-Fi, atau IP perangkat ke `FeatureStatus` / `NetworkInfo`.
+   - `CrashRecorder` (dipasang paling awal di `AetherDnsApplication.onCreate`) menyimpan jejak crash terakhir di `noBackupFilesDir/last_crash.txt` lalu meneruskan ke handler bawaan.
 5. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
@@ -109,6 +113,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
   - `NetworkInspector.kt`: Cek jaringan (penyadapan port 53, NXDOMAIN hijack, keterjangkauan DoT) dengan `PlainDnsTransport` / `DotAddressProber` yang dapat dipalsukan.
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`. `AuditSummary.reconcileWith()` menandai domain yang masih di-resolve HP tetapi diblokir resolver aktif (ditanya langsung via `DotProbe.inspect`) sebagai `AuditOutcome.CACHED` — cache DNS HP dari sebelum proteksi aktif, bukan kebocoran.
+- `diagnostics/`:
+  - `DiagnosticReport.kt` (model snapshot + formatter murni), `DiagnosticsCollector.kt` (info perangkat/jaringan tanpa izin tambahan), `CrashRecorder.kt`.
 - `widget/`:
   - `StatusWidget.kt`: widget layar utama (`res/layout/widget_status.xml`, `res/xml/widget_status_info.xml`).
 - `service/`:
@@ -126,6 +132,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, navigasi bawah 3 tab (Beranda / Resolver / Lainnya), state pilihan profil. Beranda punya pull-to-refresh; tombol utama tanpa izin menggulir ke asisten izin.
   - `NetworkCheckCard.kt`: kartu Cek jaringan di Beranda + `DotBlockedDialog`.
+  - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
   - `SelectedResolverCard.kt`, `MoreScreen.kt`: ringkasan resolver di Beranda dan tab Lainnya (izin, otomasi, tautan, tentang).
   - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
@@ -140,7 +147,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

@@ -65,6 +65,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val isCheckingNetwork by viewModel.isCheckingNetwork.collectAsState()
     val statsApiKey by viewModel.statsApiKey.collectAsState()
     val stats by viewModel.stats.collectAsState()
+    val report by viewModel.report.collectAsState()
     // Statistik hanya bermakna untuk profil NextDNS pribadi yang sedang aktif
     val activeNextDnsProfile = dnsState.specifier.takeIf { dnsState.isProtectionActive }
         ?.let { NextDnsHostname.extractConfigId(it) }
@@ -311,6 +312,9 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 automation = automation,
                 onToggleAutomation = viewModel::setAutomationEnabled,
                 onRegenerateToken = viewModel::regenerateAutomationToken,
+                report = report,
+                onGenerateReport = viewModel::generateReport,
+                onClearCrash = viewModel::clearCrashLog,
                 permissionContent = {
                     PermissionAssistantCard(
                         shizukuStatus = shizukuStatus,

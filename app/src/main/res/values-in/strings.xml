@@ -313,4 +313,15 @@
     <string name="stats_error_server">NextDNS memberi respons tak terduga. Coba lagi nanti.</string>
     <string name="audit_outcome_cached">Cache HP (segera terblokir)</string>
     <string name="audit_cached_note">%1$d domain masih berasal dari cache DNS HP sejak sebelum proteksi aktif. Resolver Anda sudah memblokirnya; domain itu akan terblokir setelah cache kedaluwarsa (biasanya dalam hitungan menit).</string>
+
+    <!-- Laporan diagnostik -->
+    <string name="report_title">Laporan diagnostik</string>
+    <string name="report_desc">Memeriksa semua fitur sekarang dan menyusun teks yang bisa disalin atau dibagikan ke pengembang. Tidak pernah memuat token, API key, nama Wi-Fi, atau alamat IP HP Anda.</string>
+    <string name="report_generate">Buat laporan</string>
+    <string name="report_regenerate">Buat ulang</string>
+    <string name="report_generating">Memeriksa semua fitur…</string>
+    <string name="report_copy">Salin</string>
+    <string name="report_share">Bagikan</string>
+    <string name="report_copied">Laporan disalin</string>
+    <string name="report_clear_crash">Hapus catatan crash</string>
 </resources>

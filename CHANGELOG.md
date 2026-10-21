@@ -3,6 +3,12 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.15.0] - 2026-10-21
+
+### Ditambahkan
+- **Laporan diagnostik** (tab Lainnya): memeriksa semua fitur sekaligus (izin, resolver aktif + probe DoT, cek jaringan, audit iklan, aktivasi, Shizuku, otomasi, NextDNS, widget, onboarding) dan menyusun teks yang bisa disalin atau dibagikan. Tidak memuat token, API key, nama Wi-Fi, atau IP perangkat.
+- **Pencatat crash**: jejak crash terakhir disimpan di perangkat (tidak ikut backup) dan disertakan di laporan; bisa dihapus dari kartu laporan.
+
 ## [1.14.1] - 2026-10-21
 
 ### Diperbaiki

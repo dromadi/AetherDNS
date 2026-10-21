@@ -1,0 +1,2 @@
+• Diagnostic report (More tab): checks every feature and builds a text you can copy or share; no tokens, API keys, Wi-Fi name, or IP
+• The last crash is recorded on the device and included in the report

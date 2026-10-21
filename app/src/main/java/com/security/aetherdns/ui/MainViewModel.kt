@@ -11,6 +11,10 @@ import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.diagnostics.DiagnosticReportFormatter
+import com.security.aetherdns.diagnostics.DiagnosticSnapshot
+import com.security.aetherdns.diagnostics.DiagnosticsCollector
+import com.security.aetherdns.diagnostics.FeatureStatus
 import com.security.aetherdns.data.NextDnsClient
 import com.security.aetherdns.data.NextDnsStatsSettings
 import com.security.aetherdns.data.NextDnsSummary
@@ -52,6 +56,13 @@ sealed class UiEvent {
     data object DotBlockedOnNetwork : UiEvent()
 }
 
+/** State kartu laporan diagnostik. */
+sealed class ReportUiState {
+    data object Idle : ReportUiState()
+    data object Loading : ReportUiState()
+    data class Ready(val text: String, val hasCrash: Boolean) : ReportUiState()
+}
+
 /** State kartu statistik blokir NextDNS. */
 sealed class StatsUiState {
     data object Idle : StatsUiState()
@@ -80,6 +91,7 @@ class MainViewModel(
     private val onboardingStore: OnboardingStore,
     private val activator: WirelessAdbActivator,
     private val statsSettings: NextDnsStatsSettings,
+    private val diagnostics: DiagnosticsCollector,
     private val statsClient: NextDnsClient = NextDnsClient(),
     private val inspector: ResolverInspector = DotProbe,
     private val networkInspector: NetworkInspector = NetworkInspector(),
@@ -157,6 +169,67 @@ class MainViewModel(
     fun clearStatsApiKey() {
         statsSettings.setApiKey(null)
         _stats.value = StatsUiState.Idle
+    }
+
+    private val _report = MutableStateFlow<ReportUiState>(ReportUiState.Idle)
+    val report: StateFlow<ReportUiState> = _report.asStateFlow()
+
+    /**
+     * Laporan diagnostik semua fitur: menjalankan probe resolver aktif, cek jaringan, dan audit sekarang juga,
+     * lalu menyusun teks yang bisa disalin. Tidak memuat token otomasi, API key, SSID, atau IP perangkat.
+     */
+    fun generateReport() {
+        if (_report.value is ReportUiState.Loading) return
+        viewModelScope.launch {
+            _report.value = ReportUiState.Loading
+            val state = dnsState.value
+            val activeHost = state.specifier.takeIf { state.isProtectionActive && it.isNotBlank() }
+            val probe = activeHost?.let { host -> async { DotProbe.probe(host) } }
+            val network = async { networkInspector.inspect(activeHost ?: DnsManager.DEFAULT_FALLBACK_HOSTNAME) }
+            val direct = activeHost?.let { host -> async { inspector.inspect(host) } }
+            val audit = auditor.runAudit().reconcileWith(
+                (direct?.await() as? InspectionResult.Success)?.filter?.blocked?.toSet().orEmpty()
+            )
+            val networkReport = network.await().also { _networkReport.value = it }
+            _auditSummary.value = audit
+
+            val preset = (DefaultProfiles.list + profileRepository.profiles.value)
+                .firstOrNull { it.hostname.equals(state.specifier, ignoreCase = true) }
+            val crash = diagnostics.crashRecorder.lastCrash()
+            val snapshot = DiagnosticSnapshot(
+                generatedAt = System.currentTimeMillis(),
+                device = diagnostics.device(),
+                network = diagnostics.network(),
+                features = FeatureStatus(
+                    hasPermission = state.hasPermission,
+                    mode = state.mode,
+                    specifier = state.specifier,
+                    presetName = preset?.let { if (it.isCustom) "saved profile" else it.id },
+                    protectionActive = state.isProtectionActive,
+                    pausedUntil = state.pausedUntil,
+                    nativeActivationSupported = activator.isSupported,
+                    activationState = activator.state.value.toString(),
+                    shizukuStatus = granter.status().name,
+                    notificationsAllowed = diagnostics.notificationsAllowed(),
+                    automationEnabled = automationSettings.state.value.enabled,
+                    nextDnsApiKeySet = statsSettings.apiKey.value != null,
+                    nextDnsProfileDetected = NextDnsHostname.extractConfigId(state.specifier) != null,
+                    savedProfiles = profileRepository.profiles.value.size,
+                    widgetsPlaced = diagnostics.widgetsPlaced(),
+                    onboardingCompleted = onboardingStore.isCompleted()
+                ),
+                activeResolverProbe = probe?.await(),
+                networkReport = networkReport,
+                audit = audit,
+                lastCrash = crash
+            )
+            _report.value = ReportUiState.Ready(DiagnosticReportFormatter.format(snapshot), hasCrash = crash != null)
+        }
+    }
+
+    fun clearCrashLog() {
+        diagnostics.crashRecorder.clear()
+        (_report.value as? ReportUiState.Ready)?.let { _report.value = it.copy(hasCrash = false) }
     }
 
     /** Aplikasi sedang tampil (onResume..onPause); cek otomatis hanya berjalan saat itu. */
@@ -408,12 +481,13 @@ class MainViewModel(
         private val automationSettings: AutomationSettings,
         private val onboardingStore: OnboardingStore,
         private val activator: WirelessAdbActivator,
-        private val statsSettings: NextDnsStatsSettings
+        private val statsSettings: NextDnsStatsSettings,
+        private val diagnostics: DiagnosticsCollector
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

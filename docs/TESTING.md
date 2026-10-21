@@ -101,6 +101,13 @@ Shizuku:
 - [ ] Helper NextDNS: `abc123` + "Pixel 8" → `pixel--8-abc123.dns.nextdns.io`; tempel URL `https://dns.nextdns.io/abc123` → ID terbaca.
 - [ ] Profil tersimpan ikut diukur oleh Uji Kecepatan & Filter.
 
+## 6b. Laporan diagnostik
+
+- [ ] Lainnya → **Buat laporan** → dalam ±10 detik teks laporan muncul dengan semua bagian.
+- [ ] **Salin** → tempel di chat: format terbaca; tidak ada token otomasi, API key NextDNS, nama Wi-Fi, atau IP HP.
+- [ ] **Bagikan** membuka pilihan aplikasi.
+- [ ] Setelah crash (bila terjadi), laporan memuat "Last crash"; **Hapus catatan crash** menghapusnya.
+
 ## 7. Tampilan & navigasi
 
 - [ ] Tab Beranda / Resolver / Lainnya berpindah tanpa kehilangan pilihan resolver; titik merah di Beranda selama izin belum ada.

@@ -1,0 +1,2 @@
+• Laporan diagnostik (tab Lainnya): memeriksa semua fitur dan menyusun teks untuk disalin/dibagikan; tanpa token, API key, nama Wi-Fi, atau IP
+• Crash terakhir dicatat di HP dan ikut di laporan

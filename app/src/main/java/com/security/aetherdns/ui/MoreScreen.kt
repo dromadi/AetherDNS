@@ -38,6 +38,9 @@ fun MoreScreen(
     automation: AutomationState,
     onToggleAutomation: (Boolean) -> Unit,
     onRegenerateToken: () -> Unit,
+    report: ReportUiState,
+    onGenerateReport: () -> Unit,
+    onClearCrash: () -> Unit,
     permissionContent: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -65,6 +68,8 @@ fun MoreScreen(
         }
 
         AutomationCard(state = automation, onToggle = onToggleAutomation, onRegenerateToken = onRegenerateToken)
+
+        DiagnosticsCard(state = report, onGenerate = onGenerateReport, onClearCrash = onClearCrash)
 
         Card(
             modifier = Modifier.fillMaxWidth(),

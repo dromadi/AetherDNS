@@ -12,6 +12,8 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.security.aetherdns.data.NextDnsSummary
 import com.security.aetherdns.ui.AuditCard
 import com.security.aetherdns.ui.BlockStatsCard
+import com.security.aetherdns.ui.DiagnosticsCard
+import com.security.aetherdns.ui.ReportUiState
 import com.security.aetherdns.util.AuditItem
 import com.security.aetherdns.util.AuditOutcome
 import com.security.aetherdns.util.AuditSummary
@@ -157,5 +159,33 @@ class ComponentScreenshotTest {
             }
         }
         compose.onRoot().captureRoboImage("build/screenshots/13_audit.png")
+    }
+
+    @Test
+    fun diagnosticsReady() {
+        val text = """
+            === AetherDNS diagnostic report ===
+            Generated: 2026-10-21 14:10:00 UTC
+
+            ## App & device
+            App: 1.15.0 (19, debug) com.security.aetherdns.debug
+            Device: samsung SM-S928B
+            Android: 15 (SDK 35)
+
+            ## Network
+            Transport: wifi
+            Carrier: Telkomsel
+            OS Private DNS active: yes
+        """.trimIndent()
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp)) {
+                        DiagnosticsCard(state = ReportUiState.Ready(text, hasCrash = true), onGenerate = {}, onClearCrash = {})
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/14_report.png")
     }
 }
