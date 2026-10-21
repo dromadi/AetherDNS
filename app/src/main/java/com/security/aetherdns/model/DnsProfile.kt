@@ -108,6 +108,22 @@ object DefaultProfiles {
             descriptionRes = R.string.preset_cloudflare_plain_desc
         ),
         DnsProfile(
+            id = "adguard_unfiltered",
+            group = PresetGroup.PLAIN,
+            hostname = "unfiltered.adguard-dns.com",
+            nameRes = R.string.preset_adguard_unfiltered_name,
+            categoryRes = R.string.preset_plain_category,
+            descriptionRes = R.string.preset_adguard_unfiltered_desc
+        ),
+        DnsProfile(
+            id = "google",
+            group = PresetGroup.PLAIN,
+            hostname = "dns.google",
+            nameRes = R.string.preset_google_name,
+            categoryRes = R.string.preset_plain_category,
+            descriptionRes = R.string.preset_google_desc
+        ),
+        DnsProfile(
             id = "nextdns_public",
             group = PresetGroup.PLAIN,
             hostname = "dns.nextdns.io",

@@ -151,6 +151,20 @@ class LiveDotProbeTest {
     }
 
     @Test
+    fun adguardUnfilteredDoesNotFilter() {
+        val result = successOf("unfiltered.adguard-dns.com")
+        println("AdGuard Non-filtering: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("AdGuard Non-filtering tidak memfilter: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
+    fun googleDoesNotFilter() {
+        val result = successOf("dns.google")
+        println("Google: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("Google tidak memfilter: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
     fun nextdnsAnycastAnswersQueries() {
         val result = successOf("dns.nextdns.io")
         println("NextDNS: ${result.latency.totalMs} ms, filter=${result.filter}")

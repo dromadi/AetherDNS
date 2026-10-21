@@ -98,6 +98,11 @@
     <string name="preset_group_plain">Encryption only</string>
     <string name="preset_group_plain_desc">Encrypts DNS without blocking anything.</string>
     <string name="preset_group_saved">Saved profiles</string>
+    <string name="preset_plain_category">No filter</string>
+    <string name="preset_adguard_unfiltered_name">AdGuard Non-filtering</string>
+    <string name="preset_adguard_unfiltered_desc">AdGuard\'s encrypted resolver without any blocking.</string>
+    <string name="preset_google_name">Google Public DNS</string>
+    <string name="preset_google_desc">Google\'s fast, widely used resolver without filtering. Google keeps temporary logs.</string>
     <string name="preset_nextdns_name">NextDNS Anycast</string>
     <string name="preset_nextdns_category">Plain resolver (no filter)</string>
     <string name="preset_nextdns_desc">Low-latency anycast DoT resolver with no built-in filtering. For NextDNS ad blocking, use a custom hostname with your profile ID.</string>

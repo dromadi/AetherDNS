@@ -76,6 +76,8 @@ Di aplikasi, preset dikelompokkan per tujuan: **Blokir iklan**, **Keluarga**, **
 | **Quad9** | `dns.quad9.net` | Anti-Malware | Nirlaba Swiss, blokir malware & phishing tanpa log IP |
 | **Cloudflare Security (1.1.1.2)** | `security.cloudflare-dns.com` | Anti-Malware | Blokir phishing, malware, dan ransomware |
 | **Cloudflare 1.1.1.1** | `1dot1dot1dot1.cloudflare-dns.com` | Resolver Bersih | Tercepat & privat, hanya enkripsi tanpa filter |
+| **AdGuard Non-filtering** | `unfiltered.adguard-dns.com` | Resolver Bersih | Enkripsi saja dari AdGuard |
+| **Google Public DNS** | `dns.google` | Resolver Bersih | Cepat & populer, tanpa filter (Google menyimpan log sementara) |
 | **NextDNS Anycast** | `dns.nextdns.io` | Resolver Bersih | Resolver Anycast berlatensi rendah (gunakan Hostname Kustom jika ingin filter ad NextDNS) |
 | **Custom Hostname** | *(Bebas ditentukan)* | Kustomisasi | ID profil NextDNS pribadi (`xxxxxx.dns.nextdns.io`) atau server VPS sendiri (AdGuard Home / Pi-hole) |
 

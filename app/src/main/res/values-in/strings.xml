@@ -97,6 +97,11 @@
     <string name="preset_group_plain">Enkripsi saja</string>
     <string name="preset_group_plain_desc">Mengenkripsi DNS tanpa memblokir apa pun.</string>
     <string name="preset_group_saved">Profil tersimpan</string>
+    <string name="preset_plain_category">Tanpa filter</string>
+    <string name="preset_adguard_unfiltered_name">AdGuard Non-filtering</string>
+    <string name="preset_adguard_unfiltered_desc">Resolver terenkripsi AdGuard tanpa pemblokiran apa pun.</string>
+    <string name="preset_google_name">Google Public DNS</string>
+    <string name="preset_google_desc">Resolver Google yang cepat dan banyak dipakai, tanpa filter. Google menyimpan log sementara.</string>
     <string name="preset_nextdns_name">NextDNS Anycast</string>
     <string name="preset_nextdns_category">Resolver Bersih (Tanpa Filter)</string>
     <string name="preset_nextdns_desc">Anycast resolver DoT berlatensi rendah tanpa filter bawaan. Untuk anti-iklan NextDNS, gunakan Hostname Kustom dengan ID profil Anda.</string>

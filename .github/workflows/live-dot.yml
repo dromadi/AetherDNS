@@ -1,6 +1,6 @@
 name: Live DoT
 
-# Uji DotProbe terhadap resolver DoT sungguhan (AdGuard, Control D, Mullvad, Quad9, Cloudflare, NextDNS) melalui port 853:
+# Uji DotProbe terhadap resolver DoT sungguhan (AdGuard, Control D, Mullvad, Quad9, Cloudflare, Google, NextDNS) melalui port 853:
 # handshake, verifikasi hostname, query DNS, dan pratinjau filter. Hasil per resolver ada di ringkasan job.
 #
 # - Pull request / push: tidak memblokir (resolver publik bisa sedang gangguan).
