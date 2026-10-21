@@ -201,7 +201,7 @@
     <string name="native_step_granting">Granting WRITE_SECURE_SETTINGS…</string>
     <string name="native_error_unsupported">Built-in activation needs Android 11 or later.</string>
     <string name="native_error_invalid_code">The pairing code must be 6 digits.</string>
-    <string name="native_error_pairing_not_found">Pairing service not found. In Wireless debugging tap \"Pair device with pairing code\", keep the dialog open, then enter the code.</string>
+    <string name="native_error_pairing_not_found">Pairing service not found. The \"Pair device with pairing code\" dialog must stay open while the code is entered — enter it in the AetherDNS notification (pull down the shade) instead of switching to the app.</string>
     <string name="native_error_pairing_unreachable">Can\'t reach the pairing service. Keep the pairing dialog open; on Samsung turn off Auto Blocker temporarily and pause VPN/firewall apps.</string>
     <string name="native_error_pairing_rejected">The code was rejected. A new code appears each time the dialog opens — use the latest one.</string>
     <string name="native_error_connect_not_found">Paired, but Wireless debugging was not found. Make sure it is still on and Wi-Fi is connected, then try again.</string>
@@ -235,4 +235,5 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_delete">Delete</string>
     <string name="perm_other_methods">Other ways: Shizuku or a PC</string>
+    <string name="native_manual_split_only">This box only works in split screen: Android closes the pairing dialog as soon as you leave Settings. Use the notification, or put AetherDNS and Settings side by side.</string>
 </resources>

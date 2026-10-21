@@ -200,7 +200,7 @@
     <string name="native_step_granting">Memberikan izin WRITE_SECURE_SETTINGS…</string>
     <string name="native_error_unsupported">Aktivasi bawaan butuh Android 11 atau lebih baru.</string>
     <string name="native_error_invalid_code">Kode penyambungan harus 6 digit.</string>
-    <string name="native_error_pairing_not_found">Layanan penyambungan tidak ditemukan. Di Wireless debugging ketuk \"Sambungkan perangkat dengan kode penyambungan\", biarkan dialognya terbuka, lalu masukkan kodenya.</string>
+    <string name="native_error_pairing_not_found">Layanan penyambungan tidak ditemukan. Dialog \"Sambungkan perangkat dengan kode penyambungan\" harus tetap terbuka saat kode dimasukkan — ketik kode di notifikasi AetherDNS (tarik bilah notifikasi), jangan berpindah ke aplikasi.</string>
     <string name="native_error_pairing_unreachable">Layanan penyambungan tidak bisa dihubungi. Biarkan dialog kode tetap terbuka; di Samsung matikan sementara Pemblokir Otomatis (Auto Blocker) dan jeda aplikasi VPN/firewall.</string>
     <string name="native_error_pairing_rejected">Kode ditolak. Kode baru muncul setiap dialog dibuka — gunakan kode terbaru.</string>
     <string name="native_error_connect_not_found">Penyambungan berhasil, tetapi Wireless debugging tidak ditemukan. Pastikan masih aktif dan Wi-Fi tersambung, lalu coba lagi.</string>
@@ -234,4 +234,5 @@
     <string name="common_cancel">Batal</string>
     <string name="common_delete">Hapus</string>
     <string name="perm_other_methods">Cara lain: Shizuku atau PC</string>
+    <string name="native_manual_split_only">Kolom ini hanya berfungsi di layar terpisah: Android menutup dialog kode begitu Anda meninggalkan Settings. Gunakan notifikasi, atau buka AetherDNS dan Settings berdampingan.</string>
 </resources>

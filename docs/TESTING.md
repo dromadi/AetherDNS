@@ -14,6 +14,7 @@ Aktivasi bawaan (Android 11+, tanpa Shizuku) — uji dengan izin belum ada (`adb
 - [ ] Kode salah → "Kode ditolak"; notifikasi menawarkan **Coba lagi**.
 - [ ] Balas notifikasi saat dialog kode sudah ditutup → "Layanan penyambungan tidak ditemukan".
 - [ ] Layar terpisah (aplikasi + Settings): ketik kode di kolom aplikasi → berhasil.
+- [ ] Layar penuh: kolom kode di aplikasi nonaktif dengan petunjuk memakai notifikasi / layar terpisah.
 - [ ] "AetherDNS" muncul di daftar perangkat tersambung Wireless debugging dan bisa dilupakan; aktivasi berikutnya tetap bisa.
 - [ ] Samsung (One UI): uji dengan Pemblokir Otomatis (Auto Blocker) aktif dan nonaktif; catat hasilnya.
 - [ ] Android 9/10: bagian aktivasi bawaan tidak tampil; Shizuku/ADB tetap ada.

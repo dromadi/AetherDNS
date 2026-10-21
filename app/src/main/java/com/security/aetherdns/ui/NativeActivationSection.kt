@@ -1,6 +1,7 @@
 package com.security.aetherdns.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,7 @@ import com.security.aetherdns.adb.PairingCode
 import com.security.aetherdns.ui.theme.ErrorRed
 import com.security.aetherdns.ui.theme.PrimaryBlue
 import com.security.aetherdns.ui.theme.SuccessGreen
+import com.security.aetherdns.ui.theme.WarningOrange
 import com.security.aetherdns.util.SystemShortcuts
 
 /** State + aksi aktivasi bawaan untuk [PermissionAssistantCard]; `null` bila perangkat < Android 11. */
@@ -130,7 +133,19 @@ private fun ActivationStatus(state: ActivationState) {
 @Composable
 private fun ManualCodeEntry(enabled: Boolean, onSubmit: (String) -> Unit) {
     var code by rememberSaveable { mutableStateOf("") }
+    // Membaca konfigurasi agar status layar terpisah dihitung ulang saat ukuran jendela berubah
+    LocalConfiguration.current
+    val inMultiWindow = (LocalContext.current as? Activity)?.isInMultiWindowMode == true
     Text(stringResource(R.string.native_manual_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (!inMultiWindow) {
+        // Layar penuh: dialog kode di Settings sudah tertutup saat pengguna kembali ke sini
+        Text(
+            stringResource(R.string.native_manual_split_only),
+            fontSize = 12.sp,
+            color = WarningOrange,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
     Spacer(modifier = Modifier.height(6.dp))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
@@ -138,14 +153,14 @@ private fun ManualCodeEntry(enabled: Boolean, onSubmit: (String) -> Unit) {
             onValueChange = { input -> code = input.filter { it.isDigit() }.take(PairingCode.LENGTH) },
             placeholder = { Text(stringResource(R.string.native_code_hint), fontSize = 12.sp) },
             singleLine = true,
-            enabled = enabled,
+            enabled = enabled && inMultiWindow,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
         OutlinedButton(
             onClick = { onSubmit(code) },
-            enabled = enabled && PairingCode.normalize(code) != null,
+            enabled = enabled && inMultiWindow && PairingCode.normalize(code) != null,
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(stringResource(R.string.native_connect), fontSize = 12.sp)
