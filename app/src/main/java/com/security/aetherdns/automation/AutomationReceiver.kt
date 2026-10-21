@@ -7,6 +7,7 @@ import android.content.Intent
 import android.util.Log
 import com.security.aetherdns.AetherDnsApplication
 import com.security.aetherdns.data.ApplyResult
+import com.security.aetherdns.data.ChangeSource
 import com.security.aetherdns.data.PauseResult
 import com.security.aetherdns.model.DefaultProfiles
 import com.security.aetherdns.ui.displayName
@@ -53,10 +54,10 @@ class AutomationReceiver : BroadcastReceiver() {
                 // membatalkan dengan aman dan memulihkan konfigurasi semula (diuji di DnsApplierTest).
                 val ok = withTimeoutOrNull(TIMEOUT_MS) {
                     when (command) {
-                        AutomationCommand.Enable -> repository.enableQuick() is ApplyResult.Success
-                        AutomationCommand.Disable -> repository.disable()
-                        is AutomationCommand.Pause -> repository.pause(command.minutes * 60_000L) is PauseResult.Paused
-                        is AutomationCommand.Apply -> repository.apply(command.hostname, probe = true) is ApplyResult.Success
+                        AutomationCommand.Enable -> repository.enableQuick(ChangeSource.AUTOMATION) is ApplyResult.Success
+                        AutomationCommand.Disable -> repository.disable(ChangeSource.AUTOMATION)
+                        is AutomationCommand.Pause -> repository.pause(command.minutes * 60_000L, ChangeSource.AUTOMATION) is PauseResult.Paused
+                        is AutomationCommand.Apply -> repository.apply(command.hostname, probe = true, source = ChangeSource.AUTOMATION) is ApplyResult.Success
                     }
                 } ?: false
                 Log.i(TAG, "Perintah otomasi $command: ${if (ok) "berhasil" else "gagal"}")

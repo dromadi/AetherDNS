@@ -3,6 +3,14 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.18.0] - 2026-10-21
+
+### Ditambahkan
+- **Saran resolver lebih cepat** di Insight: bila resolver aktif lambat di jaringan ini dan hasil "Uji Kecepatan" menunjukkan resolver sekelompok (jenis pemblokiran sama) minimal 2× lebih cepat, muncul tombol "Pindah ke …".
+- Grafik kecepatan bisa dilihat untuk **7 atau 30 hari**.
+- **Riwayat proteksi**: kapan proteksi diaktifkan, dimatikan, dijeda, dilanjutkan, atau resolver diganti, beserta asalnya (aplikasi, Quick Settings, widget/pintasan, otomasi, jeda selesai, atau di luar AetherDNS). Perubahan dari Settings HP dicatat saat aplikasi dibuka berikutnya.
+- **Statistik NextDNS 7 hari** di Insight (untuk profil NextDNS dengan API key): grafik kueri & blokir harian, alasan blokir teratas, dan perangkat teratas.
+
 ## [1.17.0] - 2026-10-21
 
 ### Ditambahkan

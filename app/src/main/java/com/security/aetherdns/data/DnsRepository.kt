@@ -19,13 +19,15 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicInteger
 
 class DnsRepository(
     private val context: Context,
     settings: SecureSettings = AndroidSecureSettings(context),
     prober: DotProber = DotProbe,
     pauseStore: PauseStore = SharedPrefsPauseStore(context),
-    resumeAlarm: ResumeAlarm = AlarmManagerResumeAlarm(context)
+    resumeAlarm: ResumeAlarm = AlarmManagerResumeAlarm(context),
+    private val historyStore: HistoryStore = FileHistoryStore(context.noBackupFilesDir)
 ) {
     private val contentResolver = context.contentResolver
     private val applier = DnsApplier(settings, prober)
@@ -39,10 +41,22 @@ class DnsRepository(
     /** Berbunyi setiap jaringan default berganti (mis. pindah Wi-Fi / ke data seluler), selama proses hidup. */
     val networkChanges: SharedFlow<Unit> = _networkChanges.asSharedFlow()
 
+    /** Riwayat proteksi lokal (halaman Insight). */
+    private val _history = MutableStateFlow(historyStore.events())
+    val history: StateFlow<List<HistoryEvent>> = _history.asStateFlow()
+
+    /** Salinan memori dari status terakhir yang dicatat, agar `refresh()` tidak membaca berkas. */
+    private var lastSnapshot: ProtectionSnapshot? = historyStore.lastSnapshot()
+
+    /** Jumlah operasi tulis yang sedang berjalan; status antara selama operasi tidak dicatat ke riwayat. */
+    private val busy = AtomicInteger(0)
+
     private var contentObserver: ContentObserver? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     init {
+        // Perubahan saat proses mati (mis. dari Settings HP) terdeteksi di sini
+        recordHistory(ChangeSource.SYSTEM)
         startObserving()
         startNetworkMonitoring()
     }
@@ -67,6 +81,37 @@ class DnsRepository(
 
     fun refresh() {
         _state.value = loadCurrentState()
+        if (busy.get() == 0) recordHistory(ChangeSource.SYSTEM)
+    }
+
+    @Synchronized
+    private fun recordHistory(source: ChangeSource) {
+        val next = ProtectionSnapshot.of(_state.value)
+        val previous = lastSnapshot
+        if (previous == next) return
+        lastSnapshot = next
+        HistoryTracker.transition(previous, next, source, System.currentTimeMillis())?.let { event ->
+            historyStore.append(event)
+            _history.value = historyStore.events()
+        }
+        historyStore.saveSnapshot(next)
+    }
+
+    /** Menjalankan operasi tulis lalu mencatat hasil akhirnya dengan [source] (bukan status antaranya). */
+    private suspend fun <T> tracked(source: ChangeSource, block: suspend () -> T): T = withContext(Dispatchers.IO) {
+        busy.incrementAndGet()
+        try {
+            block()
+        } finally {
+            busy.decrementAndGet()
+            _state.value = loadCurrentState()
+            recordHistory(source)
+        }
+    }
+
+    fun clearHistory() {
+        historyStore.clear()
+        _history.value = emptyList()
     }
 
     private fun startObserving() {
@@ -114,19 +159,18 @@ class DnsRepository(
         } catch (_: Exception) {}
     }
 
-    suspend fun apply(hostname: String, probe: Boolean = true): ApplyResult = withContext(Dispatchers.IO) {
+    suspend fun apply(hostname: String, probe: Boolean = true, source: ChangeSource = ChangeSource.APP): ApplyResult =
+        tracked(source) { applyInternal(hostname, probe) }
+
+    private suspend fun applyInternal(hostname: String, probe: Boolean): ApplyResult =
         applier.apply(hostname, probe).also { result ->
             // Pilihan manual pengguna menggantikan jeda yang sedang berjalan
             if (result is ApplyResult.Success) pauseController.cancel()
-            refresh()
         }
-    }
 
-    fun disable(): Boolean {
+    suspend fun disable(source: ChangeSource = ChangeSource.APP): Boolean = tracked(source) {
         pauseController.cancel()
-        val result = DnsManager.disablePrivateDns(context)
-        refresh()
-        return result.isSuccess
+        DnsManager.disablePrivateDns(context).isSuccess
     }
 
     /**
@@ -134,29 +178,22 @@ class DnsRepository(
      * specifier tersimpan, dengan fallback ke resolver default bila specifier tidak valid.
      * Tanpa probe agar respons tile instan; specifier tersimpan sudah lolos probe saat pertama diterapkan.
      */
-    suspend fun enableQuick(): ApplyResult = withContext(Dispatchers.IO) {
-        if (pauseController.pausedUntil() != null) {
-            return@withContext pauseController.resumeNow().also { refresh() }
-        }
+    suspend fun enableQuick(source: ChangeSource): ApplyResult = tracked(source) {
+        if (pauseController.pausedUntil() != null) return@tracked pauseController.resumeNow()
         val stored = DnsManager.getPrivateDnsSpecifier(context).trim()
-        var result = apply(stored.ifEmpty { DnsManager.DEFAULT_FALLBACK_HOSTNAME }, probe = false)
+        var result = applyInternal(stored.ifEmpty { DnsManager.DEFAULT_FALLBACK_HOSTNAME }, probe = false)
         if (result is ApplyResult.Failure && stored.isNotEmpty()) {
-            result = apply(DnsManager.DEFAULT_FALLBACK_HOSTNAME, probe = false)
+            result = applyInternal(DnsManager.DEFAULT_FALLBACK_HOSTNAME, probe = false)
         }
         result
     }
 
-    suspend fun pause(durationMs: Long): PauseResult = withContext(Dispatchers.IO) {
-        pauseController.pause(durationMs).also { refresh() }
-    }
+    suspend fun pause(durationMs: Long, source: ChangeSource = ChangeSource.APP): PauseResult =
+        tracked(source) { pauseController.pause(durationMs) }
 
-    suspend fun resumeNow(): ApplyResult = withContext(Dispatchers.IO) {
-        pauseController.resumeNow().also { refresh() }
-    }
+    suspend fun resumeNow(source: ChangeSource = ChangeSource.APP): ApplyResult =
+        tracked(source) { pauseController.resumeNow() }
 
     /** Dipanggil oleh alarm jeda dan setelah boot. */
-    suspend fun resumeIfDue() = withContext(Dispatchers.IO) {
-        pauseController.onAlarmOrBoot()
-        refresh()
-    }
+    suspend fun resumeIfDue() = tracked(ChangeSource.SCHEDULE) { pauseController.onAlarmOrBoot() }
 }

@@ -14,12 +14,16 @@ sealed class InsightSample {
     abstract val timestamp: Long
     abstract val network: NetworkKey
 
-    /** Latensi DoT ke resolver aktif; [totalMs] null bila probe gagal. */
+    /**
+     * Latensi DoT; [totalMs] null bila probe gagal. [benchmark] = diukur saat "Uji Kecepatan" (resolver belum
+     * tentu dipakai), hanya dipakai untuk mencari alternatif yang lebih cepat.
+     */
     data class Latency(
         override val timestamp: Long,
         override val network: NetworkKey,
         val resolver: String,
-        val totalMs: Long?
+        val totalMs: Long?,
+        val benchmark: Boolean = false
     ) : InsightSample()
 
     data class NetworkCheck(
@@ -35,14 +39,15 @@ sealed class InsightSample {
 
 /**
  * Format baris TSV sederhana, tahan terhadap baris rusak (dilewati). Diuji di `InsightsTest`.
- * L<TAB>waktu<TAB>transport<TAB>operator<TAB>resolver<TAB>ms|-
+ * L<TAB>waktu<TAB>transport<TAB>operator<TAB>resolver<TAB>ms|-[<TAB>b]
  * N<TAB>waktu<TAB>transport<TAB>operator<TAB>interception<TAB>hijack<TAB>dot
  */
 object InsightCodec {
     fun encode(sample: InsightSample): String {
         val net = "${clean(sample.network.transport)}\t${clean(sample.network.carrier)}"
         return when (sample) {
-            is InsightSample.Latency -> "L\t${sample.timestamp}\t$net\t${clean(sample.resolver)}\t${sample.totalMs ?: "-"}"
+            is InsightSample.Latency -> "L\t${sample.timestamp}\t$net\t${clean(sample.resolver)}\t${sample.totalMs ?: "-"}" +
+                if (sample.benchmark) "\tb" else ""
             is InsightSample.NetworkCheck -> "N\t${sample.timestamp}\t$net\t${sample.interception}\t${sample.hijack}\t${sample.dot}"
         }
     }
@@ -51,7 +56,7 @@ object InsightCodec {
         val p = line.split('\t')
         val network = NetworkKey(p[2], p[3])
         when (p[0]) {
-            "L" -> InsightSample.Latency(p[1].toLong(), network, p[4], p[5].toLongOrNull())
+            "L" -> InsightSample.Latency(p[1].toLong(), network, p[4], p[5].toLongOrNull(), p.getOrNull(6) == "b")
             "N" -> InsightSample.NetworkCheck(
                 p[1].toLong(), network,
                 CheckResult.valueOf(p[4]), CheckResult.valueOf(p[5]), CheckResult.valueOf(p[6])
@@ -115,6 +120,11 @@ data class LatencySummary(
         }
 }
 
+/** Resolver sekelompok yang jauh lebih cepat di jaringan yang sama. */
+data class FasterAlternative(val resolver: String, val medianMs: Long, val currentMs: Long) {
+    val factor: Int get() = (currentMs / medianMs.coerceAtLeast(1)).toInt()
+}
+
 data class NetworkSummary(val network: NetworkKey, val checks: Int, val tampered: Int, val dotBlocked: Int)
 
 /** Agregasi murni untuk halaman Insight (diuji di `InsightsTest`). */
@@ -123,9 +133,43 @@ object InsightAnalyzer {
     const val SLOW_MS = 400L
     /** Minimal sampel sebelum kecepatan dinilai, agar satu pengukuran buruk tidak memicu saran. */
     const val MIN_SAMPLES = 3
-    private const val DAY_MS = 24L * 60 * 60 * 1000
+    /** Alternatif baru disarankan bila minimal sekian kali lebih cepat. */
+    const val MIN_SPEEDUP = 2
+    const val DAY_MS = 24L * 60 * 60 * 1000
 
+    /**
+     * Ringkasan per resolver × jaringan. Hanya resolver yang pernah aktif yang ditampilkan; sampel uji kecepatan
+     * ikut menyumbang median-nya.
+     */
     fun latency(samples: List<InsightSample>, now: Long, windowMs: Long = 7 * DAY_MS): List<LatencySummary> =
+        allLatency(samples, now, windowMs).filter { it.first }.map { it.second }
+
+    /**
+     * Saran resolver lain dari [candidates] (mis. satu kelompok pemblokiran) yang ≥ [MIN_SPEEDUP]× lebih cepat
+     * daripada [current] yang lambat, di jaringan yang sama.
+     */
+    fun fasterAlternative(
+        samples: List<InsightSample>,
+        current: LatencySummary,
+        candidates: Set<String>,
+        now: Long
+    ): FasterAlternative? {
+        if (current.level != SpeedLevel.SLOW) return null
+        val wanted = candidates.map { it.lowercase() }.toSet()
+        return allLatency(samples, now, 7 * DAY_MS)
+            .map { it.second }
+            .filter {
+                it.network == current.network &&
+                    it.resolver.lowercase() in wanted &&
+                    !it.resolver.equals(current.resolver, ignoreCase = true) &&
+                    it.medianMs * MIN_SPEEDUP <= current.medianMs
+            }
+            .minByOrNull { it.medianMs }
+            ?.let { FasterAlternative(it.resolver, it.medianMs, current.medianMs) }
+    }
+
+    /** (pernah aktif?, ringkasan) */
+    private fun allLatency(samples: List<InsightSample>, now: Long, windowMs: Long): List<Pair<Boolean, LatencySummary>> =
         samples.filterIsInstance<InsightSample.Latency>()
             .filter { now - it.timestamp <= windowMs }
             .groupBy { it.resolver to it.network.normalized }
@@ -137,9 +181,10 @@ object InsightAnalyzer {
                     .toSortedMap()
                     .values
                     .map { day -> median(day.mapNotNull { it.totalMs }) }
-                LatencySummary(key.first, key.second, median(ok), ok.size, group.size - ok.size, daily)
+                val everActive = group.any { !it.benchmark }
+                everActive to LatencySummary(key.first, key.second, median(ok), ok.size, group.size - ok.size, daily)
             }
-            .sortedByDescending { it.samples }
+            .sortedByDescending { it.second.samples }
 
     fun networks(samples: List<InsightSample>, now: Long, windowMs: Long = 30 * DAY_MS): List<NetworkSummary> =
         samples.filterIsInstance<InsightSample.NetworkCheck>()

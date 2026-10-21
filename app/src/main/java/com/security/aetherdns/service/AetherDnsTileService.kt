@@ -9,6 +9,7 @@ import com.security.aetherdns.AetherDnsApplication
 import com.security.aetherdns.MainActivity
 import com.security.aetherdns.R
 import com.security.aetherdns.data.ApplyResult
+import com.security.aetherdns.data.ChangeSource
 import com.security.aetherdns.data.DnsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,10 +61,10 @@ class AetherDnsTileService : TileService() {
             // Penulisan setting diselesaikan walau tile dilepas sistem di tengah jalan
             val failed = withContext(NonCancellable) {
                 if (repository.loadCurrentState().isProtectionActive) {
-                    !repository.disable()
+                    !repository.disable(ChangeSource.TILE)
                 } else {
                     // Melanjutkan jeda bila ada; jika tidak, specifier tersimpan dengan fallback ke resolver default
-                    repository.enableQuick() is ApplyResult.Failure
+                    repository.enableQuick(ChangeSource.TILE) is ApplyResult.Failure
                 }
             }
             if (failed) openMainActivity()

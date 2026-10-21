@@ -350,7 +350,7 @@
     <string name="insight_subtitle">DNS speed &amp; network report</string>
     <string name="insight_privacy">Collected automatically when you open the app. Stored only on this phone, never sent anywhere.</string>
     <string name="insight_empty">No data yet. Open the app now and then on the networks you use — insights fill in by themselves.</string>
-    <string name="insight_speed_title">DNS speed (last 7 days)</string>
+    <string name="insight_speed_title">DNS speed</string>
     <string name="insight_speed_fast">Fast</string>
     <string name="insight_speed_ok">Normal</string>
     <string name="insight_speed_slow">Slow</string>
@@ -368,4 +368,33 @@
     <string name="insight_net_ethernet">Ethernet</string>
     <string name="insight_net_other">Other network</string>
     <string name="insight_clear">Clear history</string>
+    <string name="insight_days">%1$d days</string>
+    <string name="insight_alternative">%1$s is %2$d× faster on this network (%3$d ms vs %4$d ms) and blocks the same kind of content.</string>
+    <string name="insight_switch">Switch to %1$s</string>
+    <string name="insight_history_title">Protection history (last 7 days)</string>
+    <string name="insight_history_empty">No changes recorded yet.</string>
+    <string name="insight_history_note">Changes made in phone Settings are recorded the next time AetherDNS opens, so their time is approximate.</string>
+    <string name="insight_count_enabled">Turned on %1$d×</string>
+    <string name="insight_count_disabled">Turned off %1$d×</string>
+    <string name="insight_count_paused">Paused %1$d×</string>
+    <string name="insight_count_resumed">Resumed %1$d×</string>
+    <string name="insight_count_changed">Resolver changed %1$d×</string>
+    <string name="insight_action_enabled">Turned on</string>
+    <string name="insight_action_disabled">Turned off</string>
+    <string name="insight_action_paused">Paused</string>
+    <string name="insight_action_resumed">Resumed</string>
+    <string name="insight_action_changed">Resolver changed</string>
+    <string name="insight_source_app">in the app</string>
+    <string name="insight_source_tile">via Quick Settings</string>
+    <string name="insight_source_shortcut">via widget or shortcut</string>
+    <string name="insight_source_automation">via automation</string>
+    <string name="insight_source_schedule">pause ended</string>
+    <string name="insight_source_system">outside AetherDNS</string>
+    <string name="insight_nextdns_title">NextDNS (last 7 days)</string>
+    <string name="insight_nextdns_summary">%1$s blocked of %2$s queries (%3$d%%)</string>
+    <string name="insight_nextdns_reasons">Why it was blocked</string>
+    <string name="insight_nextdns_devices">Devices</string>
+    <string name="insight_nextdns_unknown_device">Unidentified devices</string>
+    <string name="insight_nextdns_queries">%1$s queries</string>
+    <string name="insight_nextdns_legend">Bars: queries per day, colored part = blocked</string>
 </resources>

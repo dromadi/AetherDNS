@@ -46,6 +46,9 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - `MainViewModel.sampleLatency()` (saat cek otomatis / periksa ulang) mencatat latensi probe resolver aktif; `runNetworkCheck` mencatat hasil cek jaringan. Sampel (`InsightSample`) diberi kunci `NetworkKey` (transport + nama operator seluler saja).
    - `FileInsightStore` menyimpan TSV di `noBackupFilesDir/insights.tsv` (≤ 30 hari, ≤ 1000 sampel). Agregasi murni `InsightAnalyzer` (median 7 hari per resolver × jaringan, rapor jaringan 30 hari; FAST < 150 ms, SLOW ≥ 400 ms, minimal 3 sampel), diuji `InsightsTest`.
    - UI: halaman Insight di tab Lainnya (`InsightScreen.kt`, `MorePage.INSIGHTS`; state `MorePage` diangkat ke `AetherDnsApp`), tombol "Lihat insight" di `HealthCard`, dan baris peringatan lambat di `HealthModel` — bukan kartu baru di Beranda.
+   - `runBenchmark` mencatat sampel `benchmark = true` (tidak ditampilkan sebagai baris sendiri) untuk `InsightAnalyzer.fasterAlternative` — hanya resolver dari `PresetGroup` yang sama dengan preset aktif, minimal 2× lebih cepat, di jaringan yang sama.
+   - **Riwayat proteksi** (`data/ProtectionHistory.kt`): `DnsRepository` membandingkan `ProtectionSnapshot` dengan status terakhir yang disimpan (`noBackupFilesDir/history_state`) dan mencatat `HistoryEvent` (`HistoryTracker.transition`, diuji `ProtectionHistoryTest`). Operasi tulis memakai `tracked(source)`: status antara selama operasi tidak dicatat; sumber (`ChangeSource`) dikirim pemanggil (tile `TILE`, `ShortcutActivity` `SHORTCUT`, `AutomationReceiver` `AUTOMATION`, alarm/boot `SCHEDULE`); perubahan yang diamati `ContentObserver` atau saat proses mulai = `SYSTEM`.
+   - **NextDNS 7 hari**: `NextDnsClient.week()` (`status;series` per hari kalender zona waktu HP, `reasons`, `devices`), dimuat saat halaman Insight dibuka.
    - **Privasi**: tidak pernah mencatat SSID Wi-Fi, IP, atau domain yang dikunjungi; data tidak pernah dikirim ke mana pun.
 4d. **Laporan Diagnostik (`diagnostics/`)**:
    - `MainViewModel.generateReport()` menjalankan probe resolver aktif, cek jaringan, dan audit (dengan `reconcileWith`) lalu menyusun `DiagnosticSnapshot` → `DiagnosticReportFormatter.format()` (teks polos berbahasa Inggris teknis, diuji `DiagnosticReportTest`). UI `DiagnosticsCard` di tab Lainnya: salin / bagikan.
@@ -74,7 +77,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Tombol memakai `PendingIntent` ke `ShortcutActivity` (tidak diekspor) — jangan menambah receiver aksi yang diekspor, karena aplikasi lain bisa mematikan proteksi lewat broadcast.
    - Diperbarui oleh `AetherDnsApplication` yang meng-collect `DnsRepository.state` selama proses hidup; `updatePeriodMillis` 30 menit hanya cadangan untuk perubahan dari Settings saat proses mati.
 9b. **Ikon**: adaptive icon `mipmap-anydpi/ic_launcher(_round).xml` = `drawable/ic_launcher_background` (gradien `BrandGradientColors`) + `ic_launcher_foreground` (perisai + gelombang, di zona aman 66dp) + `ic_launcher_monochrome` (themed icon Android 13+). `ic_tile_shield` (tile, notifikasi, hero status) memakai lambang yang sama. Ubah ketiganya bersamaan agar konsisten.
-10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state`, `automation` (token rahasia), dan `nextdns_stats` (API key) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
+10. **Backup**: profil tersimpan ikut Auto Backup; berkas di `noBackupFilesDir` (insight, riwayat, crash) tidak pernah ikut; `pause_state`, `automation` (token rahasia), dan `nextdns_stats` (API key) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
 11. **Otomasi (Tasker / MacroDroid)**:
    - `AutomationReceiver` (exported, tetapi `android:enabled="false"` di manifest) hanya diaktifkan lewat sakelar di aplikasi (`AutomationSettings` → `setComponentEnabledSetting`). Setiap perintah wajib membawa extra `token` yang dibandingkan waktu-konstan dengan token acak 128-bit.
    - Action: `com.security.aetherdns.action.ENABLE|DISABLE|PAUSE|APPLY`; extra `minutes`, `profile`, `hostname`. Parsing murni di `AutomationProtocol` (diuji di `AutomationProtocolTest`). `APPLY` selalu dengan probe dan dibatasi `withTimeoutOrNull(9 s)`; pembatalan aman karena `DnsApplier` memulihkan konfigurasi.
@@ -107,6 +110,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AndroidPause.kt`: Implementasi `SharedPrefsPauseStore` dan `AlarmManagerResumeAlarm`.
   - `NextDnsStats.kt`: klien analitik NextDNS, parser, dan `NextDnsStatsSettings` (API key).
   - `Insights.kt`: riwayat lokal latensi & cek jaringan (`InsightStore`, `InsightAnalyzer`). Diuji di `InsightsTest`.
+  - `ProtectionHistory.kt`: riwayat aktif/jeda/matikan/ganti resolver (`HistoryTracker`, `FileHistoryStore`). Diuji di `ProtectionHistoryTest`.
   - `ProfileRepository.kt`: Profil kustom tersimpan (`ProfileStore`, `ProfileCodec`). Diuji di `ProfileRepositoryTest`.
 - `model/`:
   - `DnsProfile.kt`: Data class profil DoT resolver, `PresetGroup` (ADS / FAMILY / SECURITY / PLAIN), dan koleksi `DefaultProfiles` (`list`, `grouped`; nama/kategori/deskripsi via `@StringRes`). Preset baru wajib punya uji di `LiveDotProbeTest` (ad-blocker: blokir ≥ 2 domain uji; non-filter: lolos ≥ 3).
@@ -140,7 +144,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - **Prinsip UX Beranda**: hanya kartu status (+ asisten izin bila perlu), kartu `HealthCard`, dan statistik NextDNS bila relevan. Fitur baru **tidak** menambah kartu di Beranda; hasil teknis masuk ke "Detail teknis" kartu Kesehatan atau ke menu Lainnya. Bahasa di Beranda tanpa istilah teknis (DoT, NXDOMAIN, port).
   - `HealthModel.kt` / `HealthCard.kt`: ringkasan berbahasa awam dari `DnsState` + `NetworkReport` + `AuditSummary` (logika murni, diuji `HealthModelTest`); detail teknis memakai `NetworkCheckRows` dan `AuditDetailRows`.
   - `NetworkCheckCard.kt`: `NetworkCheckRows` (detail teknis) + `DotBlockedDialog`. `AuditCard.kt`: `AuditDetailRows`.
-  - `InsightScreen.kt`: `InsightContent` (kecepatan resolver per jaringan + grafik harian, rapor jaringan, hapus riwayat).
+  - `InsightScreen.kt`: `InsightContent` (kecepatan resolver per jaringan 7/30 hari + saran alternatif, rapor jaringan, riwayat proteksi, NextDNS 7 hari, hapus riwayat).
   - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
   - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
@@ -156,7 +160,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

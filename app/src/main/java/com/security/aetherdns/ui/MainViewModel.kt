@@ -22,6 +22,9 @@ import com.security.aetherdns.data.NextDnsClient
 import com.security.aetherdns.data.NextDnsStatsSettings
 import com.security.aetherdns.data.NextDnsSummary
 import com.security.aetherdns.data.StatsError
+import com.security.aetherdns.data.HistoryEvent
+import com.security.aetherdns.data.NextDnsWeek
+import com.security.aetherdns.data.WeekResult
 import com.security.aetherdns.data.StatsResult
 import com.security.aetherdns.data.PauseResult
 import com.security.aetherdns.data.ProfileRepository
@@ -54,6 +57,7 @@ import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import java.text.DateFormat
 import java.util.Date
+import java.util.TimeZone
 
 sealed class UiEvent {
     data class ShowSnackbar(val message: UiText) : UiEvent()
@@ -75,6 +79,13 @@ sealed class StatsUiState {
     data object Loading : StatsUiState()
     data class Loaded(val summary: NextDnsSummary) : StatsUiState()
     data class Error(val error: StatsError) : StatsUiState()
+}
+
+sealed class WeekUiState {
+    data object Idle : WeekUiState()
+    data object Loading : WeekUiState()
+    data class Loaded(val week: NextDnsWeek) : WeekUiState()
+    data class Error(val error: StatsError) : WeekUiState()
 }
 
 /** Hasil "Uji Kecepatan & Filter" per ID profil. */
@@ -168,6 +179,23 @@ class MainViewModel(
         }
     }
 
+    private val _statsWeek = MutableStateFlow<WeekUiState>(WeekUiState.Idle)
+    val statsWeek: StateFlow<WeekUiState> = _statsWeek.asStateFlow()
+
+    /** Statistik NextDNS 7 hari untuk halaman Insight; dimuat saat halaman dibuka. */
+    fun refreshWeekStats() {
+        val profile = activeNextDnsProfile() ?: return
+        val key = statsSettings.apiKey.value ?: return
+        if (_statsWeek.value is WeekUiState.Loading) return
+        viewModelScope.launch {
+            _statsWeek.value = WeekUiState.Loading
+            _statsWeek.value = when (val result = statsClient.week(profile, key, TimeZone.getDefault().id)) {
+                is WeekResult.Success -> WeekUiState.Loaded(result.week)
+                is WeekResult.Failure -> WeekUiState.Error(result.error)
+            }
+        }
+    }
+
     fun saveStatsApiKey(key: String) {
         statsSettings.setApiKey(key)
         refreshStats()
@@ -176,6 +204,7 @@ class MainViewModel(
     fun clearStatsApiKey() {
         statsSettings.setApiKey(null)
         _stats.value = StatsUiState.Idle
+        _statsWeek.value = WeekUiState.Idle
     }
 
     /** Riwayat lokal untuk halaman Insight (kecepatan resolver & rapor jaringan); tidak pernah dikirim ke mana pun. */
@@ -212,9 +241,15 @@ class MainViewModel(
         }
     }
 
+    /** Riwayat aktif / jeda / matikan / ganti resolver (dari aplikasi, tile, pintasan, otomasi, atau Settings HP). */
+    val history: StateFlow<List<HistoryEvent>> = repository.history
+
     fun clearInsights() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { insightStore.clear() }
+            withContext(Dispatchers.IO) {
+                insightStore.clear()
+                repository.clearHistory()
+            }
             _insights.value = emptyList()
         }
     }
@@ -472,10 +507,18 @@ class MainViewModel(
         if (_benchmark.value.isRunning) return
         viewModelScope.launch {
             _benchmark.value = BenchmarkState(isRunning = true)
+            val network = networkKey()
+            val now = System.currentTimeMillis()
             for (profile in DefaultProfiles.list + profileRepository.profiles.value) {
                 val result = inspector.inspect(profile.hostname)
                 _benchmark.update { it.copy(results = it.results + (profile.id to result)) }
+                // Disimpan untuk saran "resolver lebih cepat" di Insight
+                val ms = (result as? InspectionResult.Success)?.latency?.totalMs
+                withContext(Dispatchers.IO) {
+                    insightStore.append(InsightSample.Latency(now, network, profile.hostname, ms, benchmark = true))
+                }
             }
+            _insights.value = withContext(Dispatchers.IO) { insightStore.all() }
             _benchmark.update { it.copy(isRunning = false) }
         }
     }

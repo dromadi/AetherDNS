@@ -321,14 +321,22 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 onGenerateReport = viewModel::generateReport,
                 onClearCrash = viewModel::clearCrashLog,
                 insightContent = {
-                    val now = remember(insights) { System.currentTimeMillis() }
+                    val history by viewModel.history.collectAsState()
+                    val statsWeek by viewModel.statsWeek.collectAsState()
+                    val showNextDns = activeNextDnsProfile != null && statsApiKey != null
+                    LaunchedEffect(showNextDns) { if (showNextDns) viewModel.refreshWeekStats() }
                     InsightContent(
-                        latency = remember(insights) { InsightAnalyzer.latency(insights, now) },
-                        networks = remember(insights) { InsightAnalyzer.networks(insights, now) },
+                        insights = insights,
+                        history = history,
+                        activeResolver = dnsState.specifier.takeIf { dnsState.isProtectionActive },
+                        currentNetwork = currentNetwork,
+                        nextDns = statsWeek.takeIf { showNextDns },
+                        now = remember(insights, history) { System.currentTimeMillis() },
                         onCompare = {
                             tab = AppTab.RESOLVERS
                             viewModel.runBenchmark()
                         },
+                        onSwitch = { hostname -> viewModel.applyDns(hostname, probe = true) },
                         onClear = viewModel::clearInsights
                     )
                 },

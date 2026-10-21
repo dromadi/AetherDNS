@@ -1,6 +1,9 @@
 package com.security.aetherdns
 
+import com.security.aetherdns.data.DayCount
+import com.security.aetherdns.data.DeviceCount
 import com.security.aetherdns.data.HttpGet
+import com.security.aetherdns.data.WeekResult
 import com.security.aetherdns.data.HttpResponse
 import com.security.aetherdns.data.NextDnsApiParser
 import com.security.aetherdns.data.NextDnsClient
@@ -82,5 +85,55 @@ class NextDnsStatsTest {
     fun `malformed json is a server error`() = runTest {
         val client = NextDnsClient(HttpGet { _, _ -> HttpResponse(200, "not json") })
         assertEquals(StatsResult.Failure(StatsError.SERVER), client.summary("abc123", "k"))
+    }
+
+    private val seriesJson = """
+        {"data":[{"status":"default","queries":[100,200,300]},{"status":"blocked","queries":[10,20,30]}],
+         "meta":{"series":{"times":["2026-10-19T00:00:00Z","2026-10-20T00:00:00Z","2026-10-21T00:00:00Z"],"interval":86400}}}
+    """.trimIndent()
+
+    @Test
+    fun `status series sums per day`() {
+        assertEquals(
+            listOf(DayCount(110, 10), DayCount(220, 20), DayCount(330, 30)),
+            NextDnsApiParser.parseStatusSeries(seriesJson)
+        )
+    }
+
+    @Test
+    fun `reasons and devices parse names with fallbacks`() {
+        val reasons = """{"data":[{"id":"blocklist:nextdns-recommended","name":"NextDNS Ads & Trackers Blocklist","queries":131833},{"id":"native:apple","queries":402}]}"""
+        assertEquals(
+            listOf("NextDNS Ads & Trackers Blocklist" to 131_833L, "native:apple" to 402L),
+            NextDnsApiParser.parseReasons(reasons)
+        )
+        val devices = """{"data":[{"id":"8TD1G","name":"Pixel","model":"Pixel 8","queries":500},{"id":"__UNIDENTIFIED__","queries":74}]}"""
+        assertEquals(listOf(DeviceCount("Pixel", 500), DeviceCount(null, 74)), NextDnsApiParser.parseDevices(devices))
+    }
+
+    @Test
+    fun `week calls series, reasons and devices with time zone`() = runTest {
+        val urls = mutableListOf<String>()
+        val client = NextDnsClient { url, _ ->
+            urls += url
+            when {
+                "status;series" in url -> HttpResponse(200, seriesJson)
+                "reasons" in url -> HttpResponse(500, "")
+                else -> HttpResponse(200, """{"data":[{"id":"a","name":"Phone","queries":9}]}""")
+            }
+        }
+        val result = client.week("abc123", "key", "Asia/Jakarta") as WeekResult.Success
+        assertEquals(660L, result.week.total)
+        assertEquals(60L, result.week.blocked)
+        assertEquals(emptyList<Pair<String, Long>>(), result.week.reasons)
+        assertEquals(listOf(DeviceCount("Phone", 9)), result.week.devices)
+        assertTrue(urls.first().contains("timezone=Asia%2FJakarta"))
+        assertEquals(3, urls.size)
+    }
+
+    @Test
+    fun `week maps auth errors`() = runTest {
+        val client = NextDnsClient { _, _ -> HttpResponse(403, "") }
+        assertEquals(WeekResult.Failure(StatsError.INVALID_KEY), client.week("abc123", "bad", "UTC"))
     }
 }

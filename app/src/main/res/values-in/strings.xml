@@ -349,7 +349,7 @@
     <string name="insight_subtitle">Kecepatan DNS &amp; rapor jaringan</string>
     <string name="insight_privacy">Terkumpul otomatis setiap kali aplikasi dibuka. Hanya disimpan di HP ini, tidak pernah dikirim ke mana pun.</string>
     <string name="insight_empty">Belum ada data. Buka aplikasi sesekali di jaringan yang biasa kamu pakai — insight terisi sendiri.</string>
-    <string name="insight_speed_title">Kecepatan DNS (7 hari terakhir)</string>
+    <string name="insight_speed_title">Kecepatan DNS</string>
     <string name="insight_speed_fast">Cepat</string>
     <string name="insight_speed_ok">Normal</string>
     <string name="insight_speed_slow">Lambat</string>
@@ -367,4 +367,33 @@
     <string name="insight_net_ethernet">Ethernet</string>
     <string name="insight_net_other">Jaringan lain</string>
     <string name="insight_clear">Hapus riwayat</string>
+    <string name="insight_days">%1$d hari</string>
+    <string name="insight_alternative">%1$s %2$d× lebih cepat di jaringan ini (%3$d ms vs %4$d ms) dan memblokir jenis konten yang sama.</string>
+    <string name="insight_switch">Pindah ke %1$s</string>
+    <string name="insight_history_title">Riwayat proteksi (7 hari terakhir)</string>
+    <string name="insight_history_empty">Belum ada perubahan tercatat.</string>
+    <string name="insight_history_note">Perubahan dari Settings HP dicatat saat AetherDNS dibuka berikutnya, jadi waktunya perkiraan.</string>
+    <string name="insight_count_enabled">Diaktifkan %1$d×</string>
+    <string name="insight_count_disabled">Dimatikan %1$d×</string>
+    <string name="insight_count_paused">Dijeda %1$d×</string>
+    <string name="insight_count_resumed">Dilanjutkan %1$d×</string>
+    <string name="insight_count_changed">Ganti resolver %1$d×</string>
+    <string name="insight_action_enabled">Diaktifkan</string>
+    <string name="insight_action_disabled">Dimatikan</string>
+    <string name="insight_action_paused">Dijeda</string>
+    <string name="insight_action_resumed">Dilanjutkan</string>
+    <string name="insight_action_changed">Ganti resolver</string>
+    <string name="insight_source_app">di aplikasi</string>
+    <string name="insight_source_tile">lewat Quick Settings</string>
+    <string name="insight_source_shortcut">lewat widget atau pintasan</string>
+    <string name="insight_source_automation">lewat otomasi</string>
+    <string name="insight_source_schedule">jeda selesai</string>
+    <string name="insight_source_system">di luar AetherDNS</string>
+    <string name="insight_nextdns_title">NextDNS (7 hari terakhir)</string>
+    <string name="insight_nextdns_summary">%1$s diblokir dari %2$s kueri (%3$d%%)</string>
+    <string name="insight_nextdns_reasons">Alasan diblokir</string>
+    <string name="insight_nextdns_devices">Perangkat</string>
+    <string name="insight_nextdns_unknown_device">Perangkat tak teridentifikasi</string>
+    <string name="insight_nextdns_queries">%1$s kueri</string>
+    <string name="insight_nextdns_legend">Batang: kueri per hari, bagian berwarna = diblokir</string>
 </resources>

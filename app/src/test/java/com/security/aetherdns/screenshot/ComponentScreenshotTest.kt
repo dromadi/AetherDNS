@@ -10,7 +10,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.security.aetherdns.data.InsightAnalyzer
+import com.security.aetherdns.data.ChangeSource
+import com.security.aetherdns.data.DayCount
+import com.security.aetherdns.data.DeviceCount
+import com.security.aetherdns.data.HistoryAction
+import com.security.aetherdns.data.HistoryEvent
+import com.security.aetherdns.data.NextDnsWeek
+import com.security.aetherdns.ui.WeekUiState
 import com.security.aetherdns.data.InsightSample
 import com.security.aetherdns.data.NetworkKey
 import com.security.aetherdns.data.NextDnsSummary
@@ -202,32 +208,53 @@ class ComponentScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = "w411dp-h2300dp-xxhdpi")
     fun insights() {
         val now = System.currentTimeMillis()
         val day = 24L * 60 * 60 * 1000
         val wifi = NetworkKey("wifi", "")
         val cell = NetworkKey("cellular", "Telkomsel")
+        val ag = "dns.adguard-dns.com"
         val samples = buildList {
             listOf(120L, 140L, 110L, 160L, 130L).forEachIndexed { i, ms ->
-                add(InsightSample.Latency(now - (4 - i) * day, wifi, "dns.adguard-dns.com", ms))
+                add(InsightSample.Latency(now - (4 - i) * day, wifi, ag, ms))
             }
             listOf(480L, 520L, 450L, 610L).forEachIndexed { i, ms ->
-                add(InsightSample.Latency(now - (3 - i) * day, cell, "dns.adguard-dns.com", ms))
+                add(InsightSample.Latency(now - (3 - i) * day, cell, ag, ms))
             }
-            add(InsightSample.Latency(now - day, cell, "dns.adguard-dns.com", null))
+            add(InsightSample.Latency(now - day, cell, ag, null))
+            add(InsightSample.Latency(now, cell, "p2.freedns.controld.com", 120L, benchmark = true))
             repeat(6) { add(InsightSample.NetworkCheck(now - it * day, wifi, CheckResult.OK, CheckResult.OK, CheckResult.OK)) }
             repeat(4) {
                 add(InsightSample.NetworkCheck(now - it * day, cell, CheckResult.PROBLEM, CheckResult.OK, CheckResult.OK))
             }
         }
+        val history = listOf(
+            HistoryEvent(now - 3 * day, HistoryAction.ENABLED, ChangeSource.APP, ag),
+            HistoryEvent(now - 2 * day, HistoryAction.PAUSED, ChangeSource.TILE, ag),
+            HistoryEvent(now - 2 * day + 900_000, HistoryAction.RESUMED, ChangeSource.SCHEDULE, ag),
+            HistoryEvent(now - day, HistoryAction.DISABLED, ChangeSource.SYSTEM, ag),
+            HistoryEvent(now - 3_600_000, HistoryAction.ENABLED, ChangeSource.SHORTCUT, ag)
+        )
+        val week = NextDnsWeek(
+            days = listOf(4200L to 610L, 3900L to 540L, 5100L to 820L, 4600L to 700L, 3800L to 520L, 6100L to 990L, 2400L to 380L)
+                .map { DayCount(it.first, it.second) },
+            reasons = listOf("NextDNS Ads & Trackers Blocklist" to 3900L, "Native Tracking (Samsung)" to 420L, "Threat Intelligence Feeds" to 60L),
+            devices = listOf(DeviceCount("Galaxy S24", 21000), DeviceCount(null, 3100))
+        )
         compose.setContent {
             AetherDnsTheme(dynamicColor = false) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         InsightContent(
-                            latency = InsightAnalyzer.latency(samples, now),
-                            networks = InsightAnalyzer.networks(samples, now),
+                            insights = samples,
+                            history = history,
+                            activeResolver = ag,
+                            currentNetwork = cell,
+                            nextDns = WeekUiState.Loaded(week),
+                            now = now,
                             onCompare = {},
+                            onSwitch = {},
                             onClear = {}
                         )
                     }

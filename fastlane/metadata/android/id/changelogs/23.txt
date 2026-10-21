@@ -1,0 +1,4 @@
+• Insight menyarankan resolver yang lebih cepat di jaringanmu (jenis pemblokiran sama), langsung dengan tombol Pindah
+• Grafik kecepatan 7 atau 30 hari
+• Riwayat proteksi: kapan diaktifkan, dijeda, dimatikan, atau ganti resolver, dan dari mana
+• Statistik NextDNS 7 hari: grafik harian, alasan blokir, dan perangkat

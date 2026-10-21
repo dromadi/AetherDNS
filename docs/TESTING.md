@@ -127,6 +127,11 @@ Shizuku:
 - [ ] Rapor jaringan menghitung jumlah pemeriksaan per jaringan.
 - [ ] "Lihat insight" di kartu Kesehatan membuka halaman Insight; Back kembali ke menu Lainnya.
 - [ ] "Bandingkan resolver" pindah ke tab Resolver dan menjalankan uji kecepatan.
+- [ ] Resolver aktif lambat + jalankan "Bandingkan resolver" → muncul saran "Pindah ke …" (hanya resolver sekelompok); tombolnya berpindah resolver.
+- [ ] Pilihan 7 / 30 hari mengubah grafik kecepatan.
+- [ ] Riwayat proteksi: matikan lewat tile, jeda lewat widget, aktifkan di aplikasi → tiga baris dengan asal yang benar.
+- [ ] Matikan Private DNS dari Settings HP saat aplikasi tertutup → buka aplikasi → tercatat "di luar AetherDNS".
+- [ ] (NextDNS + API key) bagian NextDNS 7 hari menampilkan grafik, alasan blokir, dan perangkat.
 - [ ] "Hapus riwayat" mengosongkan halaman.
 
 ## 8. Bahasa

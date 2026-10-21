@@ -94,4 +94,46 @@ class InsightsTest {
         store.clear()
         assertTrue(store.all().isEmpty())
     }
+
+    @Test
+    fun `benchmark flag round trips and old lines stay valid`() {
+        val sample = InsightSample.Latency(5L, wifi, "dns.quad9.net", 80L, benchmark = true)
+        assertEquals(sample, InsightCodec.decode(InsightCodec.encode(sample)))
+        val old = InsightCodec.decode("L\t5\twifi\t\tdns.quad9.net\t80") as InsightSample.Latency
+        assertEquals(false, old.benchmark)
+    }
+
+    @Test
+    fun `benchmark-only resolvers are hidden but help the active median`() {
+        val samples = listOf(
+            lat(now, 500), lat(now, 500), lat(now, 500),
+            InsightSample.Latency(now, wifi, "dns.adguard-dns.com", 100L, benchmark = true),
+            InsightSample.Latency(now, wifi, "dns.quad9.net", 90L, benchmark = true)
+        )
+        val rows = InsightAnalyzer.latency(samples, now)
+        assertEquals(listOf("dns.adguard-dns.com"), rows.map { it.resolver })
+        assertEquals(4, rows.single().samples)
+    }
+
+    @Test
+    fun `faster alternative only from candidates, same network, at least twice as fast`() {
+        val ag = "dns.adguard-dns.com"
+        fun bench(resolver: String, ms: Long?, net: NetworkKey = wifi) = InsightSample.Latency(now, net, resolver, ms, benchmark = true)
+        val samples = listOf(
+            lat(now, 600), lat(now, 620), lat(now, 640),
+            bench("dns.controld.com", 150),      // kandidat, 4× lebih cepat
+            bench("dns.quad9.net", 50),          // lebih cepat tapi bukan kandidat
+            bench("dns.mullvad.net", 400),       // kandidat tapi < 2×
+            bench("ads.adguard.example", 40, tsel), // jaringan lain
+            bench("p.example", null)             // gagal
+        )
+        val current = InsightAnalyzer.current(samples, ag, wifi, now)!!
+        val candidates = setOf(ag, "dns.controld.com", "dns.mullvad.net", "ads.adguard.example", "p.example")
+        val alt = InsightAnalyzer.fasterAlternative(samples, current, candidates, now)!!
+        assertEquals("dns.controld.com", alt.resolver)
+        assertEquals(4, alt.factor)
+
+        val fast = InsightAnalyzer.current(listOf(lat(now, 100), lat(now, 110), lat(now, 120)), ag, wifi, now)!!
+        assertNull(InsightAnalyzer.fasterAlternative(samples, fast, candidates, now))
+    }
 }
