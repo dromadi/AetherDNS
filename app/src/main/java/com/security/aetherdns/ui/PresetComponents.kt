@@ -58,6 +58,17 @@ fun PresetHeader(isBenchmarkRunning: Boolean, onRunBenchmark: () -> Unit) {
     }
 }
 
+/** Judul grup preset (Blokir iklan / Keluarga / Keamanan saja / Enkripsi saja) dengan penjelasan singkat. */
+@Composable
+fun PresetGroupHeader(title: String, description: String?) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PrimaryBlue)
+        if (description != null) {
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 @Composable
 fun PresetCard(
     profile: DnsProfile,

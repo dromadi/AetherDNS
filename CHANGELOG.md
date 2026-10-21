@@ -8,6 +8,8 @@ dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 ### Ditambahkan
 - **Cek jaringan** di Beranda: mendeteksi penyadapan DNS biasa (port 53), jawaban DNS yang dipalsukan ISP (iklan/halaman pengalihan), dan apakah DNS terenkripsi (port 853) bisa dipakai. Bila DoT diblokir saat proteksi aktif, tersedia tombol jeda satu ketuk agar internet tidak putus.
 - Preset **Cloudflare 1.1.1.1** (tanpa filter, tercepat) dan **Cloudflare 1.1.1.3 Families** (malware + konten dewasa), melengkapi Cloudflare 1.1.1.2 Security.
+- Preset **Control D Free**, **Mullvad Extended**, **Mullvad All**, dan **Quad9**.
+- Daftar resolver dikelompokkan per tujuan: Blokir iklan, Keluarga, Keamanan saja, Enkripsi saja. Onboarding hanya menampilkan grup Blokir iklan dan Keluarga.
 
 ## [1.12.0] - 2026-10-21
 

@@ -62,12 +62,18 @@ Tekan lama layar utama → **Widget → Status AetherDNS** untuk melihat status 
 
 ## Preset DNS Filtering Bawaan
 
+Di aplikasi, preset dikelompokkan per tujuan: **Blokir iklan**, **Keluarga**, **Keamanan saja**, dan **Enkripsi saja**. Iklan YouTube, Instagram, dan TikTok tidak bisa diblokir lewat DNS karena dikirim dari server yang sama dengan kontennya.
+
 | Profile | Hostname DoT | Kategori | Cakupan Proteksi |
 | :--- | :--- | :--- | :--- |
 | **AdGuard DNS (Rekomendasi)** | `dns.adguard-dns.com` | Anti-Iklan & Tracker | Banner, pop-up, rewarded ads di aplikasi & browser |
+| **Control D Free** | `p2.freedns.controld.com` | Anti-Iklan & Tracker | Iklan, pelacak, dan malware |
 | **AdGuard Family** | `family.adguard-dns.com` | Keluarga & Anti-Iklan | Anti-iklan + proteksi konten dewasa + SafeSearch |
 | **Mullvad Privacy** | `adblock.dns.mullvad.net` | Privasi & Anti-Iklan | Resolver zero-log resmi Mullvad dengan filter iklan aktif |
+| **Mullvad Extended** | `extended.dns.mullvad.net` | Anti-Iklan & Malware | Mullvad Adblock + blokir malware |
+| **Mullvad All** | `all.dns.mullvad.net` | Keluarga Ketat | Iklan, pelacak, malware, konten dewasa, judi, media sosial |
 | **Cloudflare Families (1.1.1.3)** | `family.cloudflare-dns.com` | Keluarga & Anti-Malware | Blokir malware + konten dewasa (tidak memblokir iklan) |
+| **Quad9** | `dns.quad9.net` | Anti-Malware | Nirlaba Swiss, blokir malware & phishing tanpa log IP |
 | **Cloudflare Security (1.1.1.2)** | `security.cloudflare-dns.com` | Anti-Malware | Blokir phishing, malware, dan ransomware |
 | **Cloudflare 1.1.1.1** | `1dot1dot1dot1.cloudflare-dns.com` | Resolver Bersih | Tercepat & privat, hanya enkripsi tanpa filter |
 | **NextDNS Anycast** | `dns.nextdns.io` | Resolver Bersih | Resolver Anycast berlatensi rendah (gunakan Hostname Kustom jika ingin filter ad NextDNS) |

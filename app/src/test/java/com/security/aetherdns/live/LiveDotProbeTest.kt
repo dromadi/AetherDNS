@@ -109,6 +109,34 @@ class LiveDotProbeTest {
     }
 
     @Test
+    fun controlDFreeBlocksAdDomains() {
+        val result = successOf("p2.freedns.controld.com")
+        println("Control D Free: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue(result.filter.toString(), result.filter.blocked.size >= 2)
+    }
+
+    @Test
+    fun mullvadExtendedBlocksAdDomains() {
+        val result = successOf("extended.dns.mullvad.net")
+        println("Mullvad Extended: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue(result.filter.toString(), result.filter.blocked.size >= 2)
+    }
+
+    @Test
+    fun mullvadAllBlocksAdDomains() {
+        val result = successOf("all.dns.mullvad.net")
+        println("Mullvad All: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue(result.filter.toString(), result.filter.blocked.size >= 2)
+    }
+
+    @Test
+    fun quad9DoesNotBlockAds() {
+        val result = successOf("dns.quad9.net")
+        println("Quad9: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("Quad9 bukan ad-blocker: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
     fun cloudflareFamiliesDoesNotBlockAds() {
         val result = successOf("family.cloudflare-dns.com")
         println("Cloudflare Families: ${result.latency.totalMs} ms, filter=${result.filter}")

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.security.aetherdns.R
 import com.security.aetherdns.data.DnsState
 import com.security.aetherdns.model.DefaultProfiles
+import com.security.aetherdns.model.PresetGroup
 import com.security.aetherdns.shizuku.GranterStatus
 import com.security.aetherdns.ui.theme.PrimaryBlue
 import com.security.aetherdns.ui.theme.SuccessGreen
@@ -92,15 +93,23 @@ fun OnboardingScreen(
                     item {
                         StepTitle(stringResource(R.string.onboarding_resolver_title), stringResource(R.string.onboarding_resolver_desc))
                     }
-                    items(DefaultProfiles.list, key = { it.id }) { profile ->
-                        PresetCard(
-                            profile = profile,
-                            isSelected = profile.id == selectedId,
-                            benchmarkResult = null,
-                            isFastest = false,
-                            onSelect = { selectedId = profile.id }
-                        )
-                    }
+                    // Pengguna baru hanya diberi pilihan yang relevan: blokir iklan dan keluarga
+                    DefaultProfiles.grouped
+                        .filter { (group, _) -> group == PresetGroup.ADS || group == PresetGroup.FAMILY }
+                        .forEach { (group, profiles) ->
+                            item(key = "group_${group.name}") {
+                                PresetGroupHeader(stringResource(group.titleRes), stringResource(group.descriptionRes))
+                            }
+                            items(profiles, key = { it.id }) { profile ->
+                                PresetCard(
+                                    profile = profile,
+                                    isSelected = profile.id == selectedId,
+                                    benchmarkResult = null,
+                                    isFastest = false,
+                                    onSelect = { selectedId = profile.id }
+                                )
+                            }
+                        }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         item { AddTileButton() }
                     }

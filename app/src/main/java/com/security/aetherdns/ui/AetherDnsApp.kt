@@ -226,16 +226,26 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                     PresetHeader(isBenchmarkRunning = benchmark.isRunning, onRunBenchmark = viewModel::runBenchmark)
                 }
 
-                items(DefaultProfiles.list, key = { it.id }) { profile ->
-                    PresetCard(
-                        profile = profile,
-                        isSelected = selectedProfileId == profile.id,
-                        benchmarkResult = benchmark.results[profile.id],
-                        isFastest = benchmark.fastestId == profile.id,
-                        onSelect = { selectProfile(profile.id, profile.hostname) }
-                    )
+                DefaultProfiles.grouped.forEach { (group, profiles) ->
+                    item(key = "group_${group.name}") {
+                        PresetGroupHeader(stringResource(group.titleRes), stringResource(group.descriptionRes))
+                    }
+                    items(profiles, key = { it.id }) { profile ->
+                        PresetCard(
+                            profile = profile,
+                            isSelected = selectedProfileId == profile.id,
+                            benchmarkResult = benchmark.results[profile.id],
+                            isFastest = benchmark.fastestId == profile.id,
+                            onSelect = { selectProfile(profile.id, profile.hostname) }
+                        )
+                    }
                 }
 
+                if (savedProfiles.isNotEmpty()) {
+                    item(key = "group_saved") {
+                        PresetGroupHeader(stringResource(R.string.preset_group_saved), null)
+                    }
+                }
                 items(savedProfiles, key = { it.id }) { profile ->
                     SavedProfileCard(
                         profile = profile,

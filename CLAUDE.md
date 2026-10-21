@@ -94,7 +94,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AndroidPause.kt`: Implementasi `SharedPrefsPauseStore` dan `AlarmManagerResumeAlarm`.
   - `ProfileRepository.kt`: Profil kustom tersimpan (`ProfileStore`, `ProfileCodec`). Diuji di `ProfileRepositoryTest`.
 - `model/`:
-  - `DnsProfile.kt`: Data class profil DoT resolver dan koleksi `DefaultProfiles` (nama/kategori/deskripsi preset via `@StringRes`).
+  - `DnsProfile.kt`: Data class profil DoT resolver, `PresetGroup` (ADS / FAMILY / SECURITY / PLAIN), dan koleksi `DefaultProfiles` (`list`, `grouped`; nama/kategori/deskripsi via `@StringRes`). Preset baru wajib punya uji di `LiveDotProbeTest` (ad-blocker: blokir ≥ 2 domain uji; non-filter: lolos ≥ 3).
 - `util/`:
   - `DnsManager.kt`: Helper wrapper interaksi native Android (`Settings.Global`, `ConnectivityManager.getLinkProperties`).
   - `DotProbe.kt`: Pre-flight test DoT (SSLSocket + SNI + hostname verifier + query DNS RFC 7858) dengan typed `DotProbeCause` dan latensi. `DotProbeClient` menerima `HostnameVerifier` (verifier default `HttpsURLConnection` selalu menolak di JVM desktop); `object DotProbe` adalah instance default untuk aplikasi.
