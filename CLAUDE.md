@@ -52,7 +52,11 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
 9. **App Shortcuts (Dinamis)**:
    - `AppShortcuts.publish()` (dipanggil di `MainActivity.onCreate`) mendaftarkan shortcut Aktifkan / Jeda 15 menit / Matikan via `ShortcutManager`. Dinamis, bukan `shortcuts.xml`, karena `targetPackage` statis tidak bisa mengikuti sufiks `.debug`.
    - Target-nya `ShortcutActivity` (transparan, `exported=false`, tanpa UI) yang memanggil `DnsRepository` lalu menampilkan Toast.
-9b. **Ikon**: adaptive icon `mipmap-anydpi-v26/ic_launcher(_round).xml` = `drawable/ic_launcher_background` (gradien `BrandGradientColors`) + `ic_launcher_foreground` (perisai + gelombang, di zona aman 66dp) + `ic_launcher_monochrome` (themed icon Android 13+). `ic_tile_shield` (tile, notifikasi, hero status) memakai lambang yang sama. Ubah ketiganya bersamaan agar konsisten.
+9a. **Widget Layar Utama (`widget/StatusWidget`)**:
+   - `AppWidgetProvider` + `RemoteViews` (tanpa Glance): status, specifier/waktu jeda, tombol aktif/nonaktif dan jeda 15 menit.
+   - Tombol memakai `PendingIntent` ke `ShortcutActivity` (tidak diekspor) — jangan menambah receiver aksi yang diekspor, karena aplikasi lain bisa mematikan proteksi lewat broadcast.
+   - Diperbarui oleh `AetherDnsApplication` yang meng-collect `DnsRepository.state` selama proses hidup; `updatePeriodMillis` 30 menit hanya cadangan untuk perubahan dari Settings saat proses mati.
+9b. **Ikon**: adaptive icon `mipmap-anydpi/ic_launcher(_round).xml` = `drawable/ic_launcher_background` (gradien `BrandGradientColors`) + `ic_launcher_foreground` (perisai + gelombang, di zona aman 66dp) + `ic_launcher_monochrome` (themed icon Android 13+). `ic_tile_shield` (tile, notifikasi, hero status) memakai lambang yang sama. Ubah ketiganya bersamaan agar konsisten.
 10. **Backup**: profil tersimpan ikut Auto Backup; `pause_state` dan `automation` (token rahasia) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
 11. **Otomasi (Tasker / MacroDroid)**:
    - `AutomationReceiver` (exported, tetapi `android:enabled="false"` di manifest) hanya diaktifkan lewat sakelar di aplikasi (`AutomationSettings` → `setComponentEnabledSetting`). Setiap perintah wajib membawa extra `token` yang dibandingkan waktu-konstan dengan token acak 128-bit.
@@ -95,6 +99,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AdTestDomains.kt`: Daftar domain iklan uji bersama (audit & pratinjau filter) dan `FilterVerdict`.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
+- `widget/`:
+  - `StatusWidget.kt`: widget layar utama (`res/layout/widget_status.xml`, `res/xml/widget_status_info.xml`).
 - `service/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
 - `automation/`:
@@ -145,7 +151,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 >
 > **Uji perangkat**: ikuti `docs/TESTING.md` sebelum membuat tag rilis.
 >
-> **Rilis**: push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
+> **Rilis**: panduan lengkap di `docs/RELEASE.md`. Setiap versi wajib punya bagian `## [X.Y.Z]` di `CHANGELOG.md` (dipakai sebagai catatan rilis). Push tag `vX.Y.Z` (harus sama dengan `versionName`) menjalankan `.github/workflows/release.yml`, yang membangun APK release bertanda tangan dari secrets `AETHERDNS_KEYSTORE_BASE64`, `AETHERDNS_KEYSTORE_PASSWORD`, `AETHERDNS_KEY_ALIAS`, `AETHERDNS_KEY_PASSWORD` dan melampirkannya ke GitHub Release. Tanpa env `AETHERDNS_KEYSTORE_PATH`, `assembleRelease` lokal tetap menghasilkan APK unsigned.
 >
 > **Catatan JDK**: Jangan menulis `org.gradle.java.home` di `gradle.properties` proyek (path mesin lokal merusak build di CI/mesin lain). Simpan di `~/.gradle/gradle.properties` milik pengguna.
 

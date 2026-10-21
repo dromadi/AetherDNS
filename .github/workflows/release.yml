@@ -1,6 +1,7 @@
 name: Release
 
 # Membangun APK release bertanda tangan dan melampirkannya ke GitHub Release saat tag v* di-push.
+# Panduan lengkap (membuat keystore, mengisi secrets): docs/RELEASE.md
 # Secrets yang dibutuhkan (Settings → Secrets and variables → Actions):
 #   AETHERDNS_KEYSTORE_BASE64   keystore .jks dalam base64 (base64 -w0 release.jks)
 #   AETHERDNS_KEYSTORE_PASSWORD
@@ -69,9 +70,24 @@ jobs:
           sha256sum "$apk" > "$apk.sha256"
           rm -f "$RUNNER_TEMP/release.jks"
 
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Isi bagian "## [X.Y.Z]" sampai judul versi berikutnya
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Catatan rilis tidak ditemukan di CHANGELOG.md untuk $version." > release_notes.md
+          fi
+          cat release_notes.md
+
       - uses: softprops/action-gh-release@v3
         with:
           files: |
             AetherDNS-${{ github.ref_name }}.apk
             AetherDNS-${{ github.ref_name }}.apk.sha256
+          body_path: release_notes.md
           generate_release_notes: true

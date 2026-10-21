@@ -6,6 +6,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.view.View
+import android.widget.FrameLayout
 import android.provider.Settings
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onRoot
@@ -16,6 +18,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.security.aetherdns.MainActivity
 import com.security.aetherdns.R
+import com.security.aetherdns.data.DnsState
+import com.security.aetherdns.widget.StatusWidget
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -79,6 +83,35 @@ class ScreenshotTest {
             setBounds(size + 48 - size / 4, -size / 4, size * 2 + 48 + size / 4, size + size / 4)
         }.draw(canvas)
         bitmap.captureRoboImage("build/screenshots/0_app_icon.png")
+    }
+
+    @Test
+    fun widget() {
+        // Merender RemoteViews widget untuk tiga state di atas latar "wallpaper"
+        val states = listOf(
+            DnsState(hasPermission = true, mode = "hostname", specifier = "dns.adguard-dns.com", isProtectionActive = true),
+            DnsState(hasPermission = true, pausedUntil = System.currentTimeMillis() + 15 * 60_000L),
+            DnsState(hasPermission = false)
+        )
+        val density = context.resources.displayMetrics.density
+        val width = (330 * density).toInt()
+        val height = (64 * density).toInt()
+        val gap = (12 * density).toInt()
+        val bitmap = Bitmap.createBitmap(width + gap * 2, (height + gap) * states.size + gap, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap).apply { drawColor(0xFF5C6B7A.toInt()) }
+        states.forEachIndexed { index, state ->
+            val view = StatusWidget.renderForPreview(context, state).apply(context, FrameLayout(context))
+            view.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+            )
+            view.layout(0, 0, width, height)
+            canvas.save()
+            canvas.translate(gap.toFloat(), (gap + index * (height + gap)).toFloat())
+            view.draw(canvas)
+            canvas.restore()
+        }
+        bitmap.captureRoboImage("build/screenshots/8_widget.png")
     }
 
     @Test

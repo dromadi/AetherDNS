@@ -59,6 +59,14 @@ Shizuku:
 - [ ] Dari lockscreen (dengan PIN) → diminta buka kunci sebelum toggle.
 - [ ] Ubah DNS lewat Settings HP → tarik panel QS → status tile sesuai.
 
+## 5a. Widget layar utama
+
+- [ ] Tekan lama layar utama → Widget → "Status AetherDNS" bisa ditambahkan; pratinjau tampil.
+- [ ] Widget mengikuti status: aktif (gradien biru + hostname), dijeda (waktu aktif lagi), mati.
+- [ ] Tombol power / jeda bekerja tanpa membuka layar aplikasi (Toast singkat), widget langsung berubah.
+- [ ] Ubah DNS dari aplikasi atau tile → widget ikut berubah.
+- [ ] Tanpa izin → tombol membuka aplikasi.
+
 ## 5. App Shortcuts
 
 - [ ] Tekan lama ikon aplikasi → muncul Aktifkan / Jeda 15 mnt / Matikan.

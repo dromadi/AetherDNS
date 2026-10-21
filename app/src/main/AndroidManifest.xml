@@ -91,6 +91,19 @@
             android:name=".adb.PairingCodeReceiver"
             android:exported="false" />
 
+        <!-- Widget layar utama (status + aktif/nonaktif/jeda). Tombolnya memakai ShortcutActivity yang tidak diekspor. -->
+        <receiver
+            android:name=".widget.StatusWidget"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_status_info" />
+        </receiver>
+
         <!-- Shizuku Provider (Dynamic authority matching debug & release package) -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

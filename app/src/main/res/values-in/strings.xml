@@ -176,7 +176,7 @@
     <string name="shizuku_enable_developer_options">Opsi Pengembang belum aktif. Ketuk \"Build number\" 7 kali (Software information), lalu kembali ke sini.</string>
     <string name="shizuku_setup_steps">1. Sambungkan ke Wi-Fi dan nyalakan Wireless debugging.\n2. Pertama kali saja: di Shizuku tekan Pairing, lalu di Wireless debugging pilih \"Pair device with pairing code\" dan ketik kodenya di notifikasi Shizuku.\n3. Tekan Start di Shizuku, lalu kembali ke sini.\nTips: Developer options → Quick settings developer tiles → Wireless debugging menambah tombol 1 ketuk. Samsung: matikan sementara Auto Blocker bila terus mencari.</string>
     <string name="tile_label">DNS Anti-Iklan</string>
-    <string name="tile_subtitle_needs_permission">Perlu Izin ADB</string>
+    <string name="tile_subtitle_needs_permission">Perlu izin</string>
     <string name="tile_subtitle_paused">Dijeda s/d %1$s</string>
     <string name="tile_subtitle_off">Nonaktif</string>
 
@@ -235,4 +235,12 @@
     <string name="common_delete">Hapus</string>
     <string name="perm_other_methods">Cara lain: Shizuku atau PC</string>
     <string name="native_manual_split_only">Kolom ini hanya berfungsi di layar terpisah: Android menutup dialog kode begitu Anda meninggalkan Settings. Gunakan notifikasi, atau buka AetherDNS dan Settings berdampingan.</string>
+
+    <!-- Widget layar utama -->
+    <string name="widget_label">Status AetherDNS</string>
+    <string name="widget_description">Status proteksi dengan tombol aktif/nonaktif dan jeda 15 menit</string>
+    <string name="widget_title_on">Proteksi aktif</string>
+    <string name="widget_title_off">Proteksi mati</string>
+    <string name="widget_title_paused">Dijeda</string>
+    <string name="widget_subtitle_paused">Aktif lagi sekitar pukul %1$s</string>
 </resources>

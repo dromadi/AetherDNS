@@ -8,11 +8,13 @@ import com.security.aetherdns.data.DnsRepository
 import com.security.aetherdns.data.ProfileRepository
 import com.security.aetherdns.data.SharedPrefsProfileStore
 import com.security.aetherdns.onboarding.OnboardingStore
+import com.security.aetherdns.widget.StatusWidget
 import com.security.aetherdns.shizuku.PermissionGranter
 import com.security.aetherdns.shizuku.ShizukuGranter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import rikka.sui.Sui
 
 class AetherDnsApplication : Application() {
@@ -34,7 +36,7 @@ class AetherDnsApplication : Application() {
     lateinit var wirelessActivator: WirelessAdbActivator
         private set
 
-    /** Hanya untuk merender notifikasi aktivasi mengikuti state; tidak ada kerja latar lain. */
+    /** Hanya untuk merender notifikasi aktivasi dan widget mengikuti state; tidak ada kerja latar lain. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
@@ -48,5 +50,7 @@ class AetherDnsApplication : Application() {
         onboardingStore = OnboardingStore(this)
         wirelessActivator = WirelessAdbActivator(this)
         PairingNotifier(this).bind(appScope, wirelessActivator)
+        // Widget layar utama mengikuti state DNS selama proses hidup (perubahan dari aplikasi, tile, Settings)
+        appScope.launch { dnsRepository.state.collect { StatusWidget.updateAll(this@AetherDnsApplication, it) } }
     }
 }
