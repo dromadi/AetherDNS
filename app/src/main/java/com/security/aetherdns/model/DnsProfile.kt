@@ -41,11 +41,26 @@ object DefaultProfiles {
             descriptionRes = R.string.preset_mullvad_desc
         ),
         DnsProfile(
+            id = "cloudflare_family",
+            hostname = "family.cloudflare-dns.com",
+            nameRes = R.string.preset_cloudflare_family_name,
+            categoryRes = R.string.preset_cloudflare_family_category,
+            descriptionRes = R.string.preset_cloudflare_family_desc
+        ),
+        DnsProfile(
             id = "cloudflare_security",
             hostname = "security.cloudflare-dns.com",
             nameRes = R.string.preset_cloudflare_name,
             categoryRes = R.string.preset_cloudflare_category,
             descriptionRes = R.string.preset_cloudflare_desc
+        ),
+        DnsProfile(
+            // Hostname DoT resmi Cloudflare untuk Private DNS Android
+            id = "cloudflare_plain",
+            hostname = "1dot1dot1dot1.cloudflare-dns.com",
+            nameRes = R.string.preset_cloudflare_plain_name,
+            categoryRes = R.string.preset_cloudflare_plain_category,
+            descriptionRes = R.string.preset_cloudflare_plain_desc
         ),
         DnsProfile(
             id = "nextdns_public",

@@ -109,6 +109,20 @@ class LiveDotProbeTest {
     }
 
     @Test
+    fun cloudflareFamiliesDoesNotBlockAds() {
+        val result = successOf("family.cloudflare-dns.com")
+        println("Cloudflare Families: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("Cloudflare Families bukan ad-blocker: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
+    fun cloudflarePlainDoesNotFilter() {
+        val result = successOf("1dot1dot1dot1.cloudflare-dns.com")
+        println("Cloudflare 1.1.1.1: ${result.latency.totalMs} ms, filter=${result.filter}")
+        assertTrue("Cloudflare 1.1.1.1 tidak memfilter: ${result.filter}", result.filter.allowed.size >= 3)
+    }
+
+    @Test
     fun nextdnsAnycastAnswersQueries() {
         val result = successOf("dns.nextdns.io")
         println("NextDNS: ${result.latency.totalMs} ms, filter=${result.filter}")

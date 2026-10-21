@@ -34,7 +34,7 @@ Shizuku:
 
 ## 2. Apply, probe, dan pratinjau filter
 
-- [ ] **Uji Kecepatan & Filter**: setiap preset menampilkan "xx ms · blokir X/Y"; AdGuard ≥ 3/4, Cloudflare Security 0/4; satu ditandai "Tercepat".
+- [ ] **Uji Kecepatan & Filter**: setiap preset menampilkan "xx ms · blokir X/Y"; AdGuard ≥ 3/4, Cloudflare (1.1.1.1 / Security / Families) 0/4; satu ditandai "Tercepat".
 - [ ] Aktifkan AdGuard → snackbar menyebut latensi; kartu status "OS: DoT terenkripsi" muncul dalam beberapa detik.
 - [ ] Hostname kustom `example.com` → **ditolak** sebelum diterapkan (bukan resolver DoT).
 - [ ] Hostname kustom `https://dns.adguard-dns.com` → error format, tombol terapkan nonaktif.

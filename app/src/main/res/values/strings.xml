@@ -71,6 +71,12 @@
     <string name="preset_cloudflare_name">Cloudflare 1.1.1.2 (Security)</string>
     <string name="preset_cloudflare_category">Anti-malware</string>
     <string name="preset_cloudflare_desc">Blocks malware, phishing, ransomware, and C2 domains in real time. Does not block ads.</string>
+    <string name="preset_cloudflare_family_name">Cloudflare 1.1.1.3 (Families)</string>
+    <string name="preset_cloudflare_family_category">Family &amp; malware</string>
+    <string name="preset_cloudflare_family_desc">Blocks malware plus adult content. Does not block ads.</string>
+    <string name="preset_cloudflare_plain_name">Cloudflare 1.1.1.1</string>
+    <string name="preset_cloudflare_plain_category">Plain resolver (no filter)</string>
+    <string name="preset_cloudflare_plain_desc">Cloudflare\'s fast, privacy-focused resolver with no filtering — encryption only, nothing is blocked.</string>
     <string name="preset_nextdns_name">NextDNS Anycast</string>
     <string name="preset_nextdns_category">Plain resolver (no filter)</string>
     <string name="preset_nextdns_desc">Low-latency anycast DoT resolver with no built-in filtering. For NextDNS ad blocking, use a custom hostname with your profile ID.</string>

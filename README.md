@@ -67,7 +67,9 @@ Tekan lama layar utama → **Widget → Status AetherDNS** untuk melihat status 
 | **AdGuard DNS (Rekomendasi)** | `dns.adguard-dns.com` | Anti-Iklan & Tracker | Banner, pop-up, rewarded ads di aplikasi & browser |
 | **AdGuard Family** | `family.adguard-dns.com` | Keluarga & Anti-Iklan | Anti-iklan + proteksi konten dewasa + SafeSearch |
 | **Mullvad Privacy** | `adblock.dns.mullvad.net` | Privasi & Anti-Iklan | Resolver zero-log resmi Mullvad dengan filter iklan aktif |
+| **Cloudflare Families (1.1.1.3)** | `family.cloudflare-dns.com` | Keluarga & Anti-Malware | Blokir malware + konten dewasa (tidak memblokir iklan) |
 | **Cloudflare Security (1.1.1.2)** | `security.cloudflare-dns.com` | Anti-Malware | Blokir phishing, malware, dan ransomware |
+| **Cloudflare 1.1.1.1** | `1dot1dot1dot1.cloudflare-dns.com` | Resolver Bersih | Tercepat & privat, hanya enkripsi tanpa filter |
 | **NextDNS Anycast** | `dns.nextdns.io` | Resolver Bersih | Resolver Anycast berlatensi rendah (gunakan Hostname Kustom jika ingin filter ad NextDNS) |
 | **Custom Hostname** | *(Bebas ditentukan)* | Kustomisasi | ID profil NextDNS pribadi (`xxxxxx.dns.nextdns.io`) atau server VPS sendiri (AdGuard Home / Pi-hole) |
 
