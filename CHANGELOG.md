@@ -3,6 +3,11 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.16.1] - 2026-10-21
+
+### Diperbaiki
+- Tombol "Pasang tombol di Quick Settings" terlihat tidak bereaksi: jawaban sistem diabaikan. Kini muncul pesan bila tile berhasil ditambahkan, sudah terpasang, atau HP tidak menampilkan dialog (dengan langkah menambahkan manual).
+
 ## [1.16.0] - 2026-10-21
 
 ### Diubah

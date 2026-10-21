@@ -1,0 +1,1 @@
+• "Add to Quick Settings" now tells you whether the button was added, is already there, or must be added manually

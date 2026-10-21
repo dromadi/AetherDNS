@@ -14,7 +14,7 @@
     <string name="action_enable">Aktifkan Proteksi Sekarang</string>
     <string name="action_pause_15">Jeda 15 Menit (Login Wi-Fi Publik)</string>
     <string name="action_add_tile">Pasang Tombol di Quick Settings (Status Bar)</string>
-    <string name="toast_tile_manual">Tile dapat ditambahkan manual dari panel atas HP</string>
+    <string name="toast_tile_manual">HP tidak menampilkan dialog penambahan. Tambahkan manual: tarik status bar ke bawah dua kali → ketuk ikon pensil / Edit → seret \"DNS Anti-Iklan\" ke panel.</string>
     <string name="audit_offline_desc">Domain kontrol pun gagal di-resolve. Periksa koneksi internet atau resolver DoT yang aktif.</string>
     <string name="audit_outcome_sinkhole">Sinkhole (%1$s)</string>
     <string name="audit_outcome_nxdomain">NXDOMAIN (terfilter)</string>
@@ -341,4 +341,6 @@
     <string name="more_about_subtitle">Versi %1$s</string>
     <string name="more_back">Kembali</string>
     <string name="status_selected_resolver">Akan memakai: %1$s</string>
+    <string name="toast_tile_added">Ditambahkan ke Quick Settings. Tarik status bar ke bawah untuk memakainya.</string>
+    <string name="toast_tile_already_added">Tombol AetherDNS sudah ada di Quick Settings. Tarik status bar ke bawah dua kali untuk menemukannya.</string>
 </resources>

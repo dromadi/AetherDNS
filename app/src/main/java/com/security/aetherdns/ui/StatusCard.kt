@@ -313,14 +313,36 @@ internal fun AddTileButton(contentColor: Color = MaterialTheme.colorScheme.prima
                     context.getString(R.string.tile_label),
                     GraphicsIcon.createWithResource(context, R.drawable.ic_tile_shield),
                     context.mainExecutor
-                ) { _ -> }
+                ) { result ->
+                    // Sebelumnya hasil diabaikan: bila tile sudah terpasang atau launcher (mis. One UI) menolak,
+                    // tombol terlihat tidak melakukan apa-apa
+                    TileRequestResult.messageFor(result)?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+                }
             } catch (e: Exception) {
-                Toast.makeText(context, R.string.toast_tile_manual, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.toast_tile_manual, Toast.LENGTH_LONG).show()
             }
         }
     ) {
         Icon(imageVector = Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
         Text(stringResource(R.string.action_add_tile), fontSize = 12.sp)
+    }
+}
+
+/**
+ * Pesan untuk hasil `StatusBarManager.requestAddTileService` (nilai konstanta API 33 ditulis langsung agar bisa
+ * diuji di JVM). `null` = tidak perlu pesan (pengguna sendiri menekan "Jangan tambahkan").
+ */
+internal object TileRequestResult {
+    private const val NOT_ADDED = 0
+    private const val ALREADY_ADDED = 1
+    private const val ADDED = 2
+
+    fun messageFor(result: Int): Int? = when (result) {
+        ADDED -> R.string.toast_tile_added
+        ALREADY_ADDED -> R.string.toast_tile_already_added
+        NOT_ADDED -> null
+        // 1000+ = galat (aplikasi tidak di depan, permintaan berjalan, tidak didukung launcher, dsb.)
+        else -> R.string.toast_tile_manual
     }
 }
