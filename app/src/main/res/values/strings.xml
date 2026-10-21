@@ -244,4 +244,21 @@
     <string name="widget_title_off">Protection off</string>
     <string name="widget_title_paused">Paused</string>
     <string name="widget_subtitle_paused">Back on around %1$s</string>
+
+    <!-- Cek jaringan -->
+    <string name="netcheck_title">Network check</string>
+    <string name="netcheck_desc">See whether this Wi-Fi or mobile network tampers with regular DNS, and whether encrypted DNS works here.</string>
+    <string name="netcheck_run">Check</string>
+    <string name="netcheck_interception_ok">Regular DNS is not intercepted</string>
+    <string name="netcheck_interception_problem">The network intercepts regular DNS (port 53)</string>
+    <string name="netcheck_hijack_ok">DNS answers are not forged</string>
+    <string name="netcheck_hijack_problem">DNS answers are forged (ISP ads or redirect pages)</string>
+    <string name="netcheck_hijack_unknown">Could not check (outside DNS may be blocked)</string>
+    <string name="netcheck_dot_ok">Encrypted DNS works on this network</string>
+    <string name="netcheck_dot_problem">This network blocks encrypted DNS (port 853)</string>
+    <string name="netcheck_dot_unknown">Could not check (offline?)</string>
+    <string name="netcheck_summary_protected">Your provider tampers with regular DNS — AetherDNS keeps your lookups encrypted and untouched.</string>
+    <string name="netcheck_summary_exposed">Your provider tampers with regular DNS. Turn protection on to avoid it.</string>
+    <string name="netcheck_summary_clean">No DNS tampering detected on this network.</string>
+    <string name="netcheck_summary_dot_blocked">Encrypted DNS is blocked here, so the internet may stop working while protection is on. Pause it while you use this network.</string>
 </resources>

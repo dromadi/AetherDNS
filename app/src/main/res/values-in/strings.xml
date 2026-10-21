@@ -243,4 +243,21 @@
     <string name="widget_title_off">Proteksi mati</string>
     <string name="widget_title_paused">Dijeda</string>
     <string name="widget_subtitle_paused">Aktif lagi sekitar pukul %1$s</string>
+
+    <!-- Cek jaringan -->
+    <string name="netcheck_title">Cek jaringan</string>
+    <string name="netcheck_desc">Lihat apakah Wi-Fi atau jaringan seluler ini membelokkan DNS biasa, dan apakah DNS terenkripsi bisa dipakai di sini.</string>
+    <string name="netcheck_run">Periksa</string>
+    <string name="netcheck_interception_ok">DNS biasa tidak disadap</string>
+    <string name="netcheck_interception_problem">Jaringan menyadap DNS biasa (port 53)</string>
+    <string name="netcheck_hijack_ok">Jawaban DNS tidak dipalsukan</string>
+    <string name="netcheck_hijack_problem">Jawaban DNS dipalsukan (iklan atau halaman pengalihan ISP)</string>
+    <string name="netcheck_hijack_unknown">Tidak bisa diperiksa (DNS luar mungkin diblokir)</string>
+    <string name="netcheck_dot_ok">DNS terenkripsi bisa dipakai di jaringan ini</string>
+    <string name="netcheck_dot_problem">Jaringan ini memblokir DNS terenkripsi (port 853)</string>
+    <string name="netcheck_dot_unknown">Tidak bisa diperiksa (sedang offline?)</string>
+    <string name="netcheck_summary_protected">Penyedia internet Anda membelokkan DNS biasa — AetherDNS menjaga DNS Anda tetap terenkripsi dan utuh.</string>
+    <string name="netcheck_summary_exposed">Penyedia internet Anda membelokkan DNS biasa. Aktifkan proteksi untuk menghindarinya.</string>
+    <string name="netcheck_summary_clean">Tidak terdeteksi pembelokan DNS di jaringan ini.</string>
+    <string name="netcheck_summary_dot_blocked">DNS terenkripsi diblokir di sini, jadi internet bisa putus selama proteksi aktif. Jeda dulu selama memakai jaringan ini.</string>
 </resources>

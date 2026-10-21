@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import java.io.DataInputStream
 import java.io.EOFException
 import java.io.IOException
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -93,15 +94,22 @@ class DotProbeClient(
      * 3. Mengirim satu query DNS (A [CANARY_DOMAIN]) dengan framing RFC 7858 dan memvalidasi respons.
      * Langkah 3 memastikan server benar-benar melayani DNS, bukan sekadar menerima TLS di port 853.
      */
-    override suspend fun probe(hostname: String): DotProbeResult =
-        withSession(hostname, onFailure = { it }) { session -> session.canary() }
+    override suspend fun probe(hostname: String): DotProbeResult = probeAt(hostname, address = null)
+
+    /**
+     * Seperti [probe], tetapi tersambung ke [address] (IP literal) bila diberikan — dipakai saat DNS sistem sedang
+     * tidak bisa me-resolve (mis. Private DNS strict ke resolver yang diblokir). SNI dan verifikasi sertifikat
+     * tetap memakai [hostname].
+     */
+    suspend fun probeAt(hostname: String, address: String?): DotProbeResult =
+        withSession(hostname, address, onFailure = { it }) { session -> session.canary() }
 
     /**
      * Seperti [probe], lalu memakai koneksi TLS yang sama untuk meng-query [AdTestDomains] dan
      * menilai apakah resolver memblokirnya (NXDOMAIN / NODATA / REFUSED / 0.0.0.0).
      */
     override suspend fun inspect(hostname: String): InspectionResult =
-        withSession(hostname, onFailure = { InspectionResult.Failure(it) }) { session ->
+        withSession(hostname, address = null, onFailure = { InspectionResult.Failure(it) }) { session ->
             when (val latency = session.canary()) {
                 is DotProbeResult.Failure -> InspectionResult.Failure(latency)
                 is DotProbeResult.Success -> {
@@ -157,6 +165,7 @@ class DotProbeClient(
     /** Membuka sesi DoT terverifikasi, menjalankan [block], dan memetakan setiap kegagalan ke [DotProbeCause]. */
     private suspend fun <T> withSession(
         hostname: String,
+        address: String?,
         onFailure: (DotProbeResult.Failure) -> T,
         block: (Session) -> T
     ): T = withContext(Dispatchers.IO) {
@@ -180,7 +189,9 @@ class DotProbeClient(
 
             // Connect & perform TLS handshake
             val handshakeStart = System.nanoTime()
-            socket.connect(InetSocketAddress(targetFqdn, DOT_PORT), TIMEOUT_MS)
+            val endpoint = address?.let { InetSocketAddress(InetAddress.getByName(it), DOT_PORT) }
+                ?: InetSocketAddress(targetFqdn, DOT_PORT)
+            socket.connect(endpoint, TIMEOUT_MS)
             socket.startHandshake()
             val handshakeMs = (System.nanoTime() - handshakeStart) / 1_000_000
 

@@ -23,6 +23,8 @@ import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DotProbe
 import com.security.aetherdns.util.InspectionResult
+import com.security.aetherdns.util.NetworkInspector
+import com.security.aetherdns.util.NetworkReport
 import com.security.aetherdns.util.ResolverInspector
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -56,6 +58,7 @@ class MainViewModel(
     private val onboardingStore: OnboardingStore,
     private val activator: WirelessAdbActivator,
     private val inspector: ResolverInspector = DotProbe,
+    private val networkInspector: NetworkInspector = NetworkInspector(),
     private val auditor: DnsAuditor = DnsAuditor()
 ) : ViewModel() {
 
@@ -90,6 +93,12 @@ class MainViewModel(
     /** Aktivasi bawaan (Wireless debugging tanpa Shizuku), Android 11+. */
     val activationState: StateFlow<ActivationState> = activator.state
     val isNativeActivationSupported: Boolean get() = activator.isSupported
+
+    private val _networkReport = MutableStateFlow<NetworkReport?>(null)
+    val networkReport: StateFlow<NetworkReport?> = _networkReport.asStateFlow()
+
+    private val _isCheckingNetwork = MutableStateFlow(false)
+    val isCheckingNetwork: StateFlow<Boolean> = _isCheckingNetwork.asStateFlow()
 
     private val _eventChannel = Channel<UiEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -186,6 +195,18 @@ class MainViewModel(
     fun disableDns() {
         viewModelScope.launch {
             snackbar(UiText.of(if (repository.disable()) R.string.disable_success else R.string.disable_failed))
+        }
+    }
+
+    /** Cek jaringan; DoT diuji ke resolver aktif, atau [fallbackHostname] bila proteksi mati. */
+    fun runNetworkCheck(fallbackHostname: String) {
+        if (_isCheckingNetwork.value) return
+        viewModelScope.launch {
+            _isCheckingNetwork.value = true
+            val state = dnsState.value
+            val hostname = state.specifier.takeIf { state.isProtectionActive && it.isNotBlank() } ?: fallbackHostname
+            _networkReport.value = networkInspector.inspect(hostname)
+            _isCheckingNetwork.value = false
         }
     }
 

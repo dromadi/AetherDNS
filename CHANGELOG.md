@@ -3,6 +3,11 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.13.0] - 2026-10-21
+
+### Ditambahkan
+- **Cek jaringan** di Beranda: mendeteksi penyadapan DNS biasa (port 53), jawaban DNS yang dipalsukan ISP (iklan/halaman pengalihan), dan apakah DNS terenkripsi (port 853) bisa dipakai. Bila DoT diblokir saat proteksi aktif, tersedia tombol jeda satu ketuk agar internet tidak putus.
+
 ## [1.12.0] - 2026-10-21
 
 ### Ditambahkan

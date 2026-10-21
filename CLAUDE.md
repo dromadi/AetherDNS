@@ -34,6 +34,10 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Hasil probe memuat latensi (`handshakeMs`, `queryMs`). `DotProbe.inspect()` memakai koneksi TLS yang sama untuk meng-query `AdTestDomains` dan menilai blokir (`FilterVerdict`: NXDOMAIN / NODATA / REFUSED / 0.0.0.0) — dipakai fitur "Uji Kecepatan & Filter" sebelum resolver diterapkan.
    - Dilengkapi *self-healing* aman (`DnsApplier`): Jika probe gagal karena resolusi DNS mati (`DotProbeCause.RESOLVE`) saat mode strict aktif, konfigurasi sementara beralih ke `opportunistic`, melakukan retry bertahap (3x percobaan), dan memulihkan setting semula di blok `finally { withContext(NonCancellable) { ... } }` bila resolver baru tidak berhasil **tertulis** (gagal, dibatalkan, atau ditolak sistem).
    - Dilindungi `Mutex` untuk mencegah *race condition* akibat penekanan preset ganda secara cepat.
+4b. **Cek Jaringan (`util/NetworkInspector`)**:
+   - Soket UDP milik aplikasi tidak melewati Private DNS, jadi hasilnya mencerminkan perilaku ISP/jaringan. Tiga pemeriksaan (`NetworkCheck`): `INTERCEPTION` (kueri ke 192.0.2.1/TEST-NET-1 yang tak pernah menjalankan DNS tetap dijawab ⇒ port 53 disadap), `NXDOMAIN_HIJACK` (subdomain acak `example.com` dijawab dengan IP lewat 8.8.8.8/1.1.1.1 ⇒ jawaban dipalsukan), `DOT_REACHABLE` (probe DoT; bila DNS sistem mati karena strict, hostname di-resolve sendiri lewat DNS biasa lalu `DotProbeClient.probeAt(host, ip)`).
+   - Hanya domain netral (RFC 2606) dan alamat dokumentasi (RFC 5737); tidak ada data pengguna. Logika murni diuji `NetworkInspectorTest` (transport palsu); `LiveDotProbeTest` menguji end-to-end di runner CI.
+   - UI `NetworkCheckCard`: bila DoT diblokir saat proteksi aktif, tawarkan jeda 15 menit.
 5. **Quick Settings Tile (Status Bar 1-Klik)**:
    - Menggunakan `AetherDnsTileService` dengan ikon monokrom `ic_tile_shield`.
    - `onStartListening()` terpanggil otomatis saat panel Quick Settings ditarik turun.
@@ -98,6 +102,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DnsWireFormat.kt`: Encoder query, decoder header, dan parser record A (dengan kompresi nama) pesan DNS (RFC 1035).
   - `AdTestDomains.kt`: Daftar domain iklan uji bersama (audit & pratinjau filter) dan `FilterVerdict`.
   - `HostnameValidator.kt`: Validasi ketat FQDN (RFC 1035 / RFC 1123) dan normalisasi IDN Punycode.
+  - `NetworkInspector.kt`: Cek jaringan (penyadapan port 53, NXDOMAIN hijack, keterjangkauan DoT) dengan `PlainDnsTransport` / `DotAddressProber` yang dapat dipalsukan.
   - `DnsAuditor.kt`: Engine audit sinkhole real-time dengan domain kontrol konektivitas; resolver diabstraksi (`SystemResolver`) dan diuji di `DnsAuditorTest`.
 - `widget/`:
   - `StatusWidget.kt`: widget layar utama (`res/layout/widget_status.xml`, `res/xml/widget_status_info.xml`).
@@ -115,6 +120,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `MainViewModel.kt`: ViewModel penampung state UI, orkestrasi Shizuku, apply/disable/audit/jeda, benchmark latensi + filter (`BenchmarkState`), dan `Channel<UiEvent>` (berisi `UiText`) untuk Snackbar.
   - `UiText.kt`: Teks terlokalisasi tertunda + pemetaan semua tipe error domain ke string resource.
   - `AetherDnsApp.kt`: Scaffold, top bar, navigasi bawah 3 tab (Beranda / Resolver / Lainnya), state pilihan profil. Beranda punya pull-to-refresh; tombol utama tanpa izin menggulir ke asisten izin.
+  - `NetworkCheckCard.kt`: kartu Cek jaringan di Beranda.
   - `SelectedResolverCard.kt`, `MoreScreen.kt`: ringkasan resolver di Beranda dan tab Lainnya (izin, otomasi, tautan, tentang).
   - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
   - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif (termasuk Material You) — jangan menulis `Color(0x...)` langsung di komponen. Tinggi baris body memakai `em` agar tetap rapat saat `fontSize` di-override.
@@ -128,7 +134,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

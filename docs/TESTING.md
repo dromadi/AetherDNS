@@ -41,6 +41,14 @@ Shizuku:
 - [ ] Set DoT ke host yang mati lewat Settings HP (mode strict, DNS putus) → pilih AdGuard di aplikasi → berhasil pulih (self-healing).
 - [ ] **Uji DNS** (audit) saat AdGuard aktif → "terfilter (aman)"; saat mode pesawat → "Offline", bukan "aman".
 
+## 2b. Cek jaringan
+
+- [ ] Wi-Fi rumah / data seluler: **Periksa** → tiga baris hasil muncul dalam beberapa detik; catat hasilnya per penyedia (IndiHome, Telkomsel, dll.).
+- [ ] Proteksi mati + jaringan yang membelokkan DNS → ringkasan oranye "Aktifkan proteksi…".
+- [ ] Proteksi aktif + jaringan yang membelokkan DNS → ringkasan hijau "AetherDNS menjaga…".
+- [ ] Jaringan yang memblokir port 853 (mis. Wi-Fi kantor/kampus) dengan proteksi aktif → ringkasan merah + tombol jeda berfungsi.
+- [ ] Mode pesawat → baris DoT "Tidak bisa diperiksa", aplikasi tidak macet.
+
 ## 3. Jeda 15 menit
 
 - [ ] Jeda → status "Dijeda — aktif kembali sekitar pukul HH:MM"; Private DNS di Settings HP = Off.

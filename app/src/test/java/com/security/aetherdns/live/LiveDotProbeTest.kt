@@ -3,7 +3,11 @@ package com.security.aetherdns.live
 import com.security.aetherdns.util.DotProbeCause
 import com.security.aetherdns.util.DotProbeClient
 import com.security.aetherdns.util.DotProbeResult
+import com.security.aetherdns.util.CheckResult
+import com.security.aetherdns.util.DotAddressProber
 import com.security.aetherdns.util.InspectionResult
+import com.security.aetherdns.util.NetworkCheck
+import com.security.aetherdns.util.NetworkInspector
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -138,5 +142,18 @@ class LiveDotProbeTest {
         val result = runBlocking { DotProbeClient(rejectAll).probe("dns.adguard-dns.com") }
         assertTrue("$result", result is DotProbeResult.Failure)
         assertEquals(DotProbeCause.CERT_MISMATCH, (result as DotProbeResult.Failure).cause)
+    }
+
+    /**
+     * Jaringan runner CI (pusat data) tidak membelokkan DNS: Cek jaringan harus melaporkan bersih dan DoT terjangkau.
+     * Menguji transport UDP sungguhan, penyusunan kueri, dan klasifikasi end-to-end.
+     */
+    @Test
+    fun networkInspectorReportsCleanDatacenterNetwork() = runBlocking {
+        val inspector = NetworkInspector(prober = DotAddressProber { host, address -> client.probeAt(host, address) })
+        val report = inspector.inspect("dns.adguard-dns.com")
+        assertEquals(CheckResult.OK, report[NetworkCheck.INTERCEPTION])
+        assertEquals(CheckResult.OK, report[NetworkCheck.NXDOMAIN_HIJACK])
+        assertEquals(CheckResult.OK, report[NetworkCheck.DOT_REACHABLE])
     }
 }

@@ -60,6 +60,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val savedProfiles by viewModel.savedProfiles.collectAsState()
     val automation by viewModel.automation.collectAsState()
     val showOnboarding by viewModel.showOnboarding.collectAsState()
+    val networkReport by viewModel.networkReport.collectAsState()
+    val isCheckingNetwork by viewModel.isCheckingNetwork.collectAsState()
     val activationState by viewModel.activationState.collectAsState()
     val nativeActivation = if (viewModel.isNativeActivationSupported) {
         NativeActivationUi(activationState, viewModel::startNotificationActivation, viewModel::activateWithCode)
@@ -196,6 +198,16 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             hostname = selectedHostname,
                             benchmarkResult = selectedProfile?.let { benchmark.results[it.id] },
                             onChange = { tab = AppTab.RESOLVERS }
+                        )
+                    }
+
+                    item {
+                        NetworkCheckCard(
+                            report = networkReport,
+                            isChecking = isCheckingNetwork,
+                            isProtectionActive = dnsState.isProtectionActive,
+                            onRun = { viewModel.runNetworkCheck(selectedHostname.ifBlank { DnsManager.DEFAULT_FALLBACK_HOSTNAME }) },
+                            onPause = { viewModel.pauseDns(15) }
                         )
                     }
 
