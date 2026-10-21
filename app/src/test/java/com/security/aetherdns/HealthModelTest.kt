@@ -86,4 +86,14 @@ class HealthModelTest {
         val fast = slow.copy(medianMs = 40)
         assertFalse(R.string.health_speed_slow in texts(HealthModel.summarize(active, true, report(), audit(4), fast)))
     }
+
+    @Test
+    fun `frequent failures warn about unreliable DNS instead of speed`() {
+        val flaky = com.security.aetherdns.data.LatencySummary("dns.adguard-dns.com", com.security.aetherdns.data.NetworkKey("wifi", ""), 980, 4, 2, emptyList())
+        val rows = texts(HealthModel.summarize(active, true, report(), audit(4), flaky))
+        assertTrue(R.string.health_dns_unreliable in rows)
+        assertFalse(R.string.health_speed_slow in rows)
+        val rare = flaky.copy(samples = 10, failures = 1)
+        assertFalse(R.string.health_dns_unreliable in texts(HealthModel.summarize(active, true, report(), audit(4), rare)))
+    }
 }

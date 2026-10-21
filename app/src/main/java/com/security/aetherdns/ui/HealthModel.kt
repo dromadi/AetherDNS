@@ -64,7 +64,11 @@ object HealthModel {
         }
 
         // Kecepatan: hanya disebut bila lambat secara konsisten (cukup sampel), bukan dari satu pengukuran
-        if (active && speed?.level == SpeedLevel.SLOW) {
+        val attempts = (speed?.samples ?: 0) + (speed?.failures ?: 0)
+        // ≥ 20% percobaan gagal (dari minimal 5): penyebab umum internet "putus-nyambung" dalam mode Private DNS
+        if (active && speed != null && attempts >= 5 && speed.failures * 5 >= attempts) {
+            rows += HealthRow(HealthLevel.WARNING, R.string.health_dns_unreliable)
+        } else if (active && speed?.level == SpeedLevel.SLOW) {
             rows += HealthRow(HealthLevel.WARNING, R.string.health_speed_slow, listOf(speed.medianMs))
         }
 

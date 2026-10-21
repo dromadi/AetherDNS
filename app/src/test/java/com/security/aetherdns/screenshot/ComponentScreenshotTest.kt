@@ -17,6 +17,9 @@ import com.security.aetherdns.data.HistoryAction
 import com.security.aetherdns.data.HistoryEvent
 import com.security.aetherdns.data.NextDnsWeek
 import com.security.aetherdns.ui.WeekUiState
+import com.security.aetherdns.ui.StabilityUiState
+import com.security.aetherdns.util.StabilityAdvice
+import com.security.aetherdns.util.StabilityResult
 import com.security.aetherdns.data.InsightSample
 import com.security.aetherdns.data.NetworkKey
 import com.security.aetherdns.data.NextDnsSummary
@@ -208,7 +211,7 @@ class ComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = "w411dp-h2300dp-xxhdpi")
+    @Config(qualifiers = "w411dp-h2900dp-xxhdpi")
     fun insights() {
         val now = System.currentTimeMillis()
         val day = 24L * 60 * 60 * 1000
@@ -252,7 +255,18 @@ class ComponentScreenshotTest {
                             activeResolver = ag,
                             currentNetwork = cell,
                             nextDns = WeekUiState.Loaded(week),
+                            stability = StabilityUiState.Done(
+                                ag,
+                                listOf(
+                                    StabilityResult(ag, listOf(480L, 520L, 2900L, 510L, 470L, 495L, 530L, 505L, 490L), 3),
+                                    StabilityResult("p2.freedns.controld.com", List(12) { 110L + it * 3 }, 0),
+                                    StabilityResult("adblock.dns.mullvad.net", List(12) { 240L + it * 5 }, 0),
+                                    StabilityResult("1dot1dot1dot1.cloudflare-dns.com", List(12) { 35L + it }, 0)
+                                ),
+                                StabilityAdvice.SwitchTo("p2.freedns.controld.com", 128)
+                            ),
                             now = now,
+                            onRunStability = {},
                             onCompare = {},
                             onSwitch = {},
                             onClear = {}

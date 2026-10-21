@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -49,6 +50,10 @@ import com.security.aetherdns.ui.theme.ErrorRed
 import com.security.aetherdns.ui.theme.PrimaryBlue
 import com.security.aetherdns.ui.theme.SuccessGreen
 import com.security.aetherdns.ui.theme.WarningOrange
+import com.security.aetherdns.util.StabilityAdvice
+import com.security.aetherdns.util.StabilityResult
+import com.security.aetherdns.util.StabilityTest
+import com.security.aetherdns.util.StabilityVerdict
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
@@ -66,7 +71,9 @@ fun InsightContent(
     activeResolver: String?,
     currentNetwork: NetworkKey,
     nextDns: WeekUiState?,
+    stability: StabilityUiState,
     now: Long,
+    onRunStability: () -> Unit,
     onCompare: () -> Unit,
     onSwitch: (String) -> Unit,
     onClear: () -> Unit
@@ -89,6 +96,10 @@ fun InsightContent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+
+    InsightSection(title = stringResource(R.string.stability_title)) {
+        StabilityContent(stability, onRunStability, onSwitch)
     }
 
     if (latency.isEmpty() && networks.isEmpty() && recentHistory.isEmpty() && nextDns == null) {
@@ -168,6 +179,107 @@ fun InsightContent(
         Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(6.dp))
         Text(stringResource(R.string.insight_clear))
+    }
+}
+
+@Composable
+private fun StabilityContent(state: StabilityUiState, onRun: () -> Unit, onSwitch: (String) -> Unit) {
+    if (state !is StabilityUiState.Done) {
+        Text(
+            stringResource(R.string.stability_desc, StabilityTest.ROUNDS),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+    when (state) {
+        is StabilityUiState.Running -> {
+            LinearProgressIndicator(
+                progress = { state.round.toFloat() / state.total },
+                modifier = Modifier.fillMaxWidth(),
+                drawStopIndicator = {}
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.stability_running, state.round, state.total),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        is StabilityUiState.Done -> {
+            StabilityAdviceBox(state.advice, onSwitch)
+            Spacer(modifier = Modifier.height(12.dp))
+            state.results.forEachIndexed { index, result ->
+                if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                StabilityRow(result, isActive = result.resolver.equals(state.active, ignoreCase = true))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = onRun, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.stability_again))
+            }
+        }
+        StabilityUiState.Idle -> Button(onClick = onRun, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.stability_run))
+        }
+    }
+}
+
+@Composable
+private fun StabilityAdviceBox(advice: StabilityAdvice, onSwitch: (String) -> Unit) {
+    val (color, text) = when (advice) {
+        StabilityAdvice.ActiveStable -> SuccessGreen to stringResource(R.string.stability_advice_stable)
+        StabilityAdvice.NetworkProblem -> WarningOrange to stringResource(R.string.stability_advice_network)
+        StabilityAdvice.NoAlternative -> ErrorRed to stringResource(R.string.stability_advice_none)
+        is StabilityAdvice.SwitchTo ->
+            WarningOrange to stringResource(R.string.stability_advice_switch, resolverName(advice.resolver), advice.medianMs)
+    }
+    Surface(shape = MaterialTheme.shapes.small, color = color.copy(alpha = 0.12f)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            if (advice is StabilityAdvice.SwitchTo) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { onSwitch(advice.resolver) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.insight_switch, resolverName(advice.resolver)), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StabilityRow(result: StabilityResult, isActive: Boolean) {
+    val (label, color) = when (result.verdict) {
+        StabilityVerdict.STABLE -> R.string.stability_stable to SuccessGreen
+        StabilityVerdict.SLOW -> R.string.stability_slow to WarningOrange
+        StabilityVerdict.UNSTABLE -> R.string.stability_unstable to ErrorRed
+    }
+    val name = resolverName(result.resolver)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                when {
+                    isActive -> stringResource(R.string.stability_active, name)
+                    result.resolver.equals(MainViewModel.STABILITY_REFERENCE, ignoreCase = true) ->
+                        stringResource(R.string.stability_reference, name)
+                    else -> name
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val median = result.medianMs
+            Text(
+                if (median == null) stringResource(R.string.stability_all_failed, result.attempts)
+                else stringResource(R.string.stability_detail, result.failures, result.attempts, median, result.worstMs ?: median),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Pill(stringResource(label), color)
     }
 }
 

@@ -48,6 +48,7 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - UI: halaman Insight di tab Lainnya (`InsightScreen.kt`, `MorePage.INSIGHTS`; state `MorePage` diangkat ke `AetherDnsApp`), tombol "Lihat insight" di `HealthCard`, dan baris peringatan lambat di `HealthModel` — bukan kartu baru di Beranda.
    - `runBenchmark` mencatat sampel `benchmark = true` (tidak ditampilkan sebagai baris sendiri) untuk `InsightAnalyzer.fasterAlternative` — hanya resolver dari `PresetGroup` yang sama dengan preset aktif, minimal 2× lebih cepat, di jaringan yang sama.
    - **Riwayat proteksi** (`data/ProtectionHistory.kt`): `DnsRepository` membandingkan `ProtectionSnapshot` dengan status terakhir yang disimpan (`noBackupFilesDir/history_state`) dan mencatat `HistoryEvent` (`HistoryTracker.transition`, diuji `ProtectionHistoryTest`). Operasi tulis memakai `tracked(source)`: status antara selama operasi tidak dicatat; sumber (`ChangeSource`) dikirim pemanggil (tile `TILE`, `ShortcutActivity` `SHORTCUT`, `AutomationReceiver` `AUTOMATION`, alarm/boot `SCHEDULE`); perubahan yang diamati `ContentObserver` atau saat proses mulai = `SYSTEM`.
+   - **Uji stabilitas** (`util/StabilityTest.kt`): `StabilityTest` mem-probe resolver aktif + preset sekelompok + `MainViewModel.STABILITY_REFERENCE` (Cloudflare) bersamaan, 12 putaran × 2,5 s, koneksi TLS baru tiap kali; `StabilityResult.verdict` (gagal ≥ 1 atau p90 ≥ 1500 ms ⇒ UNSTABLE, median ≥ 400 ms ⇒ SLOW) dan `StabilityAdvice.of` (aktif stabil / jaringan bermasalah bila pembanding pun goyah / pindah / tak ada alternatif), diuji `StabilityTestTest`. AetherDNS sendiri tidak pernah mengubah setelan DNS tanpa aksi pengguna, otomasi, atau akhir jeda — "putus-nyambung" berasal dari keterjangkauan resolver dalam mode strict.
    - **NextDNS 7 hari**: `NextDnsClient.week()` (`status;series` per hari kalender zona waktu HP, `reasons`, `devices`), dimuat saat halaman Insight dibuka.
    - **Privasi**: tidak pernah mencatat SSID Wi-Fi, IP, atau domain yang dikunjungi; data tidak pernah dikirim ke mana pun.
 4d. **Laporan Diagnostik (`diagnostics/`)**:
@@ -160,7 +161,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory, StabilityTest)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

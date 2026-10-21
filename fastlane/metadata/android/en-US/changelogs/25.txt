@@ -1,0 +1,2 @@
+• Connection stability test (Insights): if the internet keeps dropping, it measures the active resolver for about 30 seconds against similar resolvers and Cloudflare, then tells you the cause and offers a switch to a stable resolver
+• The Health card warns when encrypted DNS often fails on your network

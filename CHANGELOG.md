@@ -3,6 +3,12 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [1.20.0] - 2026-10-21
+
+### Ditambahkan
+- **Uji stabilitas koneksi** (Insight → Stabilitas koneksi) untuk keluhan internet "putus-nyambung": resolver aktif diukur 12 kali selama ±30 detik bersama resolver sekelompok dan Cloudflare sebagai pembanding. Hasilnya berupa kesimpulan: resolver aktif stabil, jaringan yang bermasalah, atau pindah ke resolver sekelompok yang stabil (dengan tombol Pindah).
+- Kartu Kesehatan memperingatkan "DNS terenkripsi sering gagal di jaringan ini" bila ≥ 20% pengukuran ke resolver aktif gagal.
+
 ## [1.19.0] - 2026-10-21
 
 ### Diubah

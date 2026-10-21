@@ -39,6 +39,9 @@ import com.security.aetherdns.util.DnsAuditor
 import com.security.aetherdns.util.DotProbe
 import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.InspectionResult
+import com.security.aetherdns.util.StabilityAdvice
+import com.security.aetherdns.util.StabilityResult
+import com.security.aetherdns.util.StabilityTest
 import com.security.aetherdns.util.CheckResult
 import com.security.aetherdns.util.DnsManager
 import com.security.aetherdns.util.NetworkCheck
@@ -86,6 +89,13 @@ sealed class WeekUiState {
     data object Loading : WeekUiState()
     data class Loaded(val week: NextDnsWeek) : WeekUiState()
     data class Error(val error: StatsError) : WeekUiState()
+}
+
+/** Uji stabilitas koneksi DoT (Insight): resolver aktif, resolver sekelompok, dan pembanding. */
+sealed class StabilityUiState {
+    data object Idle : StabilityUiState()
+    data class Running(val round: Int, val total: Int) : StabilityUiState()
+    data class Done(val active: String, val results: List<StabilityResult>, val advice: StabilityAdvice) : StabilityUiState()
 }
 
 /** Hasil "Uji Kecepatan & Filter" per ID profil. */
@@ -237,6 +247,41 @@ class MainViewModel(
                     System.currentTimeMillis(), network, state.specifier,
                     (result as? DotProbeResult.Success)?.totalMs
                 )
+            )
+        }
+    }
+
+    private val _stability = MutableStateFlow<StabilityUiState>(StabilityUiState.Idle)
+    val stability: StateFlow<StabilityUiState> = _stability.asStateFlow()
+
+    /**
+     * Mengukur resolver aktif berulang kali bersama resolver sekelompok dan Cloudflare sebagai pembanding,
+     * untuk menjawab "kenapa internet putus-nyambung": resolver-nya, atau jaringannya.
+     */
+    fun runStabilityTest() {
+        if (_stability.value is StabilityUiState.Running) return
+        val active = dnsState.value.specifier.trim().ifEmpty { DnsManager.DEFAULT_FALLBACK_HOSTNAME }
+        val preset = DefaultProfiles.list.firstOrNull { it.hostname.equals(active, ignoreCase = true) }
+        val alternatives = preset?.let { p -> DefaultProfiles.list.filter { it.group == p.group }.map { it.hostname } }.orEmpty()
+        val hosts = (listOf(active) + alternatives + STABILITY_REFERENCE).distinctBy { it.lowercase() }
+        viewModelScope.launch {
+            val network = networkKey()
+            _stability.value = StabilityUiState.Running(0, StabilityTest.ROUNDS)
+            val results = StabilityTest(DotProbe).run(hosts) { round ->
+                _stability.value = StabilityUiState.Running(round, StabilityTest.ROUNDS)
+            }
+            val now = System.currentTimeMillis()
+            withContext(Dispatchers.IO) {
+                results.forEach {
+                    val isActive = it.resolver.equals(active, ignoreCase = true)
+                    insightStore.append(InsightSample.Latency(now, network, it.resolver, it.medianMs, benchmark = !isActive))
+                }
+            }
+            _insights.value = withContext(Dispatchers.IO) { insightStore.all() }
+            _stability.value = StabilityUiState.Done(
+                active,
+                results,
+                StabilityAdvice.of(results, active, alternatives.toSet(), STABILITY_REFERENCE)
             )
         }
     }
@@ -578,10 +623,12 @@ class MainViewModel(
     private fun formatTime(epochMs: Long): String =
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(epochMs))
 
-    private companion object {
-        const val AUTO_CHECK_INTERVAL_MS = 10 * 60_000L
-        const val NETWORK_SETTLE_MS = 3_000L
-        const val STATS_REFRESH_MS = 5 * 60_000L
+    companion object {
+        /** Pembanding uji stabilitas: jaringan anycast besar, jadi bila ini pun goyah, jaringannya yang bermasalah. */
+        const val STABILITY_REFERENCE = "1dot1dot1dot1.cloudflare-dns.com"
+        private const val AUTO_CHECK_INTERVAL_MS = 10 * 60_000L
+        private const val NETWORK_SETTLE_MS = 3_000L
+        private const val STATS_REFRESH_MS = 5 * 60_000L
     }
 
     class Factory(

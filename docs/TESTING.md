@@ -132,6 +132,7 @@ Shizuku:
 - [ ] Riwayat proteksi: matikan lewat tile, jeda lewat widget, aktifkan di aplikasi → tiga baris dengan asal yang benar.
 - [ ] Matikan Private DNS dari Settings HP saat aplikasi tertutup → buka aplikasi → tercatat "di luar AetherDNS".
 - [ ] (NextDNS + API key) bagian NextDNS 7 hari menampilkan grafik, alasan blokir, dan perangkat.
+- [ ] Insight → Uji stabilitas: progres 1..12 berjalan ±30 detik, lalu kesimpulan + baris per resolver (aktif, sekelompok, Cloudflare pembanding); tombol Pindah (bila muncul) mengganti resolver.
 - [ ] "Hapus riwayat" mengosongkan halaman.
 
 ## 8. Bahasa

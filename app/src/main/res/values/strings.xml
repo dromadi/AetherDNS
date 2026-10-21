@@ -398,4 +398,21 @@
     <string name="insight_nextdns_unknown_device">Unidentified devices</string>
     <string name="insight_nextdns_queries">%1$s queries</string>
     <string name="insight_nextdns_legend">Bars: queries per day, colored part = blocked</string>
+    <string name="stability_title">Connection stability</string>
+    <string name="stability_desc">Internet keeps dropping? This measures the active resolver %1$d times over about 30 seconds, alongside similar resolvers and Cloudflare for comparison.</string>
+    <string name="stability_run">Test stability</string>
+    <string name="stability_running">Testing… %1$d/%2$d</string>
+    <string name="stability_again">Test again</string>
+    <string name="stability_stable">Stable</string>
+    <string name="stability_slow">Slow</string>
+    <string name="stability_unstable">Unstable</string>
+    <string name="stability_detail">Failed %1$d of %2$d · typically %3$d ms · slowest %4$d ms</string>
+    <string name="stability_all_failed">All %1$d attempts failed</string>
+    <string name="stability_reference">%1$s · comparison</string>
+    <string name="stability_active">%1$s · active</string>
+    <string name="stability_advice_stable">Your resolver is stable on this network. If the internet still drops, the cause is likely the signal or the network itself, not DNS.</string>
+    <string name="stability_advice_network">Even the comparison resolver is unstable, so this network itself is unreliable (weak signal, or it interferes with encrypted DNS). Pause protection while you are on it if pages keep failing to load.</string>
+    <string name="stability_advice_switch">%1$s is stable here (typically %2$d ms) and blocks the same kind of content. Switching should stop the drops.</string>
+    <string name="stability_advice_none">Your resolver is unreliable from this network and no similar resolver is stable right now. Try again later, or temporarily use Cloudflare (no ad blocking).</string>
+    <string name="health_dns_unreliable">Encrypted DNS often fails on this network</string>
 </resources>

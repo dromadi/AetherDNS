@@ -397,4 +397,21 @@
     <string name="insight_nextdns_unknown_device">Perangkat tak teridentifikasi</string>
     <string name="insight_nextdns_queries">%1$s kueri</string>
     <string name="insight_nextdns_legend">Batang: kueri per hari, bagian berwarna = diblokir</string>
+    <string name="stability_title">Stabilitas koneksi</string>
+    <string name="stability_desc">Internet sering putus-nyambung? Uji ini mengukur resolver aktif %1$d kali selama ±30 detik, bersama resolver sejenis dan Cloudflare sebagai pembanding.</string>
+    <string name="stability_run">Uji stabilitas</string>
+    <string name="stability_running">Menguji… %1$d/%2$d</string>
+    <string name="stability_again">Uji lagi</string>
+    <string name="stability_stable">Stabil</string>
+    <string name="stability_slow">Lambat</string>
+    <string name="stability_unstable">Tidak stabil</string>
+    <string name="stability_detail">Gagal %1$d dari %2$d · biasanya %3$d ms · terlama %4$d ms</string>
+    <string name="stability_all_failed">Semua %1$d percobaan gagal</string>
+    <string name="stability_reference">%1$s · pembanding</string>
+    <string name="stability_active">%1$s · aktif</string>
+    <string name="stability_advice_stable">Resolver aktifmu stabil di jaringan ini. Bila internet masih putus-nyambung, penyebabnya kemungkinan sinyal atau jaringannya, bukan DNS.</string>
+    <string name="stability_advice_network">Pembanding pun tidak stabil, jadi jaringan ini sendiri yang bermasalah (sinyal lemah atau mengganggu DNS terenkripsi). Jeda proteksi selama di jaringan ini bila halaman sering gagal dimuat.</string>
+    <string name="stability_advice_switch">%1$s stabil di sini (biasanya %2$d ms) dan memblokir jenis konten yang sama. Pindah ke sana seharusnya menghentikan putus-nyambung.</string>
+    <string name="stability_advice_none">Resolver aktif tidak andal dari jaringan ini dan belum ada resolver sejenis yang stabil. Coba lagi nanti, atau sementara pakai Cloudflare (tanpa blokir iklan).</string>
+    <string name="health_dns_unreliable">DNS terenkripsi sering gagal di jaringan ini</string>
 </resources>

@@ -322,6 +322,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 insightContent = {
                     val history by viewModel.history.collectAsState()
                     val statsWeek by viewModel.statsWeek.collectAsState()
+                    val stability by viewModel.stability.collectAsState()
                     val showNextDns = activeNextDnsProfile != null && statsApiKey != null
                     LaunchedEffect(showNextDns) { if (showNextDns) viewModel.refreshWeekStats() }
                     InsightContent(
@@ -330,7 +331,9 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         activeResolver = dnsState.specifier.takeIf { dnsState.isProtectionActive },
                         currentNetwork = currentNetwork,
                         nextDns = statsWeek.takeIf { showNextDns },
+                        stability = stability,
                         now = remember(insights, history) { System.currentTimeMillis() },
+                        onRunStability = viewModel::runStabilityTest,
                         onCompare = {
                             tab = AppTab.RESOLVERS
                             viewModel.runBenchmark()
