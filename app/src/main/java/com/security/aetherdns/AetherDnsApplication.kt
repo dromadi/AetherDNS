@@ -1,6 +1,7 @@
 package com.security.aetherdns
 
 import android.app.Application
+import com.security.aetherdns.autopilot.Autopilot
 import com.security.aetherdns.adb.PairingNotifier
 import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
@@ -50,6 +51,9 @@ class AetherDnsApplication : Application() {
     lateinit var insightStore: InsightStore
         private set
 
+    lateinit var autopilot: Autopilot
+        private set
+
     /** Hanya untuk merender notifikasi aktivasi dan widget mengikuti state; tidak ada kerja latar lain. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -68,6 +72,9 @@ class AetherDnsApplication : Application() {
         onboardingStore = OnboardingStore(this)
         wirelessActivator = WirelessAdbActivator(this)
         nextDnsStatsSettings = NextDnsStatsSettings(this)
+        autopilot = Autopilot(this, dnsRepository)
+        // Pendaftaran callback jaringan berbasis PendingIntent hilang saat reboot/update: daftarkan ulang setiap proses mulai
+        autopilot.register()
         PairingNotifier(this).bind(appScope, wirelessActivator)
         // Widget layar utama mengikuti state DNS selama proses hidup (perubahan dari aplikasi, tile, Settings)
         appScope.launch { dnsRepository.state.collect { StatusWidget.updateAll(this@AetherDnsApplication, it) } }

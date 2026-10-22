@@ -103,15 +103,28 @@ class NetworkInspector(
         return if (answered) CheckResult.OK else CheckResult.INCONCLUSIVE
     }
 
-    private suspend fun checkDot(hostname: String): CheckResult {
+    private suspend fun checkDot(hostname: String): CheckResult = classifyDot(probeResolver(hostname))
+
+    /**
+     * Probe DoT yang tetap bekerja saat DNS sistem mati (mis. Private DNS strict ke resolver yang diblokir):
+     * hostname di-resolve sendiri lewat DNS biasa lalu TLS diuji langsung ke IP-nya.
+     */
+    suspend fun probeResolver(hostname: String): DotProbeResult {
         var result = prober.probe(hostname, null)
         if (result is DotProbeResult.Failure && result.cause == DotProbeCause.RESOLVE) {
-            // DNS sistem mati (bisa karena Private DNS strict ke resolver yang diblokir): resolve sendiri lewat DNS
-            // biasa lalu uji TLS langsung ke IP-nya, agar pemblokiran port 853 tetap terdeteksi
             val address = withContext(Dispatchers.IO) { resolvePlain(hostname) }
             if (address != null) result = prober.probe(hostname, address)
         }
-        return classifyDot(result)
+        return result
+    }
+
+    /** Untuk Autopilot: [Reachability.OFFLINE] bila jaringan sendiri belum bisa dipakai (bukan salah resolver). */
+    suspend fun reachability(hostname: String): Reachability = when (val result = probeResolver(hostname)) {
+        is DotProbeResult.Success -> Reachability.OK
+        is DotProbeResult.Failure -> when (classifyDot(result)) {
+            CheckResult.PROBLEM -> Reachability.FAIL
+            else -> Reachability.OFFLINE
+        }
     }
 
     private fun resolvePlain(hostname: String): String? {
@@ -143,6 +156,8 @@ class NetworkInspector(
         const val INTERCEPTION_ATTEMPTS = 2
     }
 }
+
+enum class Reachability { OK, FAIL, OFFLINE }
 
 /** Transport UDP sungguhan; IP literal sehingga tidak ada resolusi nama sebelum kueri. */
 object UdpDnsTransport : PlainDnsTransport {

@@ -62,7 +62,9 @@ fun StatusCard(
     isProbing: Boolean,
     onChangeResolver: () -> Unit,
     onToggle: () -> Unit,
-    onPause: () -> Unit
+    onPause: () -> Unit,
+    /** Tindakan Autopilot yang sedang berlaku (dijeda / resolver pengganti), null bila tidak ada. */
+    autopilotNote: String? = null
 ) {
     val active = state.isProtectionActive
     val haptics = LocalHapticFeedback.current
@@ -147,6 +149,32 @@ fun StatusCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
+                }
+            }
+
+            if (autopilotNote != null) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (active) Color.White.copy(alpha = 0.18f) else WarningOrange.copy(alpha = 0.14f),
+                    modifier = Modifier.padding(top = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.AutoMode,
+                            contentDescription = null,
+                            tint = if (active) Color.White else WarningOrange,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            autopilotNote,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (active) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
 

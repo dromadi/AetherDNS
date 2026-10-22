@@ -5,7 +5,7 @@ import java.io.File
 enum class HistoryAction { ENABLED, DISABLED, PAUSED, RESUMED, RESOLVER_CHANGED }
 
 /** Asal perubahan; [SYSTEM] = di luar AetherDNS (Settings HP), dicatat saat aplikasi mendeteksinya. */
-enum class ChangeSource { APP, TILE, SHORTCUT, AUTOMATION, SCHEDULE, SYSTEM }
+enum class ChangeSource { APP, TILE, SHORTCUT, AUTOMATION, SCHEDULE, SYSTEM, AUTOPILOT }
 
 data class HistoryEvent(val timestamp: Long, val action: HistoryAction, val source: ChangeSource, val resolver: String)
 

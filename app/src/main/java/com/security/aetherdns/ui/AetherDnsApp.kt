@@ -1,5 +1,11 @@
 package com.security.aetherdns.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -69,6 +75,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val report by viewModel.report.collectAsState()
     val insights by viewModel.insights.collectAsState()
     val currentNetwork by viewModel.currentNetwork.collectAsState()
+    val autopilotStatus by viewModel.autopilotStatus.collectAsState()
     // Statistik hanya bermakna untuk profil NextDNS pribadi yang sedang aktif
     val activeNextDnsProfile = dnsState.specifier.takeIf { dnsState.isProtectionActive }
         ?.let { NextDnsHostname.extractConfigId(it) }
@@ -203,7 +210,8 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                                 }
                             },
                             onPause = { viewModel.pauseDns(15) },
-                            onChangeResolver = { tab = AppTab.RESOLVERS }
+                            onChangeResolver = { tab = AppTab.RESOLVERS },
+                            autopilotNote = autopilotNote(autopilotStatus.hold.takeIf { autopilotStatus.enabled })
                         )
                     }
 
@@ -313,6 +321,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 page = morePage,
                 onPageChange = { morePage = it },
                 hasPermission = dnsState.hasPermission,
+                autopilotEnabled = autopilotStatus.enabled,
                 automation = automation,
                 onToggleAutomation = viewModel::setAutomationEnabled,
                 onRegenerateToken = viewModel::regenerateAutomationToken,
@@ -340,6 +349,22 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                         },
                         onSwitch = { hostname -> viewModel.applyDns(hostname, probe = true) },
                         onClear = viewModel::clearInsights
+                    )
+                },
+                autopilotContent = {
+                    var canNotify by remember { mutableStateOf(notificationsAllowed(context)) }
+                    val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+                        canNotify = it
+                    }
+                    AutopilotContent(
+                        status = autopilotStatus,
+                        canNotify = canNotify,
+                        onToggle = viewModel::setAutopilotEnabled,
+                        onRequestNotifications = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notifyLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
                     )
                 },
                 permissionContent = {
@@ -399,3 +424,7 @@ private fun AppTopBar(hasPermission: Boolean) {
         }
     )
 }
+
+private fun notificationsAllowed(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED

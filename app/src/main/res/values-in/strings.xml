@@ -238,7 +238,7 @@
     <string name="native_notif_action_retry">Coba lagi</string>
     <string name="native_grant_success">WRITE_SECURE_SETTINGS diberikan lewat aktivasi bawaan!</string>
 
-    <!-- Navigasi & UI v1.10 -->
+    <!-- Navigasi &amp; UI v1.10 -->
     <string name="tab_home">Beranda</string>
     <string name="tab_resolvers">Resolver</string>
     <string name="tab_more">Lainnya</string>
@@ -308,7 +308,7 @@
     <string name="report_copied">Laporan disalin</string>
     <string name="report_clear_crash">Hapus catatan crash</string>
 
-    <!-- Kesehatan proteksi & menu Lainnya (v1.16) -->
+    <!-- Kesehatan proteksi &amp; menu Lainnya (v1.16) -->
     <string name="health_title">Kesehatan proteksi</string>
     <string name="health_headline_good">Semua aman</string>
     <string name="health_headline_info">Terlindungi</string>
@@ -414,4 +414,45 @@
     <string name="stability_advice_switch">%1$s stabil di sini (biasanya %2$d ms) dan memblokir jenis konten yang sama. Pindah ke sana seharusnya menghentikan putus-nyambung.</string>
     <string name="stability_advice_none">Resolver aktif tidak andal dari jaringan ini dan belum ada resolver sejenis yang stabil. Coba lagi nanti, atau sementara pakai Cloudflare (tanpa blokir iklan).</string>
     <string name="health_dns_unreliable">DNS terenkripsi sering gagal di jaringan ini</string>
+    <string name="insight_source_autopilot">oleh Autopilot</string>
+    <string name="autopilot_title">Autopilot</string>
+    <string name="autopilot_subtitle_on">Aktif: menyesuaikan setiap jaringan sendiri</string>
+    <string name="autopilot_subtitle_off">Mati</string>
+    <string name="autopilot_switch">Biarkan AetherDNS menangani masalah jaringan</string>
+    <string name="autopilot_intro">Setiap kali HP berganti jaringan, Android membangunkan AetherDNS sebentar untuk memastikan DNS terenkripsi masih bisa dipakai. Tidak ada yang berjalan terus di latar.</string>
+    <string name="autopilot_does_captive">Wi-Fi yang minta login (hotel, kafe, bandara): proteksi dijeda agar halaman login terbuka, lalu aktif lagi sendiri.</string>
+    <string name="autopilot_does_blocked">Jaringan yang memblokir DNS terenkripsi: proteksi dijeda alih-alih memutus internet, lalu kembali di jaringan yang lebih baik.</string>
+    <string name="autopilot_does_switch">Resolver pilihanmu tidak terjangkau tapi yang sejenis bisa: pindah sementara, lalu kembali ke pilihanmu secepatnya.</string>
+    <string name="autopilot_respects">Pilihanmu selalu menang: bila kamu mematikan, menjeda, atau memilih resolver lain, Autopilot mundur.</string>
+    <string name="autopilot_now_paused">Sekarang: proteksi dijeda. %1$s</string>
+    <string name="autopilot_now_switched">Sekarang: memakai %1$s sementara karena %2$s tidak terjangkau dari jaringan ini.</string>
+    <string name="autopilot_now_idle">Sekarang: tidak ada yang perlu diperbaiki. Proteksi berjalan normal.</string>
+    <string name="autopilot_notif_permission">Izinkan notifikasi agar tahu apa yang dilakukan Autopilot</string>
+    <string name="autopilot_reason_captive">Wi-Fi ini meminta login.</string>
+    <string name="autopilot_reason_blocked">Jaringan ini memblokir DNS terenkripsi.</string>
+    <string name="autopilot_reason_down">%1$s tidak terjangkau dari jaringan ini.</string>
+    <string name="autopilot_notif_channel">Autopilot</string>
+    <string name="autopilot_notif_paused_title">Proteksi dijeda oleh Autopilot</string>
+    <string name="autopilot_notif_paused_tail">Aktif lagi otomatis begitu jaringan memungkinkan.</string>
+    <string name="autopilot_notif_switched_title">Autopilot mengganti resolver</string>
+    <string name="autopilot_notif_switched_body">%1$s tidak terjangkau di sini, jadi sementara memakai %2$s. Pilihanmu kembali otomatis.</string>
+    <string name="autopilot_notif_restored_title">Proteksi aktif kembali</string>
+    <string name="autopilot_notif_restored_body">Autopilot mengembalikan %1$s.</string>
+    <string name="status_autopilot_paused">Dijeda Autopilot: %1$s</string>
+    <string name="status_autopilot_switched">Autopilot sementara memakai %1$s</string>
+    <string name="ads_help_title">Kenapa masih ada iklan?</string>
+    <string name="ads_help_intro">Pemblokiran DNS bekerja dengan menolak mencari alamat server iklan. Cara ini sangat efektif, tapi hanya bila iklan datang dari server iklan tersendiri.</string>
+    <string name="ads_help_can_title">Terblokir dengan baik</string>
+    <string name="ads_help_can_body">Iklan banner, pop-up, dan iklan berhadiah di kebanyakan aplikasi &amp; game gratis (AdMob, AppLovin, Unity, Pangle, IronSource…), pelacak, dan iklan di kebanyakan situs web.</string>
+    <string name="ads_help_video_title">YouTube, Instagram, Facebook, TikTok</string>
+    <string name="ads_help_video_body">Iklannya dikirim dari server yang sama dengan video dan postingannya. Memblokir iklannya berarti memblokir aplikasinya, jadi tidak ada layanan DNS yang bisa menghapusnya. Untuk YouTube di web, browser dengan pemblokir konten (misalnya Firefox + uBlock Origin) bisa.</string>
+    <string name="ads_help_inhouse_title">Aplikasi yang memasang iklan sendiri</string>
+    <string name="ads_help_inhouse_body">Sebagian aplikasi (misalnya beberapa pengunduh video) memuat iklan dari domainnya sendiri. Blocklist yang lebih ketat bisa membantu, tapi juga bisa membuat aplikasinya rusak.</string>
+    <string name="ads_help_cache_title">Iklan yang sudah dimuat sebelum proteksi aktif</string>
+    <string name="ads_help_cache_body">Aplikasi dan HP mengingat alamat untuk sementara. Tutup lalu buka lagi aplikasinya, atau mulai ulang HP sekali, setelah proteksi diaktifkan.</string>
+    <string name="ads_help_browser_title">Browser dengan \"DNS aman\" sendiri</string>
+    <string name="ads_help_browser_body">Bila browser punya setelan DNS aman sendiri, ia bisa melewati AetherDNS. Atur agar memakai DNS sistem/bawaan.</string>
+    <string name="ads_help_more_title">Ingin pemblokiran lebih kuat?</string>
+    <string name="ads_help_more_body">Buat profil NextDNS gratis, tambahkan blocklist tambahan (misalnya HaGeZi atau OISD), lalu tempel Config ID-nya di Resolver → Hostname kustom. Kamu juga mendapat statistik blokir di AetherDNS.</string>
+    <string name="more_ads_help_subtitle">Yang bisa &amp; tidak bisa diblokir DNS</string>
 </resources>

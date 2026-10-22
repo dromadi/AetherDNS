@@ -3,6 +3,20 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [2.0.0] - 2026-10-22
+
+### Ditambahkan
+- **Autopilot** (aktif secara bawaan, Lainnya → Autopilot): proteksi menyesuaikan setiap jaringan sendiri, tanpa service latar. Android membangunkan AetherDNS sebentar setiap jaringan berganti (callback jaringan berbasis PendingIntent), lalu:
+  - Wi-Fi yang meminta login (hotel, kafe, bandara) → proteksi dijeda agar halaman login terbuka, aktif lagi otomatis.
+  - Jaringan yang memblokir DNS terenkripsi → dijeda alih-alih memutus internet, aktif lagi di jaringan lain.
+  - Resolver pilihan tak terjangkau tetapi yang sekelompok bisa → pindah sementara, lalu kembali ke pilihan pengguna.
+  - Pilihan manual selalu menang: mematikan, menjeda, atau memilih resolver lain membuat Autopilot mundur. Setiap tindakan diberi notifikasi senyap, tercatat di Riwayat proteksi ("oleh Autopilot"), dan ditampilkan di kartu status.
+- **"Kenapa masih ada iklan?"** (Lainnya): penjelasan jujur apa yang bisa & tidak bisa diblokir DNS (YouTube/Instagram/TikTok, iklan bawaan aplikasi, cache, browser dengan DNS aman sendiri) dan cara mendapat pemblokiran lebih kuat lewat NextDNS.
+- Laporan diagnostik memuat status Autopilot.
+
+### Diubah
+- Dialog "jaringan memblokir DNS terenkripsi" hanya muncul bila Autopilot dimatikan (bila aktif, ditangani otomatis).
+
 ## [1.20.0] - 2026-10-21
 
 ### Ditambahkan

@@ -24,6 +24,12 @@ import com.security.aetherdns.data.InsightSample
 import com.security.aetherdns.data.NetworkKey
 import com.security.aetherdns.data.NextDnsSummary
 import com.security.aetherdns.ui.InsightContent
+import com.security.aetherdns.ui.AutopilotContent
+import com.security.aetherdns.ui.AdsHelpContent
+import com.security.aetherdns.autopilot.AutopilotHold
+import com.security.aetherdns.autopilot.AutopilotReason
+import com.security.aetherdns.autopilot.AutopilotStatus
+import com.security.aetherdns.data.ProtectionSnapshot
 import com.security.aetherdns.ui.AuditDetailRows
 import com.security.aetherdns.ui.HealthCard
 import com.security.aetherdns.ui.HealthModel
@@ -276,5 +282,41 @@ class ComponentScreenshotTest {
             }
         }
         compose.onRoot().captureRoboImage("build/screenshots/15_insights.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h1100dp-xxhdpi")
+    fun autopilot() {
+        val hold = AutopilotHold(
+            "dns.adguard-dns.com",
+            AutopilotReason.CAPTIVE_PORTAL,
+            ProtectionSnapshot(active = false, specifier = "dns.adguard-dns.com", paused = false),
+            System.currentTimeMillis()
+        )
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        AutopilotContent(AutopilotStatus(true, hold), canNotify = false, onToggle = {}, onRequestNotifications = {})
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/16_autopilot.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h1500dp-xxhdpi")
+    fun adsHelp() {
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        AdsHelpContent()
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/17_ads_help.png")
     }
 }

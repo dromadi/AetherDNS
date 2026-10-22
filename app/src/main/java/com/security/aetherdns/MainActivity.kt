@@ -23,7 +23,8 @@ class MainActivity : ComponentActivity() {
             app.wirelessActivator,
             app.nextDnsStatsSettings,
             app.diagnostics,
-            app.insightStore
+            app.insightStore,
+            app.autopilot
         )
     }
 

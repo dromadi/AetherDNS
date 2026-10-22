@@ -7,6 +7,8 @@ import com.security.aetherdns.R
 import com.security.aetherdns.adb.ActivationState
 import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
+import com.security.aetherdns.autopilot.Autopilot
+import com.security.aetherdns.autopilot.AutopilotStatus
 import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
@@ -120,6 +122,7 @@ class MainViewModel(
     private val statsSettings: NextDnsStatsSettings,
     private val diagnostics: DiagnosticsCollector,
     private val insightStore: InsightStore,
+    private val autopilot: Autopilot,
     private val statsClient: NextDnsClient = NextDnsClient(),
     private val inspector: ResolverInspector = DotProbe,
     private val networkInspector: NetworkInspector = NetworkInspector(),
@@ -127,6 +130,19 @@ class MainViewModel(
 ) : ViewModel() {
 
     val automation: StateFlow<AutomationState> = automationSettings.state
+
+    val autopilotStatus: StateFlow<AutopilotStatus> = autopilot.status
+
+    fun setAutopilotEnabled(enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (enabled) {
+                autopilot.enable()
+                autopilot.evaluate(waitForNetwork = false)
+            } else {
+                autopilot.disableAndRelease()
+            }
+        }
+    }
 
     private val _showOnboarding = MutableStateFlow(
         repository.state.value.let { onboardingStore.shouldShow(it.hasPermission, it.isProtectionActive) }
@@ -340,6 +356,9 @@ class MainViewModel(
                     shizukuStatus = granter.status().name,
                     notificationsAllowed = diagnostics.notificationsAllowed(),
                     automationEnabled = automationSettings.state.value.enabled,
+                    autopilot = autopilot.status.value.let { s ->
+                        if (!s.enabled) "disabled" else s.hold?.let { "enabled, holding (${it.reason}, ${if (it.isPause) "paused" else "substitute"})" } ?: "enabled, idle"
+                    },
                     nextDnsApiKeySet = statsSettings.apiKey.value != null,
                     nextDnsProfileDetected = NextDnsHostname.extractConfigId(state.specifier) != null,
                     savedProfiles = profileRepository.profiles.value.size,
@@ -491,7 +510,8 @@ class MainViewModel(
             )
             lastAutoCheckAt = System.currentTimeMillis()
             // Pemeriksaan manual sudah menampilkan peringatan di kartu; otomatis perlu menarik perhatian
-            if (automatic && dnsState.value.isProtectionActive &&
+            // Dengan Autopilot aktif jeda sudah ditangani otomatis; dialog hanya untuk yang mematikannya
+            if (automatic && dnsState.value.isProtectionActive && !autopilot.status.value.enabled &&
                 report[NetworkCheck.DOT_REACHABLE] == CheckResult.PROBLEM
             ) {
                 _eventChannel.send(UiEvent.DotBlockedOnNetwork)
@@ -502,6 +522,10 @@ class MainViewModel(
     /** Dipanggil saat layar tampil: cek otomatis paling sering tiap [AUTO_CHECK_INTERVAL_MS], tanpa kerja latar. */
     fun onVisible() {
         isVisible = true
+        // Saat Autopilot sedang menahan proteksi, cek ulang setiap aplikasi dibuka agar pemulihan terasa instan
+        if (autopilot.status.value.hold != null || System.currentTimeMillis() - lastAutoCheckAt >= AUTO_CHECK_INTERVAL_MS) {
+            viewModelScope.launch(Dispatchers.IO) { autopilot.evaluate(waitForNetwork = false) }
+        }
         autoNetworkCheck(force = false)
         if (System.currentTimeMillis() - lastStatsAt > STATS_REFRESH_MS) refreshStats()
     }
@@ -625,7 +649,7 @@ class MainViewModel(
 
     companion object {
         /** Pembanding uji stabilitas: jaringan anycast besar, jadi bila ini pun goyah, jaringannya yang bermasalah. */
-        const val STABILITY_REFERENCE = "1dot1dot1dot1.cloudflare-dns.com"
+        const val STABILITY_REFERENCE = Autopilot.REFERENCE
         private const val AUTO_CHECK_INTERVAL_MS = 10 * 60_000L
         private const val NETWORK_SETTLE_MS = 3_000L
         private const val STATS_REFRESH_MS = 5 * 60_000L
@@ -640,12 +664,13 @@ class MainViewModel(
         private val activator: WirelessAdbActivator,
         private val statsSettings: NextDnsStatsSettings,
         private val diagnostics: DiagnosticsCollector,
-        private val insightStore: InsightStore
+        private val insightStore: InsightStore,
+        private val autopilot: Autopilot
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics, insightStore) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics, insightStore, autopilot) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -78,12 +78,18 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Tombol memakai `PendingIntent` ke `ShortcutActivity` (tidak diekspor) — jangan menambah receiver aksi yang diekspor, karena aplikasi lain bisa mematikan proteksi lewat broadcast.
    - Diperbarui oleh `AetherDnsApplication` yang meng-collect `DnsRepository.state` selama proses hidup; `updatePeriodMillis` 30 menit hanya cadangan untuk perubahan dari Settings saat proses mati.
 9b. **Ikon**: adaptive icon `mipmap-anydpi/ic_launcher(_round).xml` = `drawable/ic_launcher_background` (gradien `BrandGradientColors`) + `ic_launcher_foreground` (perisai + gelombang, di zona aman 66dp) + `ic_launcher_monochrome` (themed icon Android 13+). `ic_tile_shield` (tile, notifikasi, hero status) memakai lambang yang sama. Ubah ketiganya bersamaan agar konsisten.
-10. **Backup**: profil tersimpan ikut Auto Backup; berkas di `noBackupFilesDir` (insight, riwayat, crash) tidak pernah ikut; `pause_state`, `automation` (token rahasia), dan `nextdns_stats` (API key) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
+10. **Backup**: profil tersimpan ikut Auto Backup; berkas di `noBackupFilesDir` (insight, riwayat, crash) tidak pernah ikut; `autopilot`, `pause_state`, `automation` (token rahasia), dan `nextdns_stats` (API key) dikecualikan (`res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml`).
 11. **Otomasi (Tasker / MacroDroid)**:
    - `AutomationReceiver` (exported, tetapi `android:enabled="false"` di manifest) hanya diaktifkan lewat sakelar di aplikasi (`AutomationSettings` → `setComponentEnabledSetting`). Setiap perintah wajib membawa extra `token` yang dibandingkan waktu-konstan dengan token acak 128-bit.
    - Action: `com.security.aetherdns.action.ENABLE|DISABLE|PAUSE|APPLY`; extra `minutes`, `profile`, `hostname`. Parsing murni di `AutomationProtocol` (diuji di `AutomationProtocolTest`). `APPLY` selalu dengan probe dan dibatasi `withTimeoutOrNull(9 s)`; pembatalan aman karena `DnsApplier` memulihkan konfigurasi.
    - Jangan pernah melonggarkan: tanpa token valid tidak ada perintah yang dijalankan, termasuk `DISABLE`.
 12. **Onboarding**: `OnboardingScreen` (3 langkah) tampil sekali untuk pengguna baru; `OnboardingStore.shouldShow()` otomatis menganggap selesai bila izin sudah ada atau proteksi aktif (pengguna lama yang update).
+12b. **Autopilot (`autopilot/`)**:
+   - Tanpa service latar: `Autopilot.register()` (dipanggil di setiap `AetherDnsApplication.onCreate`, termasuk saat boot/update) mendaftarkan `ConnectivityManager.registerNetworkCallback(request, PendingIntent)` ke `AutopilotReceiver` (`exported=false`, `goAsync`, batas 45 s). Selama Autopilot menahan proteksi, satu alarm inexact 15 menit (`ACTION_RECHECK`) memeriksa ulang; aplikasi yang dibuka juga memicu `evaluate()`.
+   - Keputusan murni di `AutopilotPolicy.decide()` (diuji `AutopilotPolicyTest`): portal login (`NET_CAPABILITY_CAPTIVE_PORTAL`) ⇒ jeda; resolver pilihan gagal + pembanding Cloudflare gagal ⇒ jeda (`DOT_BLOCKED`); hanya resolver pilihan gagal ⇒ pindah ke preset `PresetGroup` sama yang terjangkau, atau jeda (`RESOLVER_DOWN`); resolver pilihan sehat lagi ⇒ `Restore`. `Reachability.OFFLINE` (jaringan belum siap) tidak pernah memicu perubahan; kegagalan diulang sekali sebelum dipercaya.
+   - `AutopilotHold` (disimpan `AutopilotStore`, prefs `autopilot`, dikecualikan dari backup) mencatat resolver asli + status yang ditinggalkan; bila status sistem berbeda (`validHold`), pengguna sudah turun tangan dan Autopilot melepaskan kendali. Jeda manual pengguna tidak pernah disentuh.
+   - Semua tulis lewat `DnsRepository` dengan `ChangeSource.AUTOPILOT`; notifikasi senyap `AutopilotNotifier` (kanal `autopilot`). Aktif secara bawaan; mematikannya (`disableAndRelease`) mengembalikan resolver asli.
+12c. **"Kenapa masih ada iklan?"** (`ui/AutopilotScreen.kt` → `AdsHelpContent`): halaman statis di Lainnya tentang batas pemblokiran DNS.
 13. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
 
@@ -132,6 +138,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `AetherDnsTileService.kt`: `TileService` untuk Quick Settings panel.
 - `automation/`:
   - `AutomationProtocol.kt` (parsing perintah + token), `AutomationSettings.kt` (sakelar komponen + token), `AutomationReceiver.kt` (eksekusi via `DnsRepository`).
+- `autopilot/`:
+  - `AutopilotPolicy.kt` (keputusan murni + `AutopilotHold`), `AutopilotStore.kt` (sakelar + hold, `AutopilotHoldCodec`), `Autopilot.kt` (registrasi callback jaringan, alarm cek ulang, eksekusi), `AutopilotReceiver.kt`, `AutopilotNotifier.kt`.
 - `onboarding/`:
   - `OnboardingStore.kt`: Penanda onboarding selesai.
 - `shortcut/`:
@@ -148,7 +156,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `InsightScreen.kt`: `InsightContent` (kecepatan resolver per jaringan 7/30 hari + saran alternatif, rapor jaringan, riwayat proteksi, NextDNS 7 hari, hapus riwayat).
   - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
-  - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
+  - `AutopilotScreen.kt`: `AutopilotContent` (sakelar, tindakan yang berlaku, izin notifikasi), `autopilotNote()` untuk kartu status, dan `AdsHelpContent`.
+  - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Autopilot, Insight, Kenapa masih ada iklan?, Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
   - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
   - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif. `AetherDnsTheme` memakai skema brand lengkap (`dynamicColor = false` secara bawaan) agar serasi dengan `BrandGradientColors`; kartu memakai `surfaceContainerHigh` (putih / gelap) di atas `background` kebiruan — jangan menulis `Color(0x...)` langsung di komponen. Semua ukuran/tinggi baris tipografi wajib `sp` — `em` membuat TextField berlabel crash (lerp em↔sp), dijaga `TextFieldThemeTest`.
   - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
@@ -161,7 +170,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory, StabilityTest)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory, StabilityTest, AutopilotPolicy)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

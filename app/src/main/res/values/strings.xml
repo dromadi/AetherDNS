@@ -239,7 +239,7 @@
     <string name="native_notif_action_retry">Try again</string>
     <string name="native_grant_success">WRITE_SECURE_SETTINGS granted via built-in activation!</string>
 
-    <!-- Navigasi & UI v1.10 -->
+    <!-- Navigasi &amp; UI v1.10 -->
     <string name="tab_home">Home</string>
     <string name="tab_resolvers">Resolvers</string>
     <string name="tab_more">More</string>
@@ -309,7 +309,7 @@
     <string name="report_copied">Report copied</string>
     <string name="report_clear_crash">Clear recorded crash</string>
 
-    <!-- Kesehatan proteksi & menu Lainnya (v1.16) -->
+    <!-- Kesehatan proteksi &amp; menu Lainnya (v1.16) -->
     <string name="health_title">Protection health</string>
     <string name="health_headline_good">All good</string>
     <string name="health_headline_info">Protected</string>
@@ -415,4 +415,45 @@
     <string name="stability_advice_switch">%1$s is stable here (typically %2$d ms) and blocks the same kind of content. Switching should stop the drops.</string>
     <string name="stability_advice_none">Your resolver is unreliable from this network and no similar resolver is stable right now. Try again later, or temporarily use Cloudflare (no ad blocking).</string>
     <string name="health_dns_unreliable">Encrypted DNS often fails on this network</string>
+    <string name="insight_source_autopilot">by Autopilot</string>
+    <string name="autopilot_title">Autopilot</string>
+    <string name="autopilot_subtitle_on">On: adapts to each network by itself</string>
+    <string name="autopilot_subtitle_off">Off</string>
+    <string name="autopilot_switch">Let AetherDNS handle network problems</string>
+    <string name="autopilot_intro">Every time your phone changes network, Android briefly wakes AetherDNS to check that encrypted DNS still works. Nothing keeps running in the background.</string>
+    <string name="autopilot_does_captive">Wi-Fi that needs a login (hotel, café, airport): protection pauses so the login page opens, then turns back on by itself.</string>
+    <string name="autopilot_does_blocked">Networks that block encrypted DNS: protection pauses instead of cutting your internet, and comes back on a better network.</string>
+    <string name="autopilot_does_switch">Your resolver is unreachable but a similar one works: it switches temporarily and returns to your choice as soon as possible.</string>
+    <string name="autopilot_respects">Your own choices always win: if you turn protection off, pause it, or pick another resolver, Autopilot steps aside.</string>
+    <string name="autopilot_now_paused">Now: protection paused. %1$s</string>
+    <string name="autopilot_now_switched">Now: using %1$s temporarily because %2$s is unreachable from this network.</string>
+    <string name="autopilot_now_idle">Now: nothing to fix. Protection is running normally.</string>
+    <string name="autopilot_notif_permission">Allow notifications to see what Autopilot does</string>
+    <string name="autopilot_reason_captive">This Wi-Fi asks you to log in.</string>
+    <string name="autopilot_reason_blocked">This network blocks encrypted DNS.</string>
+    <string name="autopilot_reason_down">%1$s is unreachable from this network.</string>
+    <string name="autopilot_notif_channel">Autopilot</string>
+    <string name="autopilot_notif_paused_title">Protection paused by Autopilot</string>
+    <string name="autopilot_notif_paused_tail">It turns back on automatically when the network allows it.</string>
+    <string name="autopilot_notif_switched_title">Autopilot switched resolver</string>
+    <string name="autopilot_notif_switched_body">%1$s is unreachable here, so %2$s is used for now. Your choice comes back automatically.</string>
+    <string name="autopilot_notif_restored_title">Protection is back on</string>
+    <string name="autopilot_notif_restored_body">Autopilot restored %1$s.</string>
+    <string name="status_autopilot_paused">Paused by Autopilot: %1$s</string>
+    <string name="status_autopilot_switched">Autopilot is using %1$s for now</string>
+    <string name="ads_help_title">Why do I still see ads?</string>
+    <string name="ads_help_intro">DNS blocking works by refusing to look up the addresses of ad servers. That is very effective, but only when ads come from their own servers.</string>
+    <string name="ads_help_can_title">Blocked well</string>
+    <string name="ads_help_can_body">Banner, pop-up and rewarded ads in most free apps and games (AdMob, AppLovin, Unity, Pangle, IronSource…), trackers, and ads on most websites.</string>
+    <string name="ads_help_video_title">YouTube, Instagram, Facebook, TikTok</string>
+    <string name="ads_help_video_body">These send ads from the same servers as the videos and posts. Blocking the ads would block the app itself, so no DNS service can remove them. For YouTube on the web, a browser with a content blocker (for example Firefox with uBlock Origin) works.</string>
+    <string name="ads_help_inhouse_title">Apps that serve their own ads</string>
+    <string name="ads_help_inhouse_body">Some apps (for example certain video downloaders) load ads from their own domain. A stricter blocklist can help, but it can also break the app.</string>
+    <string name="ads_help_cache_title">Ads loaded before protection was on</string>
+    <string name="ads_help_cache_body">Apps and the phone remember addresses for a while. Close and reopen the app, or restart the phone once, after turning protection on.</string>
+    <string name="ads_help_browser_title">Browsers with their own \"secure DNS\"</string>
+    <string name="ads_help_browser_body">If a browser has its own secure DNS setting, it can bypass AetherDNS. Set it to use the system/default DNS.</string>
+    <string name="ads_help_more_title">Want stronger blocking?</string>
+    <string name="ads_help_more_body">Create a free NextDNS profile, add extra blocklists (for example HaGeZi or OISD), then paste its Config ID in Resolvers → Custom hostname. You also get block statistics in AetherDNS.</string>
+    <string name="more_ads_help_subtitle">What DNS can and can\'t block</string>
 </resources>

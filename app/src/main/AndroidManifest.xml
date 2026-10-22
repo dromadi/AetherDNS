@@ -70,6 +70,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Autopilot: dibangunkan oleh callback jaringan (PendingIntent) dan alarm cek ulang milik aplikasi ini saja -->
+        <receiver
+            android:name=".autopilot.AutopilotReceiver"
+            android:exported="false" />
+
         <!--
             Integrasi Tasker / MacroDroid. Nonaktif secara default; diaktifkan lewat sakelar di aplikasi
             (AutomationSettings) dan setiap perintah wajib membawa token rahasia.

@@ -1,0 +1,2 @@
+• Autopilot (new, on by default): protection adapts to every network by itself with no background service. Wi-Fi logins and networks that block encrypted DNS pause it and it comes back on its own; an unreachable resolver is swapped for a similar one temporarily
+• New "Why do I still see ads?" page explains what DNS can't block (YouTube, in-app ads) and what helps

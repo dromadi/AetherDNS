@@ -135,6 +135,17 @@ Shizuku:
 - [ ] Insight → Uji stabilitas: progres 1..12 berjalan ±30 detik, lalu kesimpulan + baris per resolver (aktif, sekelompok, Cloudflare pembanding); tombol Pindah (bila muncul) mengganti resolver.
 - [ ] "Hapus riwayat" mengosongkan halaman.
 
+## 7c. Autopilot
+
+- [ ] Lainnya → Autopilot: sakelar aktif secara bawaan; tombol izin notifikasi muncul bila belum diizinkan (Android 13+).
+- [ ] Proteksi aktif, sambung ke Wi-Fi yang meminta login → dalam beberapa detik proteksi dijeda (notifikasi + catatan di kartu status) dan halaman login terbuka; setelah login, buka aplikasi atau tunggu ≤ 15 menit → proteksi aktif kembali.
+- [ ] Jaringan yang memblokir port 853 (atau hotspot yang dibatasi) → dijeda dengan alasan "memblokir DNS terenkripsi"; pindah ke jaringan normal → aktif kembali.
+- [ ] Saat Autopilot menjeda, aktifkan proteksi manual → Autopilot tidak mengubahnya lagi (hold dilepas).
+- [ ] Jeda 15 menit manual → Autopilot tidak menyentuhnya.
+- [ ] Matikan Autopilot saat sedang menjeda → resolver asli langsung dikembalikan.
+- [ ] Riwayat proteksi menampilkan tindakan dengan asal "oleh Autopilot".
+- [ ] Lainnya → "Kenapa masih ada iklan?" tampil lengkap di kedua bahasa.
+
 ## 8. Bahasa
 
 - [ ] Bahasa HP English → seluruh UI, tile, shortcut, Toast, dan snackbar berbahasa Inggris.
