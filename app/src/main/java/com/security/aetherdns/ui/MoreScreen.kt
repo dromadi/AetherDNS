@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
@@ -48,6 +49,7 @@ private const val SOURCE_URL = "https://github.com/dromadi/AetherDNS"
 /** Halaman di dalam tab Lainnya; null = daftar menu. State-nya di [AetherDnsApp] agar Beranda bisa membuka Insight. */
 enum class MorePage(val titleRes: Int) {
     AUTOPILOT(R.string.autopilot_title),
+    RULES(R.string.rules_title),
     INSIGHTS(R.string.insight_title),
     ADS_HELP(R.string.ads_help_title),
     PERMISSION(R.string.more_permission_title),
@@ -64,6 +66,7 @@ fun MoreScreen(
     onPageChange: (MorePage?) -> Unit,
     hasPermission: Boolean,
     autopilotEnabled: Boolean,
+    rulesEnabled: Boolean,
     automation: AutomationState,
     onToggleAutomation: (Boolean) -> Unit,
     onRegenerateToken: () -> Unit,
@@ -72,6 +75,7 @@ fun MoreScreen(
     onClearCrash: () -> Unit,
     insightContent: @Composable () -> Unit,
     autopilotContent: @Composable () -> Unit,
+    rulesContent: @Composable () -> Unit,
     permissionContent: @Composable () -> Unit
 ) {
     BackHandler(enabled = page != null) { onPageChange(null) }
@@ -90,11 +94,12 @@ fun MoreScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (current == null) {
-                MenuList(hasPermission, autopilotEnabled, automation.enabled, onPageChange)
+                MenuList(hasPermission, autopilotEnabled, rulesEnabled, automation.enabled, onPageChange)
             } else {
                 PageHeader(stringResource(current.titleRes)) { onPageChange(null) }
                 when (current) {
                     MorePage.AUTOPILOT -> autopilotContent()
+                    MorePage.RULES -> rulesContent()
                     MorePage.INSIGHTS -> insightContent()
                     MorePage.ADS_HELP -> AdsHelpContent()
                     MorePage.PERMISSION -> if (hasPermission) PermissionGranted() else permissionContent()
@@ -109,7 +114,7 @@ fun MoreScreen(
 }
 
 @Composable
-private fun MenuList(hasPermission: Boolean, autopilotEnabled: Boolean, automationEnabled: Boolean, open: (MorePage) -> Unit) {
+private fun MenuList(hasPermission: Boolean, autopilotEnabled: Boolean, rulesEnabled: Boolean, automationEnabled: Boolean, open: (MorePage) -> Unit) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -123,6 +128,12 @@ private fun MenuList(hasPermission: Boolean, autopilotEnabled: Boolean, automati
                 subtitle = stringResource(if (autopilotEnabled) R.string.autopilot_subtitle_on else R.string.autopilot_subtitle_off),
                 subtitleColor = if (autopilotEnabled) SuccessGreen else null
             ) { open(MorePage.AUTOPILOT) }
+            MenuItem(
+                icon = Icons.Default.Rule,
+                title = stringResource(R.string.rules_title),
+                subtitle = stringResource(if (rulesEnabled) R.string.rules_subtitle_on else R.string.rules_subtitle_off),
+                subtitleColor = if (rulesEnabled) SuccessGreen else null
+            ) { open(MorePage.RULES) }
             MenuItem(
                 icon = Icons.Default.Insights,
                 title = stringResource(R.string.insight_title),

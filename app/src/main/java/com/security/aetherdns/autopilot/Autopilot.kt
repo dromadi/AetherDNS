@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
-import android.os.Build
 import android.os.SystemClock
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.ChangeSource
@@ -27,7 +25,7 @@ data class AutopilotStatus(val enabled: Boolean, val hold: AutopilotHold?)
 
 /**
  * Menjaga proteksi tanpa service latar: sistem membangunkan [AutopilotReceiver] setiap jaringan berganti
- * (callback `ConnectivityManager` berbasis PendingIntent) dan, selama Autopilot sedang menahan proteksi,
+ * ([NetworkTriggers]) dan, selama Autopilot sedang menahan proteksi,
  * lewat satu alarm inexact. Semua keputusan ada di [AutopilotPolicy]; kelas ini hanya mengumpulkan fakta
  * dan menjalankan keputusan lewat [DnsRepository] (sumber riwayat: `ChangeSource.AUTOPILOT`).
  */
@@ -36,7 +34,9 @@ class Autopilot(
     private val repository: DnsRepository,
     private val store: AutopilotStore = AutopilotStore(context),
     private val inspector: NetworkInspector = NetworkInspector(),
-    private val notifier: AutopilotNotifier = AutopilotNotifier(context)
+    private val notifier: AutopilotNotifier = AutopilotNotifier(context),
+    /** Dipanggil saat sakelar berubah agar pemicu jaringan bersama ([NetworkTriggers]) disinkronkan. */
+    private val onEnabledChanged: () -> Unit = {}
 ) {
     private val mutex = Mutex()
     private val _status = MutableStateFlow(AutopilotStatus(store.enabled, store.hold))
@@ -46,33 +46,23 @@ class Autopilot(
 
     fun enable() {
         store.enabled = true
-        register()
+        onEnabledChanged()
         publish()
     }
+
+    /** True bila Autopilot sedang menahan proteksi (dijeda / resolver pengganti); Aturan Pintar menunggu. */
+    fun isHolding(): Boolean = store.enabled && AutopilotPolicy.validHold(store.hold, snapshot()) != null
 
     /** Mematikan Autopilot: proteksi yang sedang ditahan dikembalikan ke pilihan pengguna. */
     suspend fun disableAndRelease() = mutex.withLock {
         store.enabled = false
-        unregister()
+        cancelRecheck()
+        onEnabledChanged()
         val hold = AutopilotPolicy.validHold(store.hold, snapshot())
         if (hold != null) repository.apply(hold.original, probe = false, source = ChangeSource.AUTOPILOT)
         clearHold()
         notifier.cancel()
         publish()
-    }
-
-    /** Idempoten: PendingIntent yang sama menggantikan pendaftaran sebelumnya. Dipanggil setiap proses mulai. */
-    fun register() {
-        if (!store.enabled) return
-        runCatching {
-            val request = NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
-            connectivity?.registerNetworkCallback(request, networkIntent())
-        }
-    }
-
-    private fun unregister() {
-        runCatching { connectivity?.unregisterNetworkCallback(networkIntent()) }
-        cancelRecheck()
     }
 
     /**
@@ -184,14 +174,6 @@ class Autopilot(
         context.getSystemService(AlarmManager::class.java)?.cancel(recheckIntent())
     }
 
-    private fun networkIntent(): PendingIntent {
-        // Mutable: sistem menambahkan extra Network; intent eksplisit ke receiver yang tidak diekspor
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-        val intent = Intent(context, AutopilotReceiver::class.java).setAction(AutopilotReceiver.ACTION_NETWORK)
-        return PendingIntent.getBroadcast(context, REQUEST_NETWORK, intent, flags)
-    }
-
     private fun recheckIntent(): PendingIntent {
         val intent = Intent(context, AutopilotReceiver::class.java).setAction(AutopilotReceiver.ACTION_RECHECK)
         return PendingIntent.getBroadcast(
@@ -206,7 +188,6 @@ class Autopilot(
         private const val SETTLE_TIMEOUT_MS = 8_000L
         private const val SETTLE_POLL_MS = 500L
         private const val RETRY_DELAY_MS = 1_500L
-        private const val REQUEST_NETWORK = 41
         private const val REQUEST_RECHECK = 42
     }
 }

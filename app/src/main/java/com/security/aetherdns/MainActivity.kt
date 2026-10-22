@@ -24,7 +24,9 @@ class MainActivity : ComponentActivity() {
             app.nextDnsStatsSettings,
             app.diagnostics,
             app.insightStore,
-            app.autopilot
+            app.autopilot,
+            app.smartRules,
+            app::evaluateNetwork
         )
     }
 

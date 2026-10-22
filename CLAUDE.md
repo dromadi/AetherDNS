@@ -89,6 +89,10 @@ Dokumen ini diperuntukkan bagi asisten AI (Claude Code, Cursor, Windsurf, Copilo
    - Keputusan murni di `AutopilotPolicy.decide()` (diuji `AutopilotPolicyTest`): portal login (`NET_CAPABILITY_CAPTIVE_PORTAL`) ⇒ jeda; resolver pilihan gagal + pembanding Cloudflare gagal ⇒ jeda (`DOT_BLOCKED`); hanya resolver pilihan gagal ⇒ pindah ke preset `PresetGroup` sama yang terjangkau, atau jeda (`RESOLVER_DOWN`); resolver pilihan sehat lagi ⇒ `Restore`. `Reachability.OFFLINE` (jaringan belum siap) tidak pernah memicu perubahan; kegagalan diulang sekali sebelum dipercaya.
    - `AutopilotHold` (disimpan `AutopilotStore`, prefs `autopilot`, dikecualikan dari backup) mencatat resolver asli + status yang ditinggalkan; bila status sistem berbeda (`validHold`), pengguna sudah turun tangan dan Autopilot melepaskan kendali. Jeda manual pengguna tidak pernah disentuh.
    - Semua tulis lewat `DnsRepository` dengan `ChangeSource.AUTOPILOT`; notifikasi senyap `AutopilotNotifier` (kanal `autopilot`). Aktif secara bawaan; mematikannya (`disableAndRelease`) mengembalikan resolver asli.
+12d. **Aturan Pintar (`rules/`)**:
+   - Model + logika murni di `Rules.kt` (`RuleSet`, `RuleTarget.Resolver/Fastest`, `ScheduleRule` mingguan yang boleh melewati tengah malam, `RuleEngine.decide` — jadwal > jaringan > pilihan utama — dan `nextBoundary`; `RulesCodec` JSON). Diuji `RulesTest`.
+   - `SmartRules` (Android): `RulesStore` (prefs `rules`, ikut backup) menyimpan aturan, `base` (pilihan utama = resolver terakhir yang diterapkan pengguna lewat `ChangeSource.APP` / `AUTOMATION`, via hook `DnsRepository.onChange`) dan `override` (konteks aturan saat pengguna memilih sendiri; aturan itu menunggu sampai konteks berganti). Menulis lewat `DnsRepository` dengan `ChangeSource.RULES`; tidak bertindak saat proteksi mati, dijeda pengguna, atau Autopilot menahan (`Autopilot.isHolding`).
+   - Pemicu: `NetworkTriggers` (callback jaringan PendingIntent bersama Autopilot, didaftarkan bila salah satu aktif), alarm inexact di batas jadwal berikutnya (`AutopilotReceiver.ACTION_RULES`), dan aplikasi dibuka. Urutan tunggal di `AetherDnsApplication.evaluateNetwork()`: Autopilot → aturan → Autopilot lagi bila aturan mengganti resolver.
 12c. **"Kenapa masih ada iklan?"** (`ui/AutopilotScreen.kt` → `AdsHelpContent`): halaman statis di Lainnya tentang batas pemblokiran DNS.
 13. **Tidak Memonopoli Slot VPN**:
    - Pengguna tetap dapat mengaktifkan VPN lain (WireGuard, OpenVPN, Cloudflare WARP) secara bersamaan.
@@ -139,7 +143,9 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 - `automation/`:
   - `AutomationProtocol.kt` (parsing perintah + token), `AutomationSettings.kt` (sakelar komponen + token), `AutomationReceiver.kt` (eksekusi via `DnsRepository`).
 - `autopilot/`:
-  - `AutopilotPolicy.kt` (keputusan murni + `AutopilotHold`), `AutopilotStore.kt` (sakelar + hold, `AutopilotHoldCodec`), `Autopilot.kt` (registrasi callback jaringan, alarm cek ulang, eksekusi), `AutopilotReceiver.kt`, `AutopilotNotifier.kt`.
+  - `AutopilotPolicy.kt` (keputusan murni + `AutopilotHold`), `AutopilotStore.kt` (sakelar + hold, `AutopilotHoldCodec`), `Autopilot.kt` (registrasi callback jaringan, alarm cek ulang, eksekusi), `AutopilotReceiver.kt`, `AutopilotNotifier.kt`, `NetworkTriggers.kt` (callback jaringan bersama Autopilot & Aturan Pintar).
+- `rules/`:
+  - `Rules.kt` (model, `RuleEngine`, `RulesCodec`), `SmartRules.kt` (`RulesStore`, eksekusi, alarm jadwal).
 - `onboarding/`:
   - `OnboardingStore.kt`: Penanda onboarding selesai.
 - `shortcut/`:
@@ -157,7 +163,8 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
   - `DiagnosticsCard.kt`: laporan diagnostik (buat, salin, bagikan, hapus catatan crash).
   - `BlockStatsCard.kt`: statistik blokir NextDNS (penyiapan API key, ringkasan 24 jam, domain teratas).
   - `AutopilotScreen.kt`: `AutopilotContent` (sakelar, tindakan yang berlaku, izin notifikasi), `autopilotNote()` untuk kartu status, dan `AdsHelpContent`.
-  - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Autopilot, Insight, Kenapa masih ada iklan?, Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
+  - `RulesScreen.kt`: `RulesContent` (sakelar, aturan per jaringan, jadwal + dialog TimePicker, template mode keluarga) dan `rulesNote()` untuk kartu status.
+  - `MoreScreen.kt`: tab Lainnya berupa daftar menu; tiap item (Autopilot, Aturan Pintar, Insight, Kenapa masih ada iklan?, Izin, Otomasi, Laporan, Tentang) membuka halaman sendiri (`BackHandler` kembali ke menu).
   - `AetherLogo.kt`: logo (gradien brand + foreground ikon launcher) untuk top bar & onboarding; `Modifier.brandGradient()` untuk kartu status aktif.
   - `theme/`: warna status semantik (`StatusColors` via `LocalStatusColors`, versi terang & gelap). `PrimaryBlue`, `SuccessGreen`, `WarningOrange`, `ErrorRed`, dsb. adalah getter `@Composable` yang mengikuti tema aktif. `AetherDnsTheme` memakai skema brand lengkap (`dynamicColor = false` secara bawaan) agar serasi dengan `BrandGradientColors`; kartu memakai `surfaceContainerHigh` (putih / gelap) di atas `background` kebiruan — jangan menulis `Color(0x...)` langsung di komponen. Semua ukuran/tinggi baris tipografi wajib `sp` — `em` membuat TextField berlabel crash (lerp em↔sp), dijaga `TextFieldThemeTest`.
   - `NativeActivationSection.kt`: bagian aktivasi bawaan di `PermissionAssistantCard` (tombol notifikasi + kolom kode manual).
@@ -170,7 +177,7 @@ Basis kode berlokasi di `app/src/main/java/com/security/aetherdns/`:
 ## 3. Perintah Build & Kompilasi
 
 ```powershell
-# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory, StabilityTest, AutopilotPolicy)
+# Menjalankan Unit Tests (HostnameValidator, DnsApplier, PauseController, ProfileRepository, NextDnsHostname, DnsWireFormat, FilterVerdict, DnsAuditor, GrantOutputParser, BenchmarkState, ActivationModel, NetworkInspector, NextDnsStats, TextFieldTheme, DiagnosticReport, HealthModel, Insights, ProtectionHistory, StabilityTest, AutopilotPolicy, Rules)
 .\gradlew.bat testDebugUnitTest
 
 # Kompilasi Debug APK

@@ -48,6 +48,12 @@ class DnsRepository(
     /** Salinan memori dari status terakhir yang dicatat, agar `refresh()` tidak membaca berkas. */
     private var lastSnapshot: ProtectionSnapshot? = historyStore.lastSnapshot()
 
+    /**
+     * Dipanggil setelah setiap operasi tulis selesai dengan status akhirnya; dipakai Aturan Pintar untuk
+     * mengingat resolver pilihan utama pengguna.
+     */
+    var onChange: ((DnsState, ChangeSource) -> Unit)? = null
+
     /** Jumlah operasi tulis yang sedang berjalan; status antara selama operasi tidak dicatat ke riwayat. */
     private val busy = AtomicInteger(0)
 
@@ -106,6 +112,7 @@ class DnsRepository(
             busy.decrementAndGet()
             _state.value = loadCurrentState()
             recordHistory(source)
+            onChange?.invoke(_state.value, source)
         }
     }
 

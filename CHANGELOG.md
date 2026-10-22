@@ -3,6 +3,16 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [2.1.0] - 2026-10-22
+
+### Ditambahkan
+- **Aturan Pintar** (Lainnya → Aturan Pintar), tanpa service latar:
+  - **Menurut jaringan**: resolver berbeda untuk Wi-Fi dan data seluler, atau **Tercepat** (resolver sekelompok tercepat dipilih otomatis setiap pindah jaringan).
+  - **Jadwal mingguan** (bisa melewati tengah malam), misalnya "Mode keluarga malam" 21.00–06.00 memakai AdGuard Family; jadwal mengalahkan aturan jaringan. Satu ketukan untuk template mode keluarga.
+  - **Pilihan utama** = resolver yang kamu pilih sendiri; dipakai bila tidak ada aturan yang berlaku. Memilih resolver sendiri selalu menang sampai jaringan atau jadwal berganti.
+  - Dipicu oleh pergantian jaringan (bersama Autopilot), satu alarm di batas jadwal berikutnya, dan saat aplikasi dibuka. Autopilot tetap didahulukan saat jaringan bermasalah.
+- Kartu status menampilkan aturan yang sedang berlaku; riwayat proteksi mencatat "oleh Aturan Pintar"; laporan diagnostik memuat status aturan.
+
 ## [2.0.0] - 2026-10-22
 
 ### Ditambahkan

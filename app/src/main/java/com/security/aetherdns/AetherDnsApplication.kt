@@ -2,6 +2,8 @@ package com.security.aetherdns
 
 import android.app.Application
 import com.security.aetherdns.autopilot.Autopilot
+import com.security.aetherdns.autopilot.NetworkTriggers
+import com.security.aetherdns.rules.SmartRules
 import com.security.aetherdns.adb.PairingNotifier
 import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
@@ -54,6 +56,21 @@ class AetherDnsApplication : Application() {
     lateinit var autopilot: Autopilot
         private set
 
+    lateinit var smartRules: SmartRules
+        private set
+
+    /**
+     * Satu urutan untuk semua pemicu (jaringan, alarm, aplikasi dibuka): Autopilot memastikan DNS bisa dipakai,
+     * lalu aturan memilih resolver; bila aturan mengganti resolver, Autopilot memeriksa yang baru.
+     */
+    suspend fun evaluateNetwork(waitForNetwork: Boolean) {
+        autopilot.evaluate(waitForNetwork)
+        if (smartRules.evaluate()) autopilot.evaluate(waitForNetwork = false)
+    }
+
+    private fun syncNetworkTriggers() =
+        NetworkTriggers.sync(this, autopilot.status.value.enabled || smartRules.enabled)
+
     /** Hanya untuk merender notifikasi aktivasi dan widget mengikuti state; tidak ada kerja latar lain. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -72,9 +89,10 @@ class AetherDnsApplication : Application() {
         onboardingStore = OnboardingStore(this)
         wirelessActivator = WirelessAdbActivator(this)
         nextDnsStatsSettings = NextDnsStatsSettings(this)
-        autopilot = Autopilot(this, dnsRepository)
+        autopilot = Autopilot(this, dnsRepository, onEnabledChanged = ::syncNetworkTriggers)
+        smartRules = SmartRules(this, dnsRepository, autopilotHolding = autopilot::isHolding, onEnabledChanged = ::syncNetworkTriggers)
         // Pendaftaran callback jaringan berbasis PendingIntent hilang saat reboot/update: daftarkan ulang setiap proses mulai
-        autopilot.register()
+        syncNetworkTriggers()
         PairingNotifier(this).bind(appScope, wirelessActivator)
         // Widget layar utama mengikuti state DNS selama proses hidup (perubahan dari aplikasi, tile, Settings)
         appScope.launch { dnsRepository.state.collect { StatusWidget.updateAll(this@AetherDnsApplication, it) } }

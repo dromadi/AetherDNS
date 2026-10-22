@@ -26,6 +26,13 @@ import com.security.aetherdns.data.NextDnsSummary
 import com.security.aetherdns.ui.InsightContent
 import com.security.aetherdns.ui.AutopilotContent
 import com.security.aetherdns.ui.AdsHelpContent
+import com.security.aetherdns.ui.RulesContent
+import com.security.aetherdns.rules.AppliedRule
+import com.security.aetherdns.rules.RuleSet
+import com.security.aetherdns.rules.RuleSource
+import com.security.aetherdns.rules.RuleTarget
+import com.security.aetherdns.rules.RulesStatus
+import com.security.aetherdns.rules.ScheduleRule
 import com.security.aetherdns.autopilot.AutopilotHold
 import com.security.aetherdns.autopilot.AutopilotReason
 import com.security.aetherdns.autopilot.AutopilotStatus
@@ -318,5 +325,23 @@ class ComponentScreenshotTest {
             }
         }
         compose.onRoot().captureRoboImage("build/screenshots/17_ads_help.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h1600dp-xxhdpi")
+    fun rules() {
+        val night = ScheduleRule("n", "Keluarga malam", java.time.DayOfWeek.entries.toSet(), 21 * 60, 6 * 60, "family.adguard-dns.com")
+        val rules = RuleSet(enabled = true, wifi = RuleTarget.Fastest, cellular = RuleTarget.Resolver("p2.freedns.controld.com"), schedules = listOf(night))
+        val status = RulesStatus(rules, "dns.adguard-dns.com", AppliedRule("family.adguard-dns.com", RuleSource.Schedule(night)))
+        compose.setContent {
+            AetherDnsTheme(dynamicColor = false) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        RulesContent(status, com.security.aetherdns.model.DefaultProfiles.list, onUpdate = {})
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/18_rules.png")
     }
 }

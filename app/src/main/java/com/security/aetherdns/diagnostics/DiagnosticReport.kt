@@ -46,6 +46,7 @@ data class FeatureStatus(
     val notificationsAllowed: Boolean,
     val automationEnabled: Boolean,
     val autopilot: String = "unknown",
+    val rules: String = "unknown",
     val nextDnsApiKeySet: Boolean,
     val nextDnsProfileDetected: Boolean,
     val savedProfiles: Int,
@@ -139,6 +140,7 @@ object DiagnosticReportFormatter {
         section("Other features")
         line("Automation (Tasker)", if (f.automationEnabled) "enabled" else "disabled")
         line("Autopilot", f.autopilot)
+        line("Smart rules", f.rules)
         line("NextDNS stats", "api key ${if (f.nextDnsApiKeySet) "set" else "not set"}, profile ${if (f.nextDnsProfileDetected) "detected" else "not detected"}")
         line("Saved profiles", f.savedProfiles.toString())
         line("Widgets placed", f.widgetsPlaced.toString())

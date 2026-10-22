@@ -629,6 +629,7 @@ private fun sourceLabel(source: ChangeSource): Int = when (source) {
     ChangeSource.SCHEDULE -> R.string.insight_source_schedule
     ChangeSource.SYSTEM -> R.string.insight_source_system
     ChangeSource.AUTOPILOT -> R.string.insight_source_autopilot
+    ChangeSource.RULES -> R.string.insight_source_rules
 }
 
 @Composable

@@ -9,6 +9,9 @@ import com.security.aetherdns.adb.WirelessAdbActivator
 import com.security.aetherdns.automation.AutomationSettings
 import com.security.aetherdns.autopilot.Autopilot
 import com.security.aetherdns.autopilot.AutopilotStatus
+import com.security.aetherdns.rules.RuleSet
+import com.security.aetherdns.rules.RulesStatus
+import com.security.aetherdns.rules.SmartRules
 import com.security.aetherdns.automation.AutomationState
 import com.security.aetherdns.data.ApplyResult
 import com.security.aetherdns.data.DnsRepository
@@ -123,6 +126,9 @@ class MainViewModel(
     private val diagnostics: DiagnosticsCollector,
     private val insightStore: InsightStore,
     private val autopilot: Autopilot,
+    private val smartRules: SmartRules,
+    /** Urutan Autopilot → Aturan Pintar yang sama dengan pemicu jaringan/alarm (`AetherDnsApplication`). */
+    private val evaluateNetwork: suspend (waitForNetwork: Boolean) -> Unit,
     private val statsClient: NextDnsClient = NextDnsClient(),
     private val inspector: ResolverInspector = DotProbe,
     private val networkInspector: NetworkInspector = NetworkInspector(),
@@ -133,11 +139,20 @@ class MainViewModel(
 
     val autopilotStatus: StateFlow<AutopilotStatus> = autopilot.status
 
+    val rulesStatus: StateFlow<RulesStatus> = smartRules.status
+
+    fun updateRules(rules: RuleSet) {
+        viewModelScope.launch(Dispatchers.IO) {
+            smartRules.update(rules)
+            evaluateNetwork(false)
+        }
+    }
+
     fun setAutopilotEnabled(enabled: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
                 autopilot.enable()
-                autopilot.evaluate(waitForNetwork = false)
+                evaluateNetwork(false)
             } else {
                 autopilot.disableAndRelease()
             }
@@ -356,6 +371,9 @@ class MainViewModel(
                     shizukuStatus = granter.status().name,
                     notificationsAllowed = diagnostics.notificationsAllowed(),
                     automationEnabled = automationSettings.state.value.enabled,
+                    rules = smartRules.status.value.rules.let { r ->
+                        if (!r.enabled) "disabled" else "enabled (wifi=${r.wifi != null}, cellular=${r.cellular != null}, schedules=${r.schedules.size})"
+                    },
                     autopilot = autopilot.status.value.let { s ->
                         if (!s.enabled) "disabled" else s.hold?.let { "enabled, holding (${it.reason}, ${if (it.isPause) "paused" else "substitute"})" } ?: "enabled, idle"
                     },
@@ -523,8 +541,11 @@ class MainViewModel(
     fun onVisible() {
         isVisible = true
         // Saat Autopilot sedang menahan proteksi, cek ulang setiap aplikasi dibuka agar pemulihan terasa instan
-        if (autopilot.status.value.hold != null || System.currentTimeMillis() - lastAutoCheckAt >= AUTO_CHECK_INTERVAL_MS) {
-            viewModelScope.launch(Dispatchers.IO) { autopilot.evaluate(waitForNetwork = false) }
+        // Aturan Pintar juga dievaluasi agar jadwal yang terlewat (alarm inexact) langsung berlaku
+        if (autopilot.status.value.hold != null || smartRules.enabled ||
+            System.currentTimeMillis() - lastAutoCheckAt >= AUTO_CHECK_INTERVAL_MS
+        ) {
+            viewModelScope.launch(Dispatchers.IO) { evaluateNetwork(false) }
         }
         autoNetworkCheck(force = false)
         if (System.currentTimeMillis() - lastStatsAt > STATS_REFRESH_MS) refreshStats()
@@ -665,12 +686,14 @@ class MainViewModel(
         private val statsSettings: NextDnsStatsSettings,
         private val diagnostics: DiagnosticsCollector,
         private val insightStore: InsightStore,
-        private val autopilot: Autopilot
+        private val autopilot: Autopilot,
+        private val smartRules: SmartRules,
+        private val evaluateNetwork: suspend (Boolean) -> Unit
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics, insightStore, autopilot) as T
+                return MainViewModel(repository, granter, profileRepository, automationSettings, onboardingStore, activator, statsSettings, diagnostics, insightStore, autopilot, smartRules, evaluateNetwork) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -76,6 +76,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
     val insights by viewModel.insights.collectAsState()
     val currentNetwork by viewModel.currentNetwork.collectAsState()
     val autopilotStatus by viewModel.autopilotStatus.collectAsState()
+    val rulesStatus by viewModel.rulesStatus.collectAsState()
     // Statistik hanya bermakna untuk profil NextDNS pribadi yang sedang aktif
     val activeNextDnsProfile = dnsState.specifier.takeIf { dnsState.isProtectionActive }
         ?.let { NextDnsHostname.extractConfigId(it) }
@@ -212,6 +213,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             onPause = { viewModel.pauseDns(15) },
                             onChangeResolver = { tab = AppTab.RESOLVERS },
                             autopilotNote = autopilotNote(autopilotStatus.hold.takeIf { autopilotStatus.enabled })
+                                ?: rulesNote(rulesStatus.applied.takeIf { rulesStatus.rules.enabled && dnsState.isProtectionActive })
                         )
                     }
 
@@ -322,6 +324,7 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                 onPageChange = { morePage = it },
                 hasPermission = dnsState.hasPermission,
                 autopilotEnabled = autopilotStatus.enabled,
+                rulesEnabled = rulesStatus.rules.enabled,
                 automation = automation,
                 onToggleAutomation = viewModel::setAutomationEnabled,
                 onRegenerateToken = viewModel::regenerateAutomationToken,
@@ -366,6 +369,9 @@ fun AetherDnsApp(viewModel: MainViewModel) {
                             }
                         }
                     )
+                },
+                rulesContent = {
+                    RulesContent(status = rulesStatus, profiles = allProfiles, onUpdate = viewModel::updateRules)
                 },
                 permissionContent = {
                     PermissionAssistantCard(

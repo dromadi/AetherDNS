@@ -146,6 +146,16 @@ Shizuku:
 - [ ] Riwayat proteksi menampilkan tindakan dengan asal "oleh Autopilot".
 - [ ] Lainnya → "Kenapa masih ada iklan?" tampil lengkap di kedua bahasa.
 
+## 7d. Aturan Pintar
+
+- [ ] Lainnya → Aturan Pintar: atur Wi-Fi = AdGuard, Data seluler = Control D → pindah Wi-Fi ↔ seluler → resolver berganti dalam beberapa detik; kartu status menampilkan "Aturan Wi-Fi" / "Aturan Data seluler".
+- [ ] Wi-Fi = Tercepat → resolver sekelompok tercepat dipakai setelah pindah jaringan.
+- [ ] Tambah jadwal yang mulai 2 menit lagi → dalam beberapa menit resolver jadwal dipakai (atau langsung saat aplikasi dibuka); setelah selesai kembali ke aturan jaringan / pilihan utama.
+- [ ] Template "Mode keluarga malam" menambah jadwal 21.00–06.00 setiap hari dengan AdGuard Family.
+- [ ] Saat jadwal berlaku, pilih resolver lain di tab Resolver → tidak ditimpa sampai jadwal selesai atau jaringan berganti.
+- [ ] Matikan Aturan Pintar saat aturan sedang mengganti resolver → pilihan utama dikembalikan.
+- [ ] Riwayat proteksi menampilkan "oleh Aturan Pintar".
+
 ## 8. Bahasa
 
 - [ ] Bahasa HP English → seluruh UI, tile, shortcut, Toast, dan snackbar berbahasa Inggris.
