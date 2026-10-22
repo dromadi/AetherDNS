@@ -18,7 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Rule
+import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
@@ -129,7 +129,7 @@ private fun MenuList(hasPermission: Boolean, autopilotEnabled: Boolean, rulesEna
                 subtitleColor = if (autopilotEnabled) SuccessGreen else null
             ) { open(MorePage.AUTOPILOT) }
             MenuItem(
-                icon = Icons.Default.Rule,
+                icon = Icons.AutoMirrored.Filled.Rule,
                 title = stringResource(R.string.rules_title),
                 subtitle = stringResource(if (rulesEnabled) R.string.rules_subtitle_on else R.string.rules_subtitle_off),
                 subtitleColor = if (rulesEnabled) SuccessGreen else null

@@ -6,7 +6,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Rule
+import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Wifi
@@ -52,7 +52,7 @@ fun RulesContent(
 
     RulesCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Rule, contentDescription = null, tint = PrimaryBlue)
+            Icon(Icons.AutoMirrored.Filled.Rule, contentDescription = null, tint = PrimaryBlue)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 stringResource(R.string.rules_switch),

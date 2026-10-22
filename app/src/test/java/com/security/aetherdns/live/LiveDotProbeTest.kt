@@ -28,6 +28,9 @@ import javax.net.ssl.HostnameVerifier
 class LiveDotProbeTest {
 
     companion object {
+        private const val CONNECT_ATTEMPTS = 3
+        private const val RETRY_DELAY_MS = 2_000L
+
         @BeforeClass
         @JvmStatic
         fun requireLiveNetwork() {
@@ -72,10 +75,18 @@ class LiveDotProbeTest {
         File(path).apply { parentFile?.mkdirs() }.appendText(row + "\n")
     }
 
-    private fun inspect(host: String) = runBlocking { client.inspect(host) }.also { report(host, it) }
-
+    /**
+     * Resolver publik dari runner CI sesekali gagal tersambung sesaat (mis. Quad9); koneksi dicoba ulang hingga
+     * [CONNECT_ATTEMPTS] kali sebelum dianggap gagal. Penilaian filter tetap ketat pada hasil yang berhasil.
+     */
     private fun successOf(host: String): InspectionResult.Success {
-        val result = inspect(host)
+        var result = runBlocking { client.inspect(host) }
+        repeat(CONNECT_ATTEMPTS - 1) {
+            if (result is InspectionResult.Success) return@repeat
+            Thread.sleep(RETRY_DELAY_MS)
+            result = runBlocking { client.inspect(host) }
+        }
+        report(host, result)
         assertTrue("$host: $result", result is InspectionResult.Success)
         return result as InspectionResult.Success
     }
