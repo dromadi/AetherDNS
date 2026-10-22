@@ -1,5 +1,6 @@
 package com.security.aetherdns
 
+import com.security.aetherdns.util.HostnameError
 import com.security.aetherdns.util.HostnameValidator
 import org.junit.Assert.*
 import org.junit.Test
@@ -37,7 +38,7 @@ class HostnameValidatorTest {
         for (item in schemes) {
             val result = HostnameValidator.validate(item)
             assertTrue("Expected invalid for scheme '$item'", result is HostnameValidator.Result.Invalid)
-            assertTrue((result as HostnameValidator.Result.Invalid).reason.contains("skema", ignoreCase = true))
+            assertEquals(HostnameError.URL_SCHEME, (result as HostnameValidator.Result.Invalid).error)
         }
     }
 
@@ -65,7 +66,7 @@ class HostnameValidatorTest {
         for (item in ips) {
             val result = HostnameValidator.validate(item)
             assertTrue("Expected invalid for IP '$item'", result is HostnameValidator.Result.Invalid)
-            assertTrue((result as HostnameValidator.Result.Invalid).reason.contains("IP", ignoreCase = true))
+            assertEquals(HostnameError.IP_ADDRESS, (result as HostnameValidator.Result.Invalid).error)
         }
     }
 

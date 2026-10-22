@@ -1,0 +1,61 @@
+name: Live DoT
+
+# Uji DotProbe terhadap resolver DoT sungguhan (AdGuard, Control D, Mullvad, Quad9, Cloudflare, Google, NextDNS) melalui port 853:
+# handshake, verifikasi hostname, query DNS, dan pratinjau filter. Hasil per resolver ada di ringkasan job.
+#
+# - Pull request / push: tidak memblokir (resolver publik bisa sedang gangguan).
+# - Jadwal mingguan & manual: gagal secara terlihat, agar perubahan hostname/blocklist preset cepat ketahuan.
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '17 3 * * 1' # Senin 03:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-dot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Live DoT probe & filter tests
+        env:
+          AETHERDNS_LIVE_DOT: '1'
+          AETHERDNS_LIVE_REPORT: ${{ runner.temp }}/live-dot.md
+        run: ./gradlew --no-daemon testDebugUnitTest --tests 'com.security.aetherdns.live.*'
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### Live DoT"
+            echo
+            echo "| Resolver | Status | Latensi | Filter iklan |"
+            echo "| :--- | :---: | :--- | :--- |"
+            sort -u "$RUNNER_TEMP/live-dot.md" 2>/dev/null || echo "| — | — | — | tidak ada hasil (lihat log) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload live test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-dot-report
+          path: app/build/test-results/testDebugUnitTest/

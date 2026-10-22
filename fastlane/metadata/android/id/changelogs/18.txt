@@ -1,0 +1,2 @@
+• Audit tidak lagi melaporkan bocor untuk domain yang masih dari cache DNS HP; resolver dicek langsung
+• Perbaikan kartu audit yang memanjang dan kosong bila domain punya banyak IP

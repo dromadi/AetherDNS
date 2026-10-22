@@ -4,6 +4,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Hanya untuk menjadwalkan ulang / menyelesaikan "Jeda 15 menit" setelah reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Notifikasi input kode penyambungan saat aktivasi bawaan (Android 13+ perlu izin runtime) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -16,9 +20,12 @@
     <application
         android:name=".AetherDnsApplication"
         android:allowBackup="true"
-        android:icon="@drawable/ic_shield_logo"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_shield_logo"
+        android:localeConfig="@xml/locales_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AetherDNS">
         <activity
@@ -32,17 +39,75 @@
             </intent-filter>
         </activity>
 
+        <!-- Target App Shortcuts: transparan, tanpa UI, tidak muncul di Recents; tidak diekspor ke aplikasi lain -->
+        <activity
+            android:name=".shortcut.ShortcutActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Quick Settings Tile Service -->
         <service
             android:name=".service.AetherDnsTileService"
             android:icon="@drawable/ic_tile_shield"
-            android:label="DNS Anti-Iklan"
+            android:label="@string/tile_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- Mengaktifkan kembali proteksi setelah jeda (alarm sekali-jalan, tanpa service persisten) -->
+        <receiver
+            android:name=".receiver.PauseResumeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Autopilot: dibangunkan oleh callback jaringan (PendingIntent) dan alarm cek ulang milik aplikasi ini saja -->
+        <receiver
+            android:name=".autopilot.AutopilotReceiver"
+            android:exported="false" />
+
+        <!--
+            Integrasi Tasker / MacroDroid. Nonaktif secara default; diaktifkan lewat sakelar di aplikasi
+            (AutomationSettings) dan setiap perintah wajib membawa token rahasia.
+        -->
+        <receiver
+            android:name=".automation.AutomationReceiver"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.security.aetherdns.action.ENABLE" />
+                <action android:name="com.security.aetherdns.action.DISABLE" />
+                <action android:name="com.security.aetherdns.action.PAUSE" />
+                <action android:name="com.security.aetherdns.action.APPLY" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Balasan kode penyambungan dari notifikasi aktivasi bawaan (PendingIntent milik aplikasi ini saja) -->
+        <receiver
+            android:name=".adb.PairingCodeReceiver"
+            android:exported="false" />
+
+        <!-- Widget layar utama (status + aktif/nonaktif/jeda). Tombolnya memakai ShortcutActivity yang tidak diekspor. -->
+        <receiver
+            android:name=".widget.StatusWidget"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_status_info" />
+        </receiver>
 
         <!-- Shizuku Provider (Dynamic authority matching debug & release package) -->
         <provider

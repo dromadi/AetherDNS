@@ -1,0 +1,3 @@
+• Smart rules (new): a different resolver for Wi-Fi and mobile data, or automatically pick the fastest on every network
+• Weekly schedules, e.g. family mode 21:00–06:00 with AdGuard Family (one-tap template)
+• Your own choice always wins until the network or schedule changes; still no background service

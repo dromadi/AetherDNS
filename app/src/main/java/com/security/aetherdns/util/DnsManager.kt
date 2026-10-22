@@ -53,11 +53,6 @@ object DnsManager {
         return mode == MODE_HOSTNAME && specifier.isNotBlank()
     }
 
-    fun getEffectiveHostname(context: Context): String {
-        val current = getPrivateDnsSpecifier(context).trim()
-        return if (current.isNotEmpty()) current else DEFAULT_FALLBACK_HOSTNAME
-    }
-
     /**
      * Membaca status validasi DoT langsung dari Network LinkProperties OS Android (API 28+).
      * Memberitahu apakah Android OS berhasil menyelesaikan TLS handshake dan mengenkripsi traffic DNS.
@@ -76,33 +71,6 @@ object DnsManager {
             }
         } catch (e: Exception) {
             Pair(false, null)
-        }
-    }
-
-    fun applyPrivateDns(context: Context, hostname: String): Result<Unit> {
-        val validation = HostnameValidator.validate(hostname)
-        if (validation is HostnameValidator.Result.Invalid) {
-            return Result.failure(IllegalArgumentException(validation.reason))
-        }
-
-        val normalizedFqdn = (validation as HostnameValidator.Result.Valid).fqdn
-
-        return try {
-            val resolver = context.contentResolver
-            val modeSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_MODE, MODE_HOSTNAME)
-            val specSuccess = Settings.Global.putString(resolver, SETTING_PRIVATE_DNS_SPECIFIER, normalizedFqdn)
-            if (modeSuccess && specSuccess) {
-                notifyTileUpdate(context)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Gagal memperbarui konfigurasi sistem"))
-            }
-        } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException while writing settings", e)
-            Result.failure(e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception while writing settings", e)
-            Result.failure(e)
         }
     }
 

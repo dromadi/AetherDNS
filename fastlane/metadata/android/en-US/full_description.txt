@@ -1,0 +1,19 @@
+<p>AetherDNS switches Android's built-in <b>Private DNS</b> (DNS-over-TLS) to an encrypted resolver that blocks ads, trackers, malware, or adult content. Android itself does the work, so there is <b>no VPN, no background service, and no battery drain</b> — you can close the app and protection stays on. Your VPN slot stays free for WireGuard, WARP, or any other VPN.</p>
+
+<p><b>Features</b></p>
+<ul>
+<li>13 tested resolvers grouped by purpose: block ads (AdGuard, Control D, Mullvad), family, security only (Quad9, Cloudflare), encryption only — plus your own NextDNS profile or server.</li>
+<li>Speed &amp; filter test: measures each resolver's latency and how many ad test domains it blocks, before you switch.</li>
+<li>Network check: shows whether your ISP intercepts or forges regular DNS answers, and warns when a network blocks encrypted DNS — with a one-tap 15-minute pause.</li>
+<li>NextDNS block statistics (with your own API key).</li>
+<li>Quick Settings tile, home screen widget, and app shortcuts.</li>
+<li>15-minute pause for hotel/airport Wi-Fi login pages, resumed automatically.</li>
+<li>Tasker / MacroDroid automation protected by a secret token.</li>
+<li>English and Indonesian.</li>
+</ul>
+
+<p><b>One-time setup:</b> changing Private DNS needs the WRITE_SECURE_SETTINGS permission. On Android 11+ AetherDNS can grant it to itself through Wireless debugging (enter the pairing code in a notification) — no computer and no extra app. Shizuku and a one-line ADB command are also supported. Without the permission you can still copy a resolver and paste it into the phone's Private DNS settings.</p>
+
+<p><b>Limits:</b> DNS blocking cannot remove YouTube, Instagram, or TikTok ads, because they come from the same servers as the videos.</p>
+
+<p>No account, no analytics, no tracking. The app only contacts the resolvers you test or choose (and api.nextdns.io if you add a NextDNS API key).</p>

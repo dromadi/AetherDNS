@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Latar widget saat proteksi aktif: gradien brand (sama dengan ikon aplikasi) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:radius="24dp" />
+    <gradient
+        android:angle="315"
+        android:startColor="#FF0B2E6F"
+        android:centerColor="#FF1E5BD8"
+        android:endColor="#FF1FA7C9" />
+</shape>

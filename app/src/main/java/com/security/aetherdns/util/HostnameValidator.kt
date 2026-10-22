@@ -1,9 +1,23 @@
 package com.security.aetherdns.util
 
+/** Alasan hostname ditolak; teks yang ditampilkan ke pengguna dipetakan di lapisan UI (strings.xml). */
+enum class HostnameError {
+    EMPTY,
+    URL_SCHEME,
+    PATH_OR_QUERY,
+    PORT_OR_IPV6,
+    IP_ADDRESS,
+    INVALID_CHARACTERS,
+    TOO_LONG,
+    MISSING_DOT,
+    INVALID_LABEL,
+    INVALID_TLD
+}
+
 object HostnameValidator {
     sealed class Result {
         data class Valid(val fqdn: String) : Result()
-        data class Invalid(val reason: String) : Result()
+        data class Invalid(val error: HostnameError) : Result()
     }
 
     private val LABEL = Regex("^(?!-)[a-z0-9-]{1,63}(?<!-)$")
@@ -12,24 +26,24 @@ object HostnameValidator {
 
     fun validate(input: String): Result {
         val raw = input.trim()
-        if (raw.isEmpty()) return Result.Invalid("Hostname tidak boleh kosong")
-        if (raw.contains("://")) return Result.Invalid("Hapus skema URL (https://, tls://) — DoT hanya menerima FQDN")
-        if (raw.any { it == '/' || it == '?' || it == '#' }) return Result.Invalid("Hapus path/query — hanya hostname")
-        if (raw.contains(':')) return Result.Invalid("Port/IPv6 tidak didukung — Android selalu memakai port 853")
-        if (IPV4.matches(raw)) return Result.Invalid("Alamat IP tidak didukung — sertifikat TLS diverifikasi berdasarkan FQDN")
+        if (raw.isEmpty()) return Result.Invalid(HostnameError.EMPTY)
+        if (raw.contains("://")) return Result.Invalid(HostnameError.URL_SCHEME)
+        if (raw.any { it == '/' || it == '?' || it == '#' }) return Result.Invalid(HostnameError.PATH_OR_QUERY)
+        if (raw.contains(':')) return Result.Invalid(HostnameError.PORT_OR_IPV6)
+        if (IPV4.matches(raw)) return Result.Invalid(HostnameError.IP_ADDRESS)
 
         val ascii = try {
             java.net.IDN.toASCII(raw.removeSuffix("."), java.net.IDN.USE_STD3_ASCII_RULES)
         } catch (_: IllegalArgumentException) {
-            return Result.Invalid("Karakter hostname tidak valid")
+            return Result.Invalid(HostnameError.INVALID_CHARACTERS)
         }.lowercase()
 
-        if (ascii.length > 253) return Result.Invalid("Hostname melebihi 253 karakter")
+        if (ascii.length > 253) return Result.Invalid(HostnameError.TOO_LONG)
 
         val labels = ascii.split('.')
-        if (labels.size < 2) return Result.Invalid("FQDN harus memiliki minimal satu titik (mis. dns.contoh.com)")
-        if (!labels.all { LABEL.matches(it) }) return Result.Invalid("Label hanya boleh a-z, 0-9, '-' (maks. 63 karakter, tidak diawali/diakhiri '-')")
-        if (!TLD.matches(labels.last())) return Result.Invalid("TLD tidak valid")
+        if (labels.size < 2) return Result.Invalid(HostnameError.MISSING_DOT)
+        if (!labels.all { LABEL.matches(it) }) return Result.Invalid(HostnameError.INVALID_LABEL)
+        if (!TLD.matches(labels.last())) return Result.Invalid(HostnameError.INVALID_TLD)
 
         return Result.Valid(ascii)
     }

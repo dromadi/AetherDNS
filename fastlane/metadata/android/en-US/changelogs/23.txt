@@ -1,0 +1,4 @@
+• Insights now suggest a faster resolver on your network (same kind of blocking), with a one-tap Switch button
+• Speed charts for 7 or 30 days
+• Protection history: when protection was turned on, paused, turned off or switched, and from where
+• 7-day NextDNS stats: daily chart, block reasons and devices

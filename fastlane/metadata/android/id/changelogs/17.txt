@@ -1,0 +1,7 @@
+• Statistik blokir NextDNS (dengan API key Anda)
+• Cek jaringan otomatis saat aplikasi dibuka atau jaringan berganti; peringatan bila DNS terenkripsi diblokir
+• Cek jaringan: deteksi penyadapan dan pemalsuan DNS oleh ISP
+• 13 resolver dikelompokkan per tujuan (Control D, Mullvad Extended/All, Quad9, Cloudflare 1.1.1.1/1.1.1.3, Google, AdGuard Non-filtering)
+• Widget, ikon baru, tampilan baru
+• Aktivasi bawaan tanpa Shizuku (Android 11+)
+• Perbaikan crash hostname kustom

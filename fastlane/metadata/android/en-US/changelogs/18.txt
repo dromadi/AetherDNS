@@ -1,0 +1,2 @@
+• Audit no longer reports a leak for domains still served from the phone's DNS cache; it checks your resolver directly
+• Fixed the audit card turning tall and blank when a domain has many IP addresses

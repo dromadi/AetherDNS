@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 ke bawah: status jeda, token otomasi, API key NextDNS, dan status Autopilot tidak dicadangkan. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="pause_state.xml" />
+    <exclude domain="sharedpref" path="automation.xml" />
+    <exclude domain="sharedpref" path="nextdns_stats.xml" />
+        <exclude domain="sharedpref" path="autopilot.xml" />
+</full-backup-content>

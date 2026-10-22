@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): garis perisai + gelombang, diwarnai sistem -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,26L76,34.3V52C76,65.9 66.4,77.5 54,81.8C41.6,77.5 32,65.9 32,52V34.3Z"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:pathData="M42.69,50.69A16,16 0,0 1,65.31 50.69"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:pathData="M47.64,55.64A9,9 0,0 1,60.36 55.64"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,62m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>
