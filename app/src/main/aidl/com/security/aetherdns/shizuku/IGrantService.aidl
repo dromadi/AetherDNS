@@ -2,5 +2,7 @@ package com.security.aetherdns.shizuku;
 
 interface IGrantService {
     void destroy() = 16777114;
-    int grantSecureSettings() = 1;
+
+    /** Menjalankan `pm grant`; mengembalikan "<exit code>\n<stdout+stderr>". */
+    String grantSecureSettings() = 1;
 }

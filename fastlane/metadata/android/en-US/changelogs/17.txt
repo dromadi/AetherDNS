@@ -1,0 +1,7 @@
+• NextDNS block statistics (with your API key)
+• Automatic network check when the app opens or the network changes; warns when encrypted DNS is blocked
+• Network check: detects ISP DNS interception and forged answers
+• 13 resolvers grouped by purpose (Control D, Mullvad Extended/All, Quad9, Cloudflare 1.1.1.1/1.1.1.3, Google, AdGuard Non-filtering)
+• Home screen widget, new icon, refreshed design
+• Built-in activation without Shizuku (Android 11+)
+• Fixed custom hostname crash

@@ -1,50 +1,141 @@
 package com.security.aetherdns.model
 
+import androidx.annotation.StringRes
+import com.security.aetherdns.R
+
+/**
+ * Profil resolver DoT. Preset bawaan memakai resource string (dilokalkan);
+ * profil kustom tersimpan memakai [name] yang diketik pengguna.
+ */
 data class DnsProfile(
     val id: String,
-    val name: String,
     val hostname: String,
-    val category: String,
-    val description: String,
-    val isCustom: Boolean = false
+    val name: String = "",
+    @StringRes val nameRes: Int = 0,
+    @StringRes val categoryRes: Int = 0,
+    @StringRes val descriptionRes: Int = 0,
+    val isCustom: Boolean = false,
+    val group: PresetGroup = PresetGroup.ADS
 )
 
+/** Pengelompokan preset menurut tujuan, agar pengguna awam langsung tahu mana yang memblokir iklan. */
+enum class PresetGroup(@StringRes val titleRes: Int, @StringRes val descriptionRes: Int) {
+    ADS(R.string.preset_group_ads, R.string.preset_group_ads_desc),
+    FAMILY(R.string.preset_group_family, R.string.preset_group_family_desc),
+    SECURITY(R.string.preset_group_security, R.string.preset_group_security_desc),
+    PLAIN(R.string.preset_group_plain, R.string.preset_group_plain_desc)
+}
+
 object DefaultProfiles {
+    /** Urutan = urutan tampil; [grouped] menyusunnya per [PresetGroup]. */
     val list = listOf(
         DnsProfile(
             id = "adguard_default",
-            name = "AdGuard DNS (Rekomendasi)",
             hostname = "dns.adguard-dns.com",
-            category = "Anti-Iklan & Tracker",
-            description = "Memblokir iklan banner, pop-up, rewarded ads di aplikasi Android dan pelacak telemetri."
+            nameRes = R.string.preset_adguard_name,
+            categoryRes = R.string.preset_adguard_category,
+            descriptionRes = R.string.preset_adguard_desc
+        ),
+        DnsProfile(
+            // Control D Free: profil dipilih lewat SNI (p2 = malware + iklan & pelacak)
+            id = "controld_free_ads",
+            hostname = "p2.freedns.controld.com",
+            nameRes = R.string.preset_controld_name,
+            categoryRes = R.string.preset_controld_category,
+            descriptionRes = R.string.preset_controld_desc
         ),
         DnsProfile(
             id = "adguard_family",
-            name = "AdGuard Family",
+            group = PresetGroup.FAMILY,
             hostname = "family.adguard-dns.com",
-            category = "Keluarga & Anti-Iklan",
-            description = "Proteksi iklan aplikasi sekaligus memblokir situs konten dewasa dan mengaktifkan SafeSearch."
+            nameRes = R.string.preset_adguard_family_name,
+            categoryRes = R.string.preset_adguard_family_category,
+            descriptionRes = R.string.preset_adguard_family_desc
         ),
         DnsProfile(
             id = "mullvad_adblock",
-            name = "Mullvad Privacy Adblock",
             hostname = "adblock.dns.mullvad.net",
-            category = "Privasi & Anti-Iklan",
-            description = "Resolver zero-logging resmi dari Mullvad dengan blocklist iklan dan tracker aktif."
+            nameRes = R.string.preset_mullvad_name,
+            categoryRes = R.string.preset_mullvad_category,
+            descriptionRes = R.string.preset_mullvad_desc
+        ),
+        DnsProfile(
+            id = "mullvad_extended",
+            hostname = "extended.dns.mullvad.net",
+            nameRes = R.string.preset_mullvad_extended_name,
+            categoryRes = R.string.preset_mullvad_extended_category,
+            descriptionRes = R.string.preset_mullvad_extended_desc
+        ),
+        DnsProfile(
+            id = "mullvad_all",
+            group = PresetGroup.FAMILY,
+            hostname = "all.dns.mullvad.net",
+            nameRes = R.string.preset_mullvad_all_name,
+            categoryRes = R.string.preset_mullvad_all_category,
+            descriptionRes = R.string.preset_mullvad_all_desc
+        ),
+        DnsProfile(
+            id = "cloudflare_family",
+            group = PresetGroup.FAMILY,
+            hostname = "family.cloudflare-dns.com",
+            nameRes = R.string.preset_cloudflare_family_name,
+            categoryRes = R.string.preset_cloudflare_family_category,
+            descriptionRes = R.string.preset_cloudflare_family_desc
+        ),
+        DnsProfile(
+            id = "quad9",
+            group = PresetGroup.SECURITY,
+            hostname = "dns.quad9.net",
+            nameRes = R.string.preset_quad9_name,
+            categoryRes = R.string.preset_quad9_category,
+            descriptionRes = R.string.preset_quad9_desc
         ),
         DnsProfile(
             id = "cloudflare_security",
-            name = "Cloudflare 1.1.1.2 (Security)",
+            group = PresetGroup.SECURITY,
             hostname = "security.cloudflare-dns.com",
-            category = "Anti-Malware",
-            description = "Fokus memblokir domain malware, phishing, ransomware, dan C2 server secara real-time."
+            nameRes = R.string.preset_cloudflare_name,
+            categoryRes = R.string.preset_cloudflare_category,
+            descriptionRes = R.string.preset_cloudflare_desc
+        ),
+        DnsProfile(
+            // Hostname DoT resmi Cloudflare untuk Private DNS Android
+            id = "cloudflare_plain",
+            group = PresetGroup.PLAIN,
+            hostname = "1dot1dot1dot1.cloudflare-dns.com",
+            nameRes = R.string.preset_cloudflare_plain_name,
+            categoryRes = R.string.preset_cloudflare_plain_category,
+            descriptionRes = R.string.preset_cloudflare_plain_desc
+        ),
+        DnsProfile(
+            id = "adguard_unfiltered",
+            group = PresetGroup.PLAIN,
+            hostname = "unfiltered.adguard-dns.com",
+            nameRes = R.string.preset_adguard_unfiltered_name,
+            categoryRes = R.string.preset_plain_category,
+            descriptionRes = R.string.preset_adguard_unfiltered_desc
+        ),
+        DnsProfile(
+            id = "google",
+            group = PresetGroup.PLAIN,
+            hostname = "dns.google",
+            nameRes = R.string.preset_google_name,
+            categoryRes = R.string.preset_plain_category,
+            descriptionRes = R.string.preset_google_desc
         ),
         DnsProfile(
             id = "nextdns_public",
-            name = "NextDNS Anycast",
+            group = PresetGroup.PLAIN,
             hostname = "dns.nextdns.io",
-            category = "Resolver Bersih (Tanpa Filter)",
-            description = "Anycast resolver DoT berlatensi rendah tanpa filter bawaan. Untuk anti-iklan NextDNS, gunakan opsi Hostname Kustom dengan ID profil Anda."
+            nameRes = R.string.preset_nextdns_name,
+            categoryRes = R.string.preset_nextdns_category,
+            descriptionRes = R.string.preset_nextdns_desc
         )
     )
+
+    /** Preset per grup dengan urutan grup tetap; grup kosong dilewati. */
+    val grouped: List<Pair<PresetGroup, List<DnsProfile>>>
+        get() = PresetGroup.entries.mapNotNull { group ->
+            list.filter { it.group == group }.takeIf { it.isNotEmpty() }?.let { group to it }
+        }
 }

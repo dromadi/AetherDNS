@@ -10,29 +10,59 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import com.security.aetherdns.util.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicInteger
 
-sealed class ApplyResult {
-    data class Success(val hostname: String) : ApplyResult()
-    data class Failure(val reason: String) : ApplyResult()
-}
-
-class DnsRepository(private val context: Context) {
+class DnsRepository(
+    private val context: Context,
+    settings: SecureSettings = AndroidSecureSettings(context),
+    prober: DotProber = DotProbe,
+    pauseStore: PauseStore = SharedPrefsPauseStore(context),
+    resumeAlarm: ResumeAlarm = AlarmManagerResumeAlarm(context),
+    private val historyStore: HistoryStore = FileHistoryStore(context.noBackupFilesDir)
+) {
     private val contentResolver = context.contentResolver
-    private val applyMutex = Mutex()
+    private val applier = DnsApplier(settings, prober)
+    private val pauseController = PauseController(settings, applier, pauseStore, resumeAlarm)
 
     private val _state = MutableStateFlow(loadCurrentState())
     val state: StateFlow<DnsState> = _state.asStateFlow()
+
+    private val _networkChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Berbunyi setiap jaringan default berganti (mis. pindah Wi-Fi / ke data seluler), selama proses hidup. */
+    val networkChanges: SharedFlow<Unit> = _networkChanges.asSharedFlow()
+
+    /** Riwayat proteksi lokal (halaman Insight). */
+    private val _history = MutableStateFlow(historyStore.events())
+    val history: StateFlow<List<HistoryEvent>> = _history.asStateFlow()
+
+    /** Salinan memori dari status terakhir yang dicatat, agar `refresh()` tidak membaca berkas. */
+    private var lastSnapshot: ProtectionSnapshot? = historyStore.lastSnapshot()
+
+    /**
+     * Dipanggil setelah setiap operasi tulis selesai dengan status akhirnya; dipakai Aturan Pintar untuk
+     * mengingat resolver pilihan utama pengguna.
+     */
+    var onChange: ((DnsState, ChangeSource) -> Unit)? = null
+
+    /** Jumlah operasi tulis yang sedang berjalan; status antara selama operasi tidak dicatat ke riwayat. */
+    private val busy = AtomicInteger(0)
 
     private var contentObserver: ContentObserver? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     init {
+        // Perubahan saat proses mati (mis. dari Settings HP) terdeteksi di sini
+        recordHistory(ChangeSource.SYSTEM)
         startObserving()
         startNetworkMonitoring()
     }
@@ -50,12 +80,45 @@ class DnsRepository(private val context: Context) {
             specifier = specifier,
             isProtectionActive = isProtected,
             isSystemDoTValidated = isDoTValidated,
-            validatedServerName = serverName
+            validatedServerName = serverName,
+            pausedUntil = pauseController.pausedUntil()
         )
     }
 
     fun refresh() {
         _state.value = loadCurrentState()
+        if (busy.get() == 0) recordHistory(ChangeSource.SYSTEM)
+    }
+
+    @Synchronized
+    private fun recordHistory(source: ChangeSource) {
+        val next = ProtectionSnapshot.of(_state.value)
+        val previous = lastSnapshot
+        if (previous == next) return
+        lastSnapshot = next
+        HistoryTracker.transition(previous, next, source, System.currentTimeMillis())?.let { event ->
+            historyStore.append(event)
+            _history.value = historyStore.events()
+        }
+        historyStore.saveSnapshot(next)
+    }
+
+    /** Menjalankan operasi tulis lalu mencatat hasil akhirnya dengan [source] (bukan status antaranya). */
+    private suspend fun <T> tracked(source: ChangeSource, block: suspend () -> T): T = withContext(Dispatchers.IO) {
+        busy.incrementAndGet()
+        try {
+            block()
+        } finally {
+            busy.decrementAndGet()
+            _state.value = loadCurrentState()
+            recordHistory(source)
+            onChange?.invoke(_state.value, source)
+        }
+    }
+
+    fun clearHistory() {
+        historyStore.clear()
+        _history.value = emptyList()
     }
 
     private fun startObserving() {
@@ -87,6 +150,11 @@ class DnsRepository(private val context: Context) {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
 
         networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+                _networkChanges.tryEmit(Unit)
+            }
+
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
                 super.onLinkPropertiesChanged(network, linkProperties)
                 refresh()
@@ -98,77 +166,41 @@ class DnsRepository(private val context: Context) {
         } catch (_: Exception) {}
     }
 
-    suspend fun apply(hostname: String, probe: Boolean = true): ApplyResult = withContext(Dispatchers.IO) {
-        applyMutex.withLock {
-            if (!DnsManager.hasSecurePermission(context)) {
-                return@withContext ApplyResult.Failure("Izin WRITE_SECURE_SETTINGS belum diberikan.")
-            }
+    suspend fun apply(hostname: String, probe: Boolean = true, source: ChangeSource = ChangeSource.APP): ApplyResult =
+        tracked(source) { applyInternal(hostname, probe) }
 
-            val validation = HostnameValidator.validate(hostname)
-            if (validation is HostnameValidator.Result.Invalid) {
-                return@withContext ApplyResult.Failure(validation.reason)
-            }
-            val targetFqdn = (validation as HostnameValidator.Result.Valid).fqdn
-
-            if (probe) {
-                var probeResult = DotProbe.probe(targetFqdn)
-
-                // Self-healing: HANYA jika kegagalan disebabkan oleh kegagalan resolusi (RESOLVE / UnknownHostException)
-                // dan mode sistem saat ini adalah hostname (strict mode lama rusak/mati sehingga DNS lumpuh)
-                val currentMode = DnsManager.getPrivateDnsMode(context)
-                if (probeResult is DotProbeResult.Failure &&
-                    probeResult.cause == DotProbeCause.RESOLVE &&
-                    currentMode == DnsManager.MODE_HOSTNAME
-                ) {
-                    val originalMode = currentMode
-                    val originalSpecifier = DnsManager.getPrivateDnsSpecifier(context)
-                    var healed = false
-
-                    try {
-                        // Alihkan sementara ke mode opportunistic agar DNS dasar bisa hidup dan me-resolve targetFqdn
-                        Settings.Global.putString(contentResolver, DnsManager.SETTING_PRIVATE_DNS_MODE, DnsManager.MODE_OPPORTUNISTIC)
-
-                        // Retry dengan delay bertahap untuk memberikan waktu ConnectivityService dan cache DNS libcore pulih
-                        for (attempt in 1..3) {
-                            delay(1200L)
-                            val retryProbe = DotProbe.probe(targetFqdn)
-                            if (retryProbe is DotProbeResult.Success) {
-                                probeResult = DotProbeResult.Success
-                                healed = true
-                                break
-                            }
-                        }
-                    } finally {
-                        // Pastikan jika self-healing gagal, sistem tidak tertinggal di mode opportunistic
-                        if (!healed) {
-                            withContext(NonCancellable) {
-                                try {
-                                    Settings.Global.putString(contentResolver, DnsManager.SETTING_PRIVATE_DNS_MODE, originalMode)
-                                    Settings.Global.putString(contentResolver, DnsManager.SETTING_PRIVATE_DNS_SPECIFIER, originalSpecifier)
-                                } catch (_: Exception) {}
-                            }
-                        }
-                    }
-                }
-
-                if (probeResult is DotProbeResult.Failure) {
-                    return@withContext ApplyResult.Failure("Uji DoT gagal: ${probeResult.reason}")
-                }
-            }
-
-            val result = DnsManager.applyPrivateDns(context, targetFqdn)
-            if (result.isSuccess) {
-                refresh()
-                ApplyResult.Success(targetFqdn)
-            } else {
-                ApplyResult.Failure(result.exceptionOrNull()?.message ?: "Gagal memperbarui pengaturan sistem")
-            }
+    private suspend fun applyInternal(hostname: String, probe: Boolean): ApplyResult =
+        applier.apply(hostname, probe).also { result ->
+            // Pilihan manual pengguna menggantikan jeda yang sedang berjalan
+            if (result is ApplyResult.Success) pauseController.cancel()
         }
+
+    suspend fun disable(source: ChangeSource = ChangeSource.APP): Boolean = tracked(source) {
+        pauseController.cancel()
+        DnsManager.disablePrivateDns(context).isSuccess
     }
 
-    fun disable(): Boolean {
-        val result = DnsManager.disablePrivateDns(context)
-        refresh()
-        return result.isSuccess
+    /**
+     * Mengaktifkan proteksi tanpa UI (Quick Settings Tile): melanjutkan jeda bila ada, jika tidak memakai
+     * specifier tersimpan, dengan fallback ke resolver default bila specifier tidak valid.
+     * Tanpa probe agar respons tile instan; specifier tersimpan sudah lolos probe saat pertama diterapkan.
+     */
+    suspend fun enableQuick(source: ChangeSource): ApplyResult = tracked(source) {
+        if (pauseController.pausedUntil() != null) return@tracked pauseController.resumeNow()
+        val stored = DnsManager.getPrivateDnsSpecifier(context).trim()
+        var result = applyInternal(stored.ifEmpty { DnsManager.DEFAULT_FALLBACK_HOSTNAME }, probe = false)
+        if (result is ApplyResult.Failure && stored.isNotEmpty()) {
+            result = applyInternal(DnsManager.DEFAULT_FALLBACK_HOSTNAME, probe = false)
+        }
+        result
     }
+
+    suspend fun pause(durationMs: Long, source: ChangeSource = ChangeSource.APP): PauseResult =
+        tracked(source) { pauseController.pause(durationMs) }
+
+    suspend fun resumeNow(source: ChangeSource = ChangeSource.APP): ApplyResult =
+        tracked(source) { pauseController.resumeNow() }
+
+    /** Dipanggil oleh alarm jeda dan setelah boot. */
+    suspend fun resumeIfDue() = tracked(ChangeSource.SCHEDULE) { pauseController.onAlarmOrBoot() }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget 3x1 (bisa diubah ukuran). Pembaruan utama dipicu DnsRepository; periodik 30 menit hanya cadangan
+     bila DNS diubah dari Settings saat proses aplikasi tidak berjalan. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_status"
+    android:minWidth="180dp"
+    android:minHeight="56dp"
+    android:minResizeWidth="140dp"
+    android:minResizeHeight="48dp"
+    android:previewLayout="@layout/widget_status"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    tools:ignore="UnusedAttribute" />

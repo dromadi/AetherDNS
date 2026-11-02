@@ -25,6 +25,14 @@ val Typography = Typography(
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
+    // PENTING: lineHeight wajib `sp`, jangan `em`. TextField Material menganimasikan label dengan lerp antara
+    // bodyLarge dan bodySmall; mencampur em dan sp melempar IllegalArgumentException (crash saat kolom berlabel tampil).
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 21.sp
+    ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,

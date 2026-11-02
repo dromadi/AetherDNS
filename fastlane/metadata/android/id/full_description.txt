@@ -1,0 +1,19 @@
+<p>AetherDNS mengatur <b>DNS Pribadi</b> (DNS-over-TLS) bawaan Android ke resolver terenkripsi yang memblokir iklan, pelacak, malware, atau konten dewasa. Pekerjaannya dilakukan Android sendiri, jadi <b>tanpa VPN, tanpa layanan latar, dan tanpa boros baterai</b> — aplikasi boleh ditutup dan proteksi tetap aktif. Slot VPN tetap bebas untuk WireGuard, WARP, atau VPN lain.</p>
+
+<p><b>Fitur</b></p>
+<ul>
+<li>13 resolver teruji yang dikelompokkan per tujuan: blokir iklan (AdGuard, Control D, Mullvad), keluarga, keamanan saja (Quad9, Cloudflare), enkripsi saja — plus profil NextDNS atau server Anda sendiri.</li>
+<li>Uji kecepatan &amp; filter: mengukur latensi tiap resolver dan berapa domain iklan uji yang diblokir, sebelum Anda beralih.</li>
+<li>Cek jaringan: menunjukkan apakah ISP menyadap atau memalsukan DNS biasa, dan memperingatkan bila jaringan memblokir DNS terenkripsi — dengan tombol jeda 15 menit.</li>
+<li>Statistik blokir NextDNS (dengan API key Anda sendiri).</li>
+<li>Tile Quick Settings, widget layar utama, dan pintasan aplikasi.</li>
+<li>Jeda 15 menit untuk halaman login Wi-Fi hotel/bandara, aktif kembali otomatis.</li>
+<li>Otomasi Tasker / MacroDroid dengan token rahasia.</li>
+<li>Bahasa Indonesia dan Inggris.</li>
+</ul>
+
+<p><b>Penyiapan sekali saja:</b> mengubah DNS Pribadi butuh izin WRITE_SECURE_SETTINGS. Di Android 11+ AetherDNS bisa memberi izin ke dirinya sendiri lewat Wireless debugging (kode penyambungan diketik di notifikasi) — tanpa komputer dan tanpa aplikasi lain. Shizuku dan satu perintah ADB juga didukung. Tanpa izin, Anda tetap bisa menyalin resolver lalu menempelkannya di pengaturan DNS Pribadi HP.</p>
+
+<p><b>Batasan:</b> pemblokiran DNS tidak bisa menghapus iklan YouTube, Instagram, atau TikTok, karena iklannya dikirim dari server yang sama dengan videonya.</p>
+
+<p>Tanpa akun, tanpa analitik, tanpa pelacakan. Aplikasi hanya menghubungi resolver yang Anda uji atau pilih (dan api.nextdns.io bila Anda menambahkan API key NextDNS).</p>

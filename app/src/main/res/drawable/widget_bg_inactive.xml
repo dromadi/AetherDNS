@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Latar widget saat proteksi mati / dijeda: gelap netral agar terbaca di wallpaper apa pun -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:radius="24dp" />
+    <solid android:color="#E62A2F3A" />
+</shape>

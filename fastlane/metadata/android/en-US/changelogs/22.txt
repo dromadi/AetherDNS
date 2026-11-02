@@ -1,0 +1,3 @@
+• New Insights (More → Insights): DNS speed per network over 7 days and a 30-day network report (DNS tampering / encrypted DNS blocked)
+• The Health card now tells you when DNS is consistently slow, with a button to compare resolvers
+• Data stays on your phone, never includes Wi-Fi names or IPs, and can be cleared any time

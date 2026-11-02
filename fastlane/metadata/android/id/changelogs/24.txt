@@ -1,0 +1,3 @@
+• Tampilan baru yang seragam: semua tombol, menu, dan navigasi memakai biru AetherDNS, serasi dengan kartu status (mode terang & gelap)
+• Tab Resolver lebih rapi: tombol uji kecepatan selebar layar, kartu lebih ringkas dengan tanda pilihan yang jelas
+• Kartu izin dan bilah atas lebih bersih

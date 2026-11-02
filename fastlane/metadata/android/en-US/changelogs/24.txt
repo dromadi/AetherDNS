@@ -1,0 +1,3 @@
+• A consistent new look: every button, menu and the navigation bar now use AetherDNS blue, matching the status card (light & dark)
+• Cleaner Resolvers tab: full-width speed test button and compact cards with a clear selection mark
+• Cleaner permission card and top bar

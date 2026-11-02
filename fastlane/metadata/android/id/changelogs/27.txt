@@ -1,0 +1,3 @@
+• Aturan Pintar (baru): resolver berbeda untuk Wi-Fi dan data seluler, atau otomatis pilih yang tercepat di setiap jaringan
+• Jadwal mingguan, misalnya mode keluarga 21.00–06.00 dengan AdGuard Family (template satu ketukan)
+• Pilihanmu sendiri selalu menang sampai jaringan/jadwal berganti; tetap tanpa service latar

@@ -5,88 +5,93 @@ import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.security.aetherdns.AetherDnsApplication
 import com.security.aetherdns.MainActivity
-import com.security.aetherdns.util.DnsManager
+import com.security.aetherdns.R
+import com.security.aetherdns.data.ApplyResult
+import com.security.aetherdns.data.ChangeSource
+import com.security.aetherdns.data.DnsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.util.Date
 
 class AetherDnsTileService : TileService() {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private val repository: DnsRepository
+        get() = (application as AetherDnsApplication).dnsRepository
 
     override fun onStartListening() {
         super.onStartListening()
         updateTileState()
     }
 
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+
     override fun onClick() {
         super.onClick()
 
-        // 1. Jika belum ada izin WRITE_SECURE_SETTINGS, buka MainActivity untuk panduan ADB.
+        // 1. Jika belum ada izin WRITE_SECURE_SETTINGS, buka MainActivity untuk panduan ADB / Shizuku.
         // Catatan AOSP: Tile harus berstatus STATE_INACTIVE (bukan STATE_UNAVAILABLE) agar klik diteruskan ke sini.
-        if (!DnsManager.hasSecurePermission(this)) {
+        if (!repository.loadCurrentState().hasPermission) {
             openMainActivity()
             return
         }
 
         // 2. Proteksi Lockscreen: Pastikan perangkat dibuka sebelum mengubah konfigurasi DNS sistem
         if (isSecure) {
-            unlockAndRun {
-                performToggle()
-            }
+            unlockAndRun { performToggle() }
         } else {
             performToggle()
         }
     }
 
     private fun performToggle() {
-        val isCurrentlyActive = DnsManager.isProtectionActive(this)
-
-        if (isCurrentlyActive) {
-            DnsManager.disablePrivateDns(this)
-        } else {
-            val targetHostname = DnsManager.getEffectiveHostname(this)
-            val result = DnsManager.applyPrivateDns(this, targetHostname)
-
-            // Jika hostname tersimpan tidak valid atau gagal, fallback ke AdGuard default
-            if (result.isFailure) {
-                val fallbackResult = DnsManager.applyPrivateDns(this, DnsManager.DEFAULT_FALLBACK_HOSTNAME)
-                if (fallbackResult.isFailure) {
-                    openMainActivity()
+        scope.launch {
+            // Penulisan setting diselesaikan walau tile dilepas sistem di tengah jalan
+            val failed = withContext(NonCancellable) {
+                if (repository.loadCurrentState().isProtectionActive) {
+                    !repository.disable(ChangeSource.TILE)
+                } else {
+                    // Melanjutkan jeda bila ada; jika tidak, specifier tersimpan dengan fallback ke resolver default
+                    repository.enableQuick(ChangeSource.TILE) is ApplyResult.Failure
                 }
             }
+            if (failed) openMainActivity()
+            updateTileState()
         }
-
-        updateTileState()
     }
 
     private fun updateTileState() {
         val tile = qsTile ?: return
+        val state = repository.loadCurrentState()
+        tile.label = getString(R.string.tile_label)
 
-        if (!DnsManager.hasSecurePermission(this)) {
-            // Gunakan STATE_INACTIVE agar klik tetap diterima sistem dan diarahkan ke openMainActivity()
-            tile.state = Tile.STATE_INACTIVE
-            tile.label = "DNS Anti-Iklan"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = "Perlu Izin ADB"
-            }
-            tile.updateTile()
-            return
+        val (tileState, subtitle) = when {
+            // STATE_INACTIVE agar klik tetap diterima sistem dan diarahkan ke openMainActivity()
+            !state.hasPermission -> Tile.STATE_INACTIVE to getString(R.string.tile_subtitle_needs_permission)
+            state.isProtectionActive -> Tile.STATE_ACTIVE to state.specifier
+            state.pausedUntil != null ->
+                Tile.STATE_INACTIVE to getString(
+                    R.string.tile_subtitle_paused,
+                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(state.pausedUntil))
+                )
+            else -> Tile.STATE_INACTIVE to getString(R.string.tile_subtitle_off)
         }
-
-        val isProtectionActive = DnsManager.isProtectionActive(this)
-        val specifier = DnsManager.getPrivateDnsSpecifier(this)
-
-        if (isProtectionActive) {
-            tile.state = Tile.STATE_ACTIVE
-            tile.label = "DNS Anti-Iklan"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = specifier
-            }
-        } else {
-            tile.state = Tile.STATE_INACTIVE
-            tile.label = "DNS Anti-Iklan"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = "Nonaktif"
-            }
+        tile.state = tileState
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            tile.subtitle = subtitle
         }
-
         tile.updateTile()
     }
 
@@ -104,7 +109,7 @@ class AetherDnsTileService : TileService() {
             )
             startActivityAndCollapse(pendingIntent)
         } else {
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated") // API < 34: PendingIntent overload tidak tersedia
             startActivityAndCollapse(intent)
         }
     }

@@ -1,0 +1,2 @@
+• Uji stabilitas koneksi (Insight): untuk internet yang putus-nyambung, mengukur resolver aktif selama ±30 detik dibanding resolver sejenis dan Cloudflare, lalu memberi kesimpulan dan tombol pindah ke resolver yang stabil
+• Kartu Kesehatan memberi tahu bila DNS terenkripsi sering gagal di jaringanmu

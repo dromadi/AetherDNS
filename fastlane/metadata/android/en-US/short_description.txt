@@ -1,0 +1,1 @@
+Ad-blocking Private DNS (DoT) switcher — no VPN, no battery drain

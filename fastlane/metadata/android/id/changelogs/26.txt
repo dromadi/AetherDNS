@@ -1,0 +1,2 @@
+• Autopilot (baru, aktif otomatis): proteksi menyesuaikan setiap jaringan sendiri tanpa service latar. Wi-Fi yang minta login atau jaringan yang memblokir DNS terenkripsi → dijeda lalu aktif lagi sendiri; resolver tak terjangkau → pindah sementara ke yang sejenis
+• Halaman baru "Kenapa masih ada iklan?" menjelaskan batas pemblokiran DNS (YouTube, iklan bawaan aplikasi) dan solusinya

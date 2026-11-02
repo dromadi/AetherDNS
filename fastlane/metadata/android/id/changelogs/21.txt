@@ -1,0 +1,1 @@
+• "Pasang tombol di Quick Settings" kini memberi tahu apakah tombol berhasil ditambahkan, sudah ada, atau perlu ditambahkan manual

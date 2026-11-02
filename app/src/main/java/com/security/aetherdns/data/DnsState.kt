@@ -6,5 +6,7 @@ data class DnsState(
     val specifier: String = "",
     val isProtectionActive: Boolean = false,
     val isSystemDoTValidated: Boolean = false,
-    val validatedServerName: String? = null
+    val validatedServerName: String? = null,
+    /** Epoch ms saat proteksi aktif kembali bila sedang dijeda; null bila tidak dijeda. */
+    val pausedUntil: Long? = null
 )
