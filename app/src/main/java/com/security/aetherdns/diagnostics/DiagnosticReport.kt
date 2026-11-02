@@ -1,5 +1,6 @@
 package com.security.aetherdns.diagnostics
 
+import com.security.aetherdns.data.HistoryEvent
 import com.security.aetherdns.util.AuditSummary
 import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.NetworkCheck
@@ -64,7 +65,9 @@ data class DiagnosticSnapshot(
     val activeResolverProbe: DotProbeResult?,
     val networkReport: NetworkReport?,
     val audit: AuditSummary?,
-    val lastCrash: CrashInfo?
+    val lastCrash: CrashInfo?,
+    /** Perubahan proteksi terbaru (tanpa data pribadi): untuk mendiagnosis "DNS putus sendiri". */
+    val history: List<HistoryEvent> = emptyList()
 )
 
 /**
@@ -74,6 +77,7 @@ data class DiagnosticSnapshot(
 object DiagnosticReportFormatter {
 
     private const val MAX_STACK_LINES = 25
+    private const val MAX_HISTORY = 20
 
     fun format(s: DiagnosticSnapshot): String = buildString {
         appendLine("=== AetherDNS diagnostic report ===")
@@ -145,6 +149,15 @@ object DiagnosticReportFormatter {
         line("Saved profiles", f.savedProfiles.toString())
         line("Widgets placed", f.widgetsPlaced.toString())
         line("Onboarding completed", yesNo(f.onboardingCompleted))
+
+        section("Recent protection changes")
+        if (s.history.isEmpty()) {
+            appendLine("none recorded")
+        } else {
+            s.history.takeLast(MAX_HISTORY).forEach {
+                appendLine("${timestamp(it.timestamp)}  ${it.action}  by ${it.source}  ${it.resolver}")
+            }
+        }
 
         section("Last crash")
         val crash = s.lastCrash

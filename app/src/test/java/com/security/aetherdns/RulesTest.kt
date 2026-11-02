@@ -72,4 +72,12 @@ class RulesTest {
         assertEquals(RuleSet(), RulesCodec.decode("bukan json"))
         assertEquals(RuleSet(), RulesCodec.decode(null))
     }
+
+    @Test
+    fun `fastest only switches for a clear gain`() {
+        assertTrue(RuleEngine.isClearlyFaster(120, 500))
+        assertFalse(RuleEngine.isClearlyFaster(110, 130))   // < 50 ms
+        assertFalse(RuleEngine.isClearlyFaster(300, 400))   // hanya 25% lebih cepat
+        assertTrue(RuleEngine.isClearlyFaster(280, 400))    // 30%
+    }
 }

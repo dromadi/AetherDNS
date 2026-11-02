@@ -35,14 +35,16 @@ class AutopilotPolicyTest {
         hold: AutopilotHold? = null,
         captive: Boolean = false,
         userPaused: Boolean = false,
+        systemHealthy: Boolean = false,
+        plainInternet: Boolean = true,
+        now: Long = AutopilotPolicy.MIN_SUBSTITUTE_HOLD_MS * 2,
         net: Map<String, Reachability>
-    ): AutopilotDecision {
-        val probed = mutableListOf<String>()
-        return AutopilotPolicy.decide(AutopilotInput(snapshot, userPaused, hold, captive), alts, ref) {
-            probed += it
-            net[it] ?: OFFLINE
-        }
-    }
+    ): AutopilotDecision = AutopilotPolicy.decide(
+        AutopilotInput(snapshot, userPaused, hold, captive, systemHealthy, now),
+        alts,
+        ref,
+        plainInternet = { plainInternet }
+    ) { net[it] ?: OFFLINE }
 
     @Test
     fun `healthy resolver means nothing to do`() = runTest {
@@ -110,5 +112,35 @@ class AutopilotPolicyTest {
         assertEquals(pause, AutopilotHoldCodec.decode(AutopilotHoldCodec.encode(pause)))
         assertNull(AutopilotHoldCodec.decode("rusak"))
         assertNull(AutopilotHoldCodec.decode(null))
+    }
+
+    @Test
+    fun `android reporting healthy encrypted dns overrides failing app probes`() = runTest {
+        // Mis. aplikasi dibatasi Doze / hemat baterai: probe gagal padahal DNS sistem tersambung
+        assertEquals(AutopilotDecision.None, decide(systemHealthy = true, net = mapOf(ag to FAIL, ref to FAIL)))
+        assertEquals(AutopilotDecision.None, decide(systemHealthy = true, net = mapOf(ag to FAIL, ref to OK, cd to OK)))
+        // Portal login tetap ditangani
+        assertEquals(AutopilotDecision.Pause(AutopilotReason.CAPTIVE_PORTAL), decide(systemHealthy = true, captive = true, net = emptyMap()))
+    }
+
+    @Test
+    fun `no plain internet means the app cannot judge, so nothing changes`() = runTest {
+        assertEquals(AutopilotDecision.None, decide(plainInternet = false, net = mapOf(ag to FAIL, ref to FAIL)))
+        assertEquals(AutopilotDecision.None, decide(plainInternet = false, net = mapOf(ag to FAIL, ref to OK, mv to OK)))
+    }
+
+    @Test
+    fun `substitute is kept for a minimum time before switching back`() = runTest {
+        val recent = switchedHold().copy(since = 1_000L)
+        assertEquals(
+            AutopilotDecision.None,
+            decide(on.copy(specifier = cd), recent, now = 1_000L + 60_000L, net = mapOf(ag to OK))
+        )
+        assertEquals(
+            AutopilotDecision.Restore(ag),
+            decide(on.copy(specifier = cd), recent, now = 1_000L + AutopilotPolicy.MIN_SUBSTITUTE_HOLD_MS, net = mapOf(ag to OK))
+        )
+        // Jeda (bukan pengganti) dipulihkan secepatnya
+        assertEquals(AutopilotDecision.Restore(ag), decide(off, pausedHold().copy(since = 1_000L), now = 2_000L, net = mapOf(ag to OK)))
     }
 }

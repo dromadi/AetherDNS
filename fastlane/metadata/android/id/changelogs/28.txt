@@ -1,0 +1,3 @@
+• Perbaikan: proteksi kadang terputus sendiri karena Autopilot salah menilai jaringan saat HP tidur atau baru tersambung. Kini Autopilot memercayai status DNS Android dan menunggu jaringan siap
+• Resolver pengganti dan aturan "Tercepat" tidak lagi bolak-balik
+• Laporan diagnostik memuat riwayat perubahan proteksi terbaru

@@ -82,9 +82,13 @@ class Autopilot(
 
         val preferred = hold?.original ?: snapshot.specifier
         val decision = AutopilotPolicy.decide(
-            AutopilotInput(snapshot, state.pausedUntil != null, hold, isCaptivePortal()),
+            AutopilotInput(
+                snapshot, state.pausedUntil != null, hold, isCaptivePortal(),
+                systemDnsHealthy = isSystemDnsHealthy(), now = System.currentTimeMillis()
+            ),
             alternatives = alternativesFor(preferred),
             reference = REFERENCE,
+            plainInternet = inspector::hasPlainInternet,
             reachable = ::reachableWithRetry
         )
         act(decision, preferred, hold)
@@ -145,6 +149,13 @@ class Autopilot(
     private fun capabilities(): NetworkCapabilities? =
         runCatching { connectivity?.let { it.getNetworkCapabilities(it.activeNetwork) } }.getOrNull()
 
+    /** Jaringan tervalidasi Android dan DNS terenkripsi sistem aktif: sumber kebenaran yang lebih kuat dari probe aplikasi. */
+    private fun isSystemDnsHealthy(): Boolean {
+        val caps = capabilities() ?: return false
+        val lp = runCatching { connectivity?.let { it.getLinkProperties(it.activeNetwork) } }.getOrNull() ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) && lp.isPrivateDnsActive
+    }
+
     private fun isCaptivePortal(): Boolean =
         capabilities()?.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) == true
 
@@ -185,7 +196,8 @@ class Autopilot(
         /** Pembanding: bila resolver anycast besar ini pun gagal, jaringannya yang memblokir DNS terenkripsi. */
         const val REFERENCE = "1dot1dot1dot1.cloudflare-dns.com"
         private const val RECHECK_MS = 15 * 60_000L
-        private const val SETTLE_TIMEOUT_MS = 8_000L
+        // Seluler bisa butuh >10 detik untuk validasi; terlalu cepat menilai = jeda yang salah
+        private const val SETTLE_TIMEOUT_MS = 15_000L
         private const val SETTLE_POLL_MS = 500L
         private const val RETRY_DELAY_MS = 1_500L
         private const val REQUEST_RECHECK = 42

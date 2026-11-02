@@ -14,6 +14,9 @@ import com.security.aetherdns.util.DotProbeCause
 import com.security.aetherdns.util.DotProbeResult
 import com.security.aetherdns.util.NetworkCheck
 import com.security.aetherdns.util.NetworkReport
+import com.security.aetherdns.data.ChangeSource
+import com.security.aetherdns.data.HistoryAction
+import com.security.aetherdns.data.HistoryEvent
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,5 +95,17 @@ class DiagnosticReportTest {
         val text = DiagnosticReportFormatter.format(snapshot(crash = CrashInfo(0, "main", trace)))
         assertTrue("frame25" in text)
         assertFalse("frame26\n" in text)
+    }
+
+    @Test
+    fun `recent protection changes show action and source`() {
+        val history = listOf(
+            HistoryEvent(1_760_000_000_000, HistoryAction.PAUSED, ChangeSource.AUTOPILOT, "dns.adguard-dns.com"),
+            HistoryEvent(1_760_000_600_000, HistoryAction.RESUMED, ChangeSource.AUTOPILOT, "dns.adguard-dns.com")
+        )
+        val text = DiagnosticReportFormatter.format(snapshot().copy(history = history))
+        assertTrue("## Recent protection changes" in text)
+        assertTrue("PAUSED  by AUTOPILOT  dns.adguard-dns.com" in text)
+        assertTrue("RESUMED  by AUTOPILOT" in text)
     }
 }

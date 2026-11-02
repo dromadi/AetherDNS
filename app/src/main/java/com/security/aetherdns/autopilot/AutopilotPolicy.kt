@@ -46,7 +46,13 @@ data class AutopilotInput(
     /** Jeda manual pengguna (tombol Jeda 15 menit) sedang berjalan. */
     val userPaused: Boolean,
     val hold: AutopilotHold?,
-    val captivePortal: Boolean
+    val captivePortal: Boolean,
+    /**
+     * Android sendiri melaporkan DNS terenkripsi tersambung dan jaringan tervalidasi. Bila begitu, probe milik
+     * aplikasi yang gagal berarti aplikasi dibatasi (Doze, hemat baterai), bukan DNS-nya: jangan bertindak.
+     */
+    val systemDnsHealthy: Boolean = false,
+    val now: Long = 0L
 )
 
 /**
@@ -60,10 +66,18 @@ object AutopilotPolicy {
     fun validHold(hold: AutopilotHold?, snapshot: ProtectionSnapshot): AutopilotHold? =
         hold?.takeIf { it.expected == snapshot }
 
+    /** Resolver pengganti dipertahankan minimal selama ini agar tidak bolak-balik di jaringan yang goyah. */
+    const val MIN_SUBSTITUTE_HOLD_MS = 5 * 60_000L
+
+    /**
+     * @param plainInternet true bila DNS biasa (port 53) masih menjawab: membedakan "DNS terenkripsi diblokir"
+     * dari "aplikasi / jaringan sedang tidak bisa dipakai sama sekali".
+     */
     suspend fun decide(
         input: AutopilotInput,
         alternatives: List<String>,
         reference: String,
+        plainInternet: suspend () -> Boolean = { true },
         reachable: suspend (String) -> Reachability
     ): AutopilotDecision {
         if (input.userPaused) return AutopilotDecision.None
@@ -79,12 +93,18 @@ object AutopilotPolicy {
             return if (active) AutopilotDecision.Pause(AutopilotReason.CAPTIVE_PORTAL) else AutopilotDecision.None
         }
 
+        // Proteksi aktif dan Android sendiri tersambung: tidak ada yang perlu diperbaiki
+        if (active && input.systemDnsHealthy && hold?.substitute == null) return AutopilotDecision.None
+
         return when (reachable(preferred)) {
-            Reachability.OK ->
-                if (hold == null) AutopilotDecision.None else AutopilotDecision.Restore(preferred)
+            Reachability.OK -> when {
+                hold == null -> AutopilotDecision.None
+                hold.substitute != null && input.now - hold.since < MIN_SUBSTITUTE_HOLD_MS -> AutopilotDecision.None
+                else -> AutopilotDecision.Restore(preferred)
+            }
             // Jaringan belum siap / offline: jangan mengubah apa pun berdasarkan data kosong
             Reachability.OFFLINE -> AutopilotDecision.None
-            Reachability.FAIL -> when (reachable(reference)) {
+            Reachability.FAIL -> if (!plainInternet()) AutopilotDecision.None else when (reachable(reference)) {
                 Reachability.OFFLINE -> AutopilotDecision.None
                 Reachability.FAIL ->
                     if (active) AutopilotDecision.Pause(AutopilotReason.DOT_BLOCKED) else AutopilotDecision.None

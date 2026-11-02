@@ -128,7 +128,7 @@ class SmartRules(
         val desired = when (val target = decision?.target) {
             null -> base
             is RuleTarget.Resolver -> target.hostname
-            RuleTarget.Fastest -> fastest(base) ?: state.specifier
+            RuleTarget.Fastest -> fastest(base, state.specifier) ?: state.specifier
         }
         val changed = !desired.equals(state.specifier, ignoreCase = true) &&
             repository.apply(desired, probe = false, source = ChangeSource.RULES) is ApplyResult.Success
@@ -136,14 +136,20 @@ class SmartRules(
         changed
     }
 
-    /** Resolver tercepat dari kelompok pilihan utama (atau pemblokir iklan bila pilihan utama bukan preset). */
-    private suspend fun fastest(base: String): String? = coroutineScope {
+    /**
+     * Resolver tercepat dari kelompok pilihan utama (atau pemblokir iklan bila pilihan utama bukan preset).
+     * Resolver yang sedang dipakai dipertahankan kecuali yang lain jelas lebih cepat ([RuleEngine.isClearlyFaster]):
+     * setiap pergantian membuat Android menyambung ulang DNS terenkripsi, jadi bolak-balik justru terasa putus.
+     */
+    private suspend fun fastest(base: String, current: String): String? = coroutineScope {
         val group = DefaultProfiles.list.firstOrNull { it.hostname.equals(base, ignoreCase = true) }?.group ?: PresetGroup.ADS
-        DefaultProfiles.list.filter { it.group == group }
+        val timings = DefaultProfiles.list.filter { it.group == group }
             .map { profile -> async { profile.hostname to prober.probe(profile.hostname) } }
             .awaitAll()
             .mapNotNull { (host, result) -> (result as? DotProbeResult.Success)?.let { host to it.totalMs } }
-            .minByOrNull { it.second }?.first
+        val best = timings.minByOrNull { it.second } ?: return@coroutineScope null
+        val currentMs = timings.firstOrNull { it.first.equals(current, ignoreCase = true) }?.second
+        if (currentMs != null && !RuleEngine.isClearlyFaster(best.second, currentMs)) current else best.first
     }
 
     fun currentNetworkType(): NetworkType = networkType()

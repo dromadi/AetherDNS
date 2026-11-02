@@ -73,6 +73,10 @@ object RuleEngine {
         return RuleDecision(byNetwork, RuleSource.Network(network))
     }
 
+    /** Pindah ke resolver lain hanya bila ≥ 30% dan ≥ 50 ms lebih cepat dari yang sedang dipakai. */
+    fun isClearlyFaster(candidateMs: Long, currentMs: Long): Boolean =
+        currentMs - candidateMs >= 50 && candidateMs * 10 <= currentMs * 7
+
     /** Batas jadwal berikutnya (mulai/selesai) setelah [now], untuk satu alarm; null bila tidak ada jadwal. */
     fun nextBoundary(rules: RuleSet, now: LocalDateTime): LocalDateTime? {
         if (!rules.enabled || rules.schedules.isEmpty()) return null

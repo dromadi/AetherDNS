@@ -3,6 +3,19 @@
 Format per versi: `## [X.Y.Z] - YYYY-MM-DD`. Bagian versi yang cocok dengan tag rilis otomatis
 dipakai sebagai catatan rilis GitHub oleh `.github/workflows/release.yml`.
 
+## [2.1.1] - 2026-11-02
+
+### Diperbaiki
+- **Proteksi kadang "putus sendiri"**: Autopilot bisa salah menyimpulkan DNS terenkripsi diblokir ketika aplikasi dibangunkan saat HP tidur atau saat jaringan baru tersambung (Android membatasi akses jaringan aplikasi di latar), lalu menjeda proteksi hingga 15 menit. Kini Autopilot:
+  - tidak bertindak bila Android sendiri melaporkan DNS terenkripsi tersambung dan jaringan tervalidasi;
+  - tidak bertindak bila DNS biasa pun tidak menjawab (aplikasi/jaringan belum bisa dipakai);
+  - menunggu hingga 15 detik (sebelumnya 8) sampai jaringan baru selesai divalidasi.
+- Resolver pengganti Autopilot dipertahankan minimal 5 menit agar tidak bolak-balik di jaringan yang goyah.
+- Aturan "Tercepat" hanya berganti resolver bila yang lain jelas lebih cepat (≥ 30% dan ≥ 50 ms); setiap pergantian membuat Android menyambung ulang DNS terenkripsi.
+
+### Ditambahkan
+- Laporan diagnostik memuat 20 perubahan proteksi terbaru (kapan, apa, oleh siapa) untuk melacak penyebab DNS terputus.
+
 ## [2.1.0] - 2026-10-22
 
 ### Ditambahkan

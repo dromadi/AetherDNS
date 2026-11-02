@@ -386,7 +386,8 @@ class MainViewModel(
                 activeResolverProbe = probe?.await(),
                 networkReport = networkReport,
                 audit = audit,
-                lastCrash = crash
+                lastCrash = crash,
+                history = repository.history.value
             )
             _report.value = ReportUiState.Ready(DiagnosticReportFormatter.format(snapshot), hasCrash = crash != null)
         }

@@ -1,0 +1,3 @@
+• Fix: protection sometimes dropped by itself because Autopilot misjudged the network while the phone slept or had just connected. Autopilot now trusts Android's own DNS status and waits for the network to settle
+• Substitute resolvers and the "Fastest" rule no longer flip back and forth
+• The diagnostic report includes recent protection changes

@@ -118,6 +118,9 @@ class NetworkInspector(
         return result
     }
 
+    /** DNS biasa (port 53) ke resolver publik menjawab: aplikasi dan jaringan bisa dipakai. */
+    suspend fun hasPlainInternet(): Boolean = withContext(Dispatchers.IO) { resolvePlain(NEUTRAL_DOMAIN) != null }
+
     /** Untuk Autopilot: [Reachability.OFFLINE] bila jaringan sendiri belum bisa dipakai (bukan salah resolver). */
     suspend fun reachability(hostname: String): Reachability = when (val result = probeResolver(hostname)) {
         is DotProbeResult.Success -> Reachability.OK
